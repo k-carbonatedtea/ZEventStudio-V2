@@ -9,6 +9,7 @@ pub struct Edge {
     pub target_port_id: String,
     pub label: Option<String>,
     pub color_override: Option<String>,
+    pub is_dashed: bool,
     pub selected: bool,
 }
 
@@ -33,12 +34,18 @@ impl Edge {
             target_port_id: t_port,
             label: None,
             color_override: None,
+            is_dashed: false,
             selected: false,
         }
     }
 
     pub fn with_label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    pub fn with_dashed(mut self, dashed: bool) -> Self {
+        self.is_dashed = dashed;
         self
     }
 }

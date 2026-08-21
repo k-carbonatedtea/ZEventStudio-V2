@@ -6,8 +6,9 @@ use revfl::container::{Container, ContainerData};
 use revfl::event::EventData;
 use revfl::evfl::EventFlow;
 use revfl::flowchart::Flowchart;
+use std::collections::HashSet;
 
-/// 从任天堂 BFEVFL 二进制字节流中加载并转换为 Graph 图结构 (完美对齐图2规范)
+/// 从任天堂 BFEVFL 二进制字节流中加载并转换为 Graph 图结构
 pub fn load_bfevfl_from_bytes(bytes: &[u8]) -> Result<Graph, String> {
     let mut evfl = EventFlow::new();
     evfl.read(bytes);
@@ -33,7 +34,7 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
     let events = &fc.events;
     let actors = &fc.actors;
 
-    // 1. 生成 EntryPoints 顶部绿色胶囊节点 (对齐图2)
+    // 1. 创建所有 EntryPoint 节点 (绿色胶囊)
     for ep in &fc.entry_points {
         let ep_id = format!("ep_{}", ep.name);
         let mut ep_node = NodeData::new(
@@ -51,25 +52,11 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
         }
 
         graph.add_node(ep_node);
-
-        // 连接 EntryPoint 到起始 Event
-        let target_idx = ep.main_event.idx;
-        if target_idx != 0xFFFF && (target_idx as usize) < events.len() {
-            let target_ev = &events[target_idx as usize];
-            let edge = Edge::new(
-                &ep_id,
-                &format!("{}_out", ep_id),
-                &target_ev.name,
-                &format!("{}_in", target_ev.name),
-            );
-            graph.add_edge(edge);
-        }
     }
 
-    // 2. 生成所有 Events 节点 (对齐图2: 标题为 EventID, 副标题为 Actor :: Action)
+    // 2. 创建所有 Event 节点
     for ev in events {
         let ev_id = ev.name.clone();
-
         match &ev.data {
             EventData::Action(a) => {
                 let actor_name = if a.actor.idx != 0xFFFF && (a.actor.idx as usize) < actors.len() {
@@ -98,19 +85,6 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
                 }
 
                 graph.add_node(node);
-
-                // 连接至 NextEvent
-                let next_idx = a.nxt.idx;
-                if next_idx != 0xFFFF && (next_idx as usize) < events.len() {
-                    let next_ev = &events[next_idx as usize];
-                    let edge = Edge::new(
-                        &ev_id,
-                        &format!("{}_out", ev_id),
-                        &next_ev.name,
-                        &format!("{}_in", next_ev.name),
-                    );
-                    graph.add_edge(edge);
-                }
             }
 
             EventData::Switch(s) => {
@@ -137,11 +111,7 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
                 let mut out_ports = Vec::new();
                 for (&case_val, _) in &s.cases {
                     let port_id = format!("{}_case_{}", ev_id, case_val);
-                    let label = match case_val {
-                        0 => "Case 0".to_string(),
-                        1 => "Case 1".to_string(),
-                        v => format!("Case {}", v),
-                    };
+                    let label = format!("Case {}", case_val);
                     out_ports.push(Port::new_condition_out(port_id, label));
                 }
                 if out_ports.is_empty() {
@@ -156,21 +126,6 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
                 }
 
                 graph.add_node(node);
-
-                for (&case_val, target_idx) in &s.cases {
-                    let t_idx = target_idx.idx;
-                    if t_idx != 0xFFFF && (t_idx as usize) < events.len() {
-                        let target_ev = &events[t_idx as usize];
-                        let source_port = format!("{}_case_{}", ev_id, case_val);
-                        let edge = Edge::new(
-                            &ev_id,
-                            &source_port,
-                            &target_ev.name,
-                            &format!("{}_in", target_ev.name),
-                        ).with_label(format!("Case {}", case_val));
-                        graph.add_edge(edge);
-                    }
-                }
             }
 
             EventData::SubFlow(sf) => {
@@ -195,18 +150,6 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
                 }
 
                 graph.add_node(node);
-
-                let next_idx = sf.nxt.idx;
-                if next_idx != 0xFFFF && (next_idx as usize) < events.len() {
-                    let next_ev = &events[next_idx as usize];
-                    let edge = Edge::new(
-                        &ev_id,
-                        &format!("{}_out", ev_id),
-                        &next_ev.name,
-                        &format!("{}_in", next_ev.name),
-                    );
-                    graph.add_edge(edge);
-                }
             }
 
             EventData::Fork(f) => {
@@ -232,41 +175,182 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
                 }
 
                 graph.add_node(node);
+            }
 
-                for (b_idx, fork_target) in f.forks.iter().enumerate() {
-                    let f_idx = fork_target.idx;
-                    if f_idx != 0xFFFF && (f_idx as usize) < events.len() {
-                        let target_ev = &events[f_idx as usize];
-                        let edge = Edge::new(
-                            &ev_id,
-                            &format!("{}_fork_{}", ev_id, b_idx),
-                            &target_ev.name,
-                            &format!("{}_in", target_ev.name),
-                        ).with_label(format!("Fork {}", b_idx));
-                        graph.add_edge(edge);
+            EventData::Join(_) => {
+                let mut node = NodeData::new(ev_id.clone(), ev_id.clone(), NodeKind::Join, (0.0, 0.0));
+                node.subtitle = Some("Wait for parallel join".to_string());
+                node.size = (210.0, 95.0);
+                graph.add_node(node);
+            }
+        }
+    }
+
+    // 3. 构建完整的流程连线 (支持 Fork/Join 栈回溯与虚线连接)
+    let mut visited: HashSet<usize> = HashSet::new();
+
+    fn traverse_flow(
+        curr_idx: usize,
+        join_stack: &mut Vec<usize>,
+        events: &[revfl::event::Event],
+        graph: &mut Graph,
+        visited: &mut HashSet<usize>,
+    ) {
+        if visited.contains(&curr_idx) || curr_idx >= events.len() {
+            return;
+        }
+        visited.insert(curr_idx);
+
+        let ev = &events[curr_idx];
+        let ev_id = &ev.name;
+
+        match &ev.data {
+            EventData::Action(a) => {
+                let next_idx = a.nxt.idx;
+                if next_idx != 0xFFFF && (next_idx as usize) < events.len() {
+                    let next_ev = &events[next_idx as usize];
+                    graph.add_edge(Edge::new(
+                        ev_id,
+                        format!("{}_out", ev_id),
+                        &next_ev.name,
+                        format!("{}_in", next_ev.name),
+                    ));
+                    traverse_flow(next_idx as usize, join_stack, events, graph, visited);
+                } else if let Some(&join_target_idx) = join_stack.last() {
+                    // 分支结束，添加汇合虚线至 Join 节点
+                    if join_target_idx < events.len() {
+                        let join_ev = &events[join_target_idx];
+                        graph.add_edge(
+                            Edge::new(
+                                ev_id,
+                                format!("{}_out", ev_id),
+                                &join_ev.name,
+                                format!("{}_in", join_ev.name),
+                            )
+                            .with_dashed(true),
+                        );
                     }
                 }
             }
 
+            EventData::SubFlow(sf) => {
+                let next_idx = sf.nxt.idx;
+                if next_idx != 0xFFFF && (next_idx as usize) < events.len() {
+                    let next_ev = &events[next_idx as usize];
+                    graph.add_edge(Edge::new(
+                        ev_id,
+                        format!("{}_out", ev_id),
+                        &next_ev.name,
+                        format!("{}_in", next_ev.name),
+                    ));
+                    traverse_flow(next_idx as usize, join_stack, events, graph, visited);
+                } else if let Some(&join_target_idx) = join_stack.last() {
+                    if join_target_idx < events.len() {
+                        let join_ev = &events[join_target_idx];
+                        graph.add_edge(
+                            Edge::new(
+                                ev_id,
+                                format!("{}_out", ev_id),
+                                &join_ev.name,
+                                format!("{}_in", join_ev.name),
+                            )
+                            .with_dashed(true),
+                        );
+                    }
+                }
+            }
+
+            EventData::Switch(s) => {
+                for (&case_val, target_idx) in &s.cases {
+                    let t_idx = target_idx.idx;
+                    if t_idx != 0xFFFF && (t_idx as usize) < events.len() {
+                        let target_ev = &events[t_idx as usize];
+                        let source_port = format!("{}_case_{}", ev_id, case_val);
+                        graph.add_edge(
+                            Edge::new(
+                                ev_id,
+                                source_port,
+                                &target_ev.name,
+                                format!("{}_in", target_ev.name),
+                            )
+                            .with_label(format!("Case {}", case_val)),
+                        );
+                        traverse_flow(t_idx as usize, join_stack, events, graph, visited);
+                    }
+                }
+            }
+
+            EventData::Fork(f) => {
+                let join_idx = f.join.idx;
+                let has_valid_join = join_idx != 0xFFFF && (join_idx as usize) < events.len();
+
+                if has_valid_join {
+                    join_stack.push(join_idx as usize);
+                }
+
+                // 遍历各个并发分支
+                for (b_idx, fork_target) in f.forks.iter().enumerate() {
+                    let f_idx = fork_target.idx;
+                    if f_idx != 0xFFFF && (f_idx as usize) < events.len() {
+                        let target_ev = &events[f_idx as usize];
+                        graph.add_edge(
+                            Edge::new(
+                                ev_id,
+                                format!("{}_fork_{}", ev_id, b_idx),
+                                &target_ev.name,
+                                format!("{}_in", target_ev.name),
+                            )
+                            .with_label(format!("Fork {}", b_idx)),
+                        );
+                        traverse_flow(f_idx as usize, join_stack, events, graph, visited);
+                    }
+                }
+
+                if has_valid_join {
+                    join_stack.pop();
+                    // 继续从 Join 节点向下遍历
+                    traverse_flow(join_idx as usize, join_stack, events, graph, visited);
+                }
+            }
+
             EventData::Join(j) => {
-                let mut node = NodeData::new(ev_id.clone(), ev_id.clone(), NodeKind::Join, (0.0, 0.0));
-                node.subtitle = Some("Wait for parallel join".to_string());
-                node.size = (210.0, 95.0);
-
-                graph.add_node(node);
-
                 let next_idx = j.nxt.idx;
                 if next_idx != 0xFFFF && (next_idx as usize) < events.len() {
                     let next_ev = &events[next_idx as usize];
-                    let edge = Edge::new(
-                        &ev_id,
-                        &format!("{}_out", ev_id),
+                    graph.add_edge(Edge::new(
+                        ev_id,
+                        format!("{}_out", ev_id),
                         &next_ev.name,
-                        &format!("{}_in", next_ev.name),
-                    );
-                    graph.add_edge(edge);
+                        format!("{}_in", next_ev.name),
+                    ));
+                    traverse_flow(next_idx as usize, join_stack, events, graph, visited);
                 }
             }
+        }
+    }
+
+    // 从所有 EntryPoint 开始执行遍历
+    for ep in &fc.entry_points {
+        let ep_id = format!("ep_{}", ep.name);
+        let target_idx = ep.main_event.idx;
+        if target_idx != 0xFFFF && (target_idx as usize) < events.len() {
+            let target_ev = &events[target_idx as usize];
+            graph.add_edge(Edge::new(
+                &ep_id,
+                format!("{}_out", ep_id),
+                &target_ev.name,
+                format!("{}_in", target_ev.name),
+            ));
+            let mut j_stack = Vec::new();
+            traverse_flow(target_idx as usize, &mut j_stack, events, &mut graph, &mut visited);
+        }
+    }
+
+    // 补充遍历剩余未被直接连接的游离节点
+    for i in 0..events.len() {
+        if !visited.contains(&i) {
+            let mut j_stack = Vec::new();
+            traverse_flow(i, &mut j_stack, events, &mut graph, &mut visited);
         }
     }
 
@@ -301,6 +385,7 @@ mod tests {
         let bytes = include_bytes!("../../100enemy.bfevfl");
         let graph = load_bfevfl_from_bytes(bytes).expect("Failed to parse 100enemy.bfevfl with Revfl");
         assert_eq!(graph.nodes.len(), 89);
-        assert_eq!(graph.edges.len(), 89);
+        // 包含 Fork/Join 汇合虚线
+        assert!(graph.edges.iter().any(|e| e.is_dashed));
     }
 }

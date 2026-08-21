@@ -20,7 +20,7 @@ fn eval_cubic_bezier(
     (x, y)
 }
 
-/// 绘制基于图2规范的垂直平滑贝塞尔曲线（支持实线与汇合虚线 Dashed Curve）
+/// 绘制基于图2规范的垂直平滑贝塞尔曲线（消除斜线马赛克包围盒，支持平滑实线与汇合虚线）
 fn draw_bezier_edge(
     start: (f32, f32),
     end: (f32, f32),
@@ -33,51 +33,52 @@ fn draw_bezier_edge(
     let ctrl1 = (start.0, start.1 + dy * 0.45);
     let ctrl2 = (end.0, end.1 - dy * 0.45);
 
-    let segments = if is_dashed { 32 } else { 24 };
-    let mut prev_pt = start;
+    let dx = end.0 - start.0;
+    let dist = (dx * dx + (end.1 - start.1) * (end.1 - start.1)).sqrt();
+    let num_samples = (dist * 0.9).clamp(36.0, 200.0) as usize;
 
-    for i in 1..=segments {
-        let t = (i as f32) / (segments as f32);
-        let curr_pt = eval_cubic_bezier(start, ctrl1, ctrl2, end, t);
+    let dot_size = stroke_width.max(1.5);
+    let half_dot = dot_size * 0.5;
 
-        // 虚线模式：每 4 段跳过 2 段形成虚线效果 (对应 React Flow strokeDasharray: 5,5)
-        if is_dashed && (i % 4 >= 2) {
-            prev_pt = curr_pt;
+    for i in 0..=num_samples {
+        // 虚线模式：每 12 个采样点跳过 6 个形成清晰均匀的虚线 (对应 React Flow strokeDasharray: 5,5)
+        if is_dashed && ((i / 6) % 2 == 1) {
             continue;
         }
 
-        let min_x = prev_pt.0.min(curr_pt.0);
-        let min_y = prev_pt.1.min(curr_pt.1);
-        let max_x = prev_pt.0.max(curr_pt.0) + stroke_width;
-        let max_y = prev_pt.1.max(curr_pt.1) + stroke_width;
+        let t = (i as f32) / (num_samples as f32);
+        let pt = eval_cubic_bezier(start, ctrl1, ctrl2, end, t);
 
         window.paint_quad(fill(
             Bounds {
                 origin: Point {
-                    x: px(min_x - stroke_width / 2.0),
-                    y: px(min_y - stroke_width / 2.0),
+                    x: px(pt.0 - half_dot),
+                    y: px(pt.1 - half_dot),
                 },
-                size: size(px(max_x - min_x + stroke_width), px(max_y - min_y + stroke_width)),
+                size: size(px(dot_size), px(dot_size)),
             },
             color,
         ));
-
-        prev_pt = curr_pt;
     }
 
-    // 终点闭合三角箭头 (Closed Arrowhead)
-    let arrow_w = (stroke_width * 3.5).clamp(4.0, 10.0);
-    let arrow_h = (stroke_width * 3.0).clamp(3.5, 9.0);
-    window.paint_quad(fill(
-        Bounds {
-            origin: Point {
-                x: px(end.0 - arrow_w * 0.5),
-                y: px(end.1 - arrow_h),
+    // 终点闭合向下三角箭头 (Closed Arrowhead)
+    let arrow_w = (stroke_width * 3.5).clamp(4.5, 10.0);
+    let arrow_h = (stroke_width * 3.0).clamp(4.0, 9.0);
+    for s in 0..4 {
+        let f = (s as f32) / 4.0;
+        let w = arrow_w * (1.0 - f * 0.85);
+        let y = end.1 - arrow_h * (1.0 - f);
+        window.paint_quad(fill(
+            Bounds {
+                origin: Point {
+                    x: px(end.0 - w * 0.5),
+                    y: px(y),
+                },
+                size: size(px(w), px(arrow_h * 0.3)),
             },
-            size: size(px(arrow_w), px(arrow_h)),
-        },
-        color,
-    ));
+            color,
+        ));
+    }
 }
 
 pub fn render_edges_layer(
@@ -104,14 +105,14 @@ pub fn render_edges_layer(
             let ey = t_node.pos.1 + t_offset.1;
 
             let is_entry_point = s_node.kind == NodeKind::EntryPoint;
-            let is_join_target = t_node.kind == NodeKind::Join;
+            let is_dashed = edge.is_dashed || t_node.kind == NodeKind::Join;
 
             edge_items.push((
                 edge.source_node_id.clone(),
                 edge.target_node_id.clone(),
                 edge.label.clone(),
                 is_entry_point,
-                is_join_target,
+                is_dashed,
                 (sx, sy),
                 (ex, ey),
             ));
@@ -152,7 +153,7 @@ pub fn render_edges_layer(
                     // - 并行汇合连线 (连接到 Join 节点): 虚线 (#94a3b8)
                     // - 普通/分支事件连线: 石板灰蓝 (#94a3b8)
                     // - 切刀模式: 警示红 (#ef4444)
-                    for (_, _, _, is_entry_point, is_join_target, (sx, sy), (ex, ey)) in &edge_items_clone {
+                    for (_, _, _, is_entry_point, is_dashed, (sx, sy), (ex, ey)) in &edge_items_clone {
                         let screen_sx = orig_x + pan.0 + sx * zoom;
                         let screen_sy = orig_y + pan.1 + sy * zoom;
                         let screen_ex = orig_x + pan.0 + ex * zoom;
@@ -171,7 +172,7 @@ pub fn render_edges_layer(
                             (screen_ex, screen_ey),
                             edge_color,
                             if *is_entry_point { stroke_w * 1.15 } else { stroke_w },
-                            *is_join_target,
+                            *is_dashed,
                             window,
                         );
                     }
