@@ -20,16 +20,16 @@ fn eval_cubic_bezier(
     (x, y)
 }
 
-fn draw_bezier_curve(
+fn draw_vertical_bezier_curve(
     start: (f32, f32),
     end: (f32, f32),
     color: Hsla,
     stroke_width: f32,
     window: &mut Window,
 ) {
-    let dx = (end.0 - start.0).abs().max(40.0);
-    let ctrl1 = (start.0 + dx * 0.45, start.1);
-    let ctrl2 = (end.0 - dx * 0.45, end.1);
+    let dy = (end.1 - start.1).abs().max(40.0);
+    let ctrl1 = (start.0, start.1 + dy * 0.45);
+    let ctrl2 = (end.0, end.1 - dy * 0.45);
 
     let segments = 24;
     let mut prev_pt = start;
@@ -57,13 +57,13 @@ fn draw_bezier_curve(
         prev_pt = curr_pt;
     }
 
-    // Draw end arrow head
+    // Draw end arrow head pointing downwards
     let arrow_size = (stroke_width * 3.0).max(6.0);
     window.paint_quad(fill(
         Bounds {
             origin: Point {
-                x: px(end.0 - arrow_size * 0.7),
-                y: px(end.1 - arrow_size * 0.5),
+                x: px(end.0 - arrow_size * 0.5),
+                y: px(end.1 - arrow_size * 0.8),
             },
             size: size(px(arrow_size), px(arrow_size)),
         },
@@ -71,16 +71,16 @@ fn draw_bezier_curve(
     ));
 }
 
-fn draw_flowing_particles(
+fn draw_vertical_flowing_particles(
     start: (f32, f32),
     end: (f32, f32),
     particle_color: Hsla,
     particle_size: f32,
     window: &mut Window,
 ) {
-    let dx = (end.0 - start.0).abs().max(40.0);
-    let ctrl1 = (start.0 + dx * 0.45, start.1);
-    let ctrl2 = (end.0 - dx * 0.45, end.1);
+    let dy = (end.1 - start.1).abs().max(40.0);
+    let ctrl1 = (start.0, start.1 + dy * 0.45);
+    let ctrl2 = (end.0, end.1 - dy * 0.45);
 
     // Calculate phase based on system time for smooth 60fps flowing animation
     let time_ms = std::time::SystemTime::now()
@@ -133,20 +133,20 @@ pub fn render_edges_layer(
     let knife_mode = state.knife_mode;
     let particles_enabled = state.particles_enabled;
 
-    // Collect all edge coordinates
+    // Collect all edge coordinates from bottom of source to top of target
     let mut edge_coords = Vec::new();
     for edge in &state.graph.edges {
         if let (Some(s_node), Some(t_node)) = (
             state.graph.find_node(&edge.source_node_id),
             state.graph.find_node(&edge.target_node_id),
         ) {
-            let s_offset_y = s_node.get_port_offset_y(&edge.source_port_id, PortDirection::Output);
-            let t_offset_y = t_node.get_port_offset_y(&edge.target_port_id, PortDirection::Input);
+            let s_offset = s_node.get_port_offset(&edge.source_port_id, PortDirection::Output);
+            let t_offset = t_node.get_port_offset(&edge.target_port_id, PortDirection::Input);
 
-            let sx = s_node.pos.0 + s_node.size.0;
-            let sy = s_node.pos.1 + s_offset_y;
-            let ex = t_node.pos.0;
-            let ey = t_node.pos.1 + t_offset_y;
+            let sx = s_node.pos.0 + s_offset.0;
+            let sy = s_node.pos.1 + s_offset.1;
+            let ex = t_node.pos.0 + t_offset.0;
+            let ey = t_node.pos.1 + t_offset.1;
 
             edge_coords.push((
                 edge.source_node_id.clone(),
@@ -203,7 +203,7 @@ pub fn render_edges_layer(
                         let screen_ex = orig_x + pan.0 + ex * zoom;
                         let screen_ey = orig_y + pan.1 + ey * zoom;
 
-                        draw_bezier_curve(
+                        draw_vertical_bezier_curve(
                             (screen_sx, screen_sy),
                             (screen_ex, screen_ey),
                             default_edge_color,
@@ -212,7 +212,7 @@ pub fn render_edges_layer(
                         );
 
                         if particles_enabled && !knife_mode {
-                            draw_flowing_particles(
+                            draw_vertical_flowing_particles(
                                 (screen_sx, screen_sy),
                                 (screen_ex, screen_ey),
                                 particle_color,
@@ -230,7 +230,7 @@ pub fn render_edges_layer(
                         let screen_ey = orig_y + pan.1 + end_pt.1 * zoom;
 
                         let live_color = hsla(45.0 / 360.0, 0.95, 0.60, 0.95);
-                        draw_bezier_curve(
+                        draw_vertical_bezier_curve(
                             (screen_sx, screen_sy),
                             (screen_ex, screen_ey),
                             live_color,
@@ -244,7 +244,6 @@ pub fn render_edges_layer(
         )
         // Edge interactive badges (Branch labels and Knife cut triggers)
         .children(edge_coords.into_iter().filter_map(move |(s_id, t_id, label, (sx, sy), (ex, ey))| {
-            // Only render badge if knife mode is active or edge has a label
             if !knife_mode && label.is_none() {
                 return None;
             }

@@ -201,15 +201,26 @@ impl NodeData {
         self.outputs.iter().find(|p| p.id == port_id)
     }
 
-    pub fn get_port_offset_y(&self, port_id: &str, dir: PortDirection) -> f32 {
-        let ports = match dir {
-            PortDirection::Input => &self.inputs,
-            PortDirection::Output => &self.outputs,
-        };
+    pub fn get_port_offset(&self, port_id: &str, dir: PortDirection) -> (f32, f32) {
+        match dir {
+            PortDirection::Input => {
+                let idx = self.inputs.iter().position(|p| p.id == port_id).unwrap_or(0);
+                let total = self.inputs.len().max(1);
+                let step = self.size.0 / (total as f32 + 1.0);
+                let offset_x = step * (idx as f32 + 1.0);
+                (offset_x, 0.0)
+            }
+            PortDirection::Output => {
+                let idx = self.outputs.iter().position(|p| p.id == port_id).unwrap_or(0);
+                let total = self.outputs.len().max(1);
+                let step = self.size.0 / (total as f32 + 1.0);
+                let offset_x = step * (idx as f32 + 1.0);
+                (offset_x, self.size.1)
+            }
+        }
+    }
 
-        let idx = ports.iter().position(|p| p.id == port_id).unwrap_or(0);
-        let header_height = 36.0;
-        let port_spacing = 26.0;
-        header_height + 16.0 + (idx as f32) * port_spacing
+    pub fn get_port_offset_y(&self, port_id: &str, dir: PortDirection) -> f32 {
+        self.get_port_offset(port_id, dir).1
     }
 }

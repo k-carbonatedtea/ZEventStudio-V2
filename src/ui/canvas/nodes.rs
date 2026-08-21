@@ -34,10 +34,23 @@ fn render_single_node(
 
     let screen_x = pan.0 + node.pos.0 * zoom;
     let screen_y = pan.1 + node.pos.1 * zoom;
-    let node_w = node.size.0 * zoom;
+    let node_w = (node.size.0 * zoom).max(16.0);
+    let node_h = (node.size.1 * zoom).max(12.0);
 
     let node_id = node.id.clone();
     let model_header_drag = model.clone();
+
+    // Responsive scaling variables with zoom
+    let z = zoom;
+    let font_title = (12.0 * z).clamp(2.0, 24.0);
+    let font_sub = (9.5 * z).clamp(2.0, 18.0);
+    let font_prop = (9.0 * z).clamp(2.0, 16.0);
+    let font_badge = (8.5 * z).clamp(2.0, 14.0);
+    let pad_x = (8.0 * z).clamp(1.0, 16.0);
+    let pad_y = (4.0 * z).clamp(1.0, 10.0);
+    let icon_size = (13.0 * z).clamp(3.0, 26.0);
+    let socket_size = (9.0 * z).clamp(3.0, 14.0);
+    let corner_radius = (10.0 * z).clamp(2.0, 14.0);
 
     div()
         .id(SharedString::from(format!("node_{}", node.id)))
@@ -45,7 +58,8 @@ fn render_single_node(
         .left(px(screen_x))
         .top(px(screen_y))
         .w(px(node_w))
-        .rounded_xl()
+        .h(px(node_h))
+        .rounded(px(corner_radius))
         .bg(hsla(220.0 / 360.0, 0.35, 0.12, 0.96))
         .border_2()
         .border_color(if is_selected {
@@ -55,129 +69,106 @@ fn render_single_node(
         })
         .shadow_xl()
         .cursor_default()
-        // Header
+        // Card Main Content Area
         .child(
             div()
+                .size_full()
+                .overflow_hidden()
                 .flex()
-                .items_center()
-                .justify_between()
-                .px_3()
-                .py_2()
-                .rounded_t_lg()
-                .bg(header_bg)
-                .border_b_1()
-                .border_color(header_border)
-                .cursor_move()
-                .on_mouse_down(MouseButton::Left, move |e, _, cx| {
-                    let id = node_id.clone();
-                    let mx: f32 = e.position.x.into();
-                    let my: f32 = e.position.y.into();
-                    model_header_drag.update(cx, |state, cx| {
-                        state.selected_node_id = Some(id.clone());
-                        let init_positions = state
-                            .graph
-                            .nodes
-                            .iter()
-                            .map(|n| (n.id.clone(), n.pos))
-                            .collect();
-                        state.drag_state = DragState::DragNodes {
-                            start_mouse: (mx, my),
-                            initial_positions: init_positions,
-                        };
-                        cx.notify();
-                    });
-                })
+                .flex_col()
+                // Header (Draggable)
                 .child(
                     div()
                         .flex()
                         .items_center()
-                        .gap_1p5()
-                        .child(
-                            div()
-                                .text_size(px(14.0 * zoom.clamp(0.8, 1.2)))
-                                .child(node.kind.icon()),
-                        )
-                        .child(
-                            div()
-                                .font_weight(FontWeight::BOLD)
-                                .text_size(px(12.0 * zoom.clamp(0.8, 1.2)))
-                                .text_color(rgb(0xffffff))
-                                .child(node.title.clone()),
-                        ),
-                )
-                .child(
-                    div()
-                        .text_size(px(9.5 * zoom.clamp(0.8, 1.1)))
-                        .px_1p5()
-                        .py_0p5()
-                        .rounded_sm()
-                        .bg(hsla(0.0, 0.0, 0.0, 0.3))
-                        .text_color(hsla(0.0, 0.0, 0.95, 0.85))
-                        .child(node.kind.display_name()),
-                ),
-        )
-        // Subtitle / info tag
-        .children(node.subtitle.as_ref().map(|sub| {
-            div()
-                .px_3()
-                .pt_1()
-                .text_size(px(10.0 * zoom.clamp(0.75, 1.1)))
-                .text_color(hsla(215.0 / 360.0, 0.25, 0.65, 1.0))
-                .child(sub.clone())
-        }))
-        // Body (Ports & Parameters)
-        .child(
-            div()
-                .p_2()
-                .flex()
-                .flex_col()
-                .gap_2()
-                // Ports area
-                .child(
-                    div()
-                        .flex()
                         .justify_between()
-                        .gap_2()
-                        // Inputs column
+                        .px(px(pad_x))
+                        .py(px(pad_y))
+                        .bg(header_bg)
+                        .border_b_1()
+                        .border_color(header_border)
+                        .cursor_move()
+                        .on_mouse_down(MouseButton::Left, move |e, _, cx| {
+                            let id = node_id.clone();
+                            let mx: f32 = e.position.x.into();
+                            let my: f32 = e.position.y.into();
+                            model_header_drag.update(cx, |state, cx| {
+                                state.selected_node_id = Some(id.clone());
+                                let init_positions = state
+                                    .graph
+                                    .nodes
+                                    .iter()
+                                    .map(|n| (n.id.clone(), n.pos))
+                                    .collect();
+                                state.drag_state = DragState::DragNodes {
+                                    start_mouse: (mx, my),
+                                    initial_positions: init_positions,
+                                };
+                                cx.notify();
+                            });
+                        })
                         .child(
                             div()
                                 .flex()
-                                .flex_col()
-                                .gap_1p5()
-                                .items_start()
-                                .children(node.inputs.iter().map(|p| {
-                                    render_input_port(p, &node.id, zoom, connecting_state, model)
-                                })),
+                                .items_center()
+                                .gap(px((4.0 * z).max(1.0)))
+                                .child(
+                                    div()
+                                        .text_size(px(icon_size))
+                                        .child(node.kind.icon()),
+                                )
+                                .child(
+                                    div()
+                                        .font_weight(FontWeight::BOLD)
+                                        .text_size(px(font_title))
+                                        .text_color(rgb(0xffffff))
+                                        .child(node.title.clone()),
+                                ),
                         )
-                        // Outputs column
-                        .child(
-                            div()
-                                .flex()
-                                .flex_col()
-                                .gap_1p5()
-                                .items_end()
-                                .children(node.outputs.iter().map(|p| {
-                                    render_output_port(p, node, zoom, model)
-                                })),
-                        ),
+                        .children(if z >= 0.45 {
+                            Some(
+                                div()
+                                    .text_size(px(font_badge))
+                                    .px(px((4.0 * z).max(1.0)))
+                                    .py(px((1.0 * z).max(0.5)))
+                                    .rounded_sm()
+                                    .bg(hsla(0.0, 0.0, 0.0, 0.3))
+                                    .text_color(hsla(0.0, 0.0, 0.95, 0.85))
+                                    .child(node.kind.display_name()),
+                            )
+                        } else {
+                            None
+                        }),
                 )
-                // Properties summary preview
-                .children(if !node.properties.is_empty() {
+                // Subtitle / Actor Scope
+                .children(if z >= 0.40 {
+                    node.subtitle.as_ref().map(|sub| {
+                        div()
+                            .px(px(pad_x))
+                            .pt(px((2.0 * z).max(1.0)))
+                            .text_size(px(font_sub))
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(hsla(45.0 / 360.0, 0.85, 0.70, 1.0))
+                            .child(sub.clone())
+                    })
+                } else {
+                    None
+                })
+                // Properties list
+                .children(if z >= 0.50 && !node.properties.is_empty() {
                     Some(
                         div()
-                            .mt_1()
-                            .pt_1p5()
-                            .border_t_1()
-                            .border_color(hsla(220.0 / 360.0, 0.2, 0.22, 1.0))
+                            .px(px(pad_x))
+                            .py(px(pad_y))
                             .flex()
                             .flex_col()
-                            .gap_1()
+                            .gap(px((2.0 * z).max(1.0)))
                             .children(node.properties.iter().take(3).map(|prop| {
                                 div()
                                     .flex()
                                     .items_center()
                                     .justify_between()
-                                    .text_size(px(9.5 * zoom.clamp(0.75, 1.05)))
+                                    .text_size(px(font_prop))
                                     .child(
                                         div()
                                             .text_color(hsla(215.0 / 360.0, 0.2, 0.55, 1.0))
@@ -199,12 +190,24 @@ fn render_single_node(
                     None
                 }),
         )
+        // Absolute Positioned Top Input Sockets (Matches get_port_offset exactly)
+        .children(node.inputs.iter().map(|p| {
+            let offset = node.get_port_offset(&p.id, PortDirection::Input);
+            render_absolute_input_socket(p, &node.id, offset, z, socket_size, connecting_state, model)
+        }))
+        // Absolute Positioned Bottom Output Sockets (Matches get_port_offset exactly)
+        .children(node.outputs.iter().map(|p| {
+            let offset = node.get_port_offset(&p.id, PortDirection::Output);
+            render_absolute_output_socket(p, node, offset, z, socket_size, model)
+        }))
 }
 
-fn render_input_port(
+fn render_absolute_input_socket(
     port: &Port,
     node_id: &str,
+    offset: (f32, f32),
     zoom: f32,
+    socket_size: f32,
     connecting_state: &DragState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
@@ -219,10 +222,22 @@ fn render_input_port(
         PortType::Data => hsla(200.0 / 360.0, 0.85, 0.60, 1.0),
     };
 
+    let sx = offset.0 * zoom - socket_size / 2.0;
+    let sy = -socket_size / 2.0;
+
     div()
-        .flex()
-        .items_center()
-        .gap_1p5()
+        .absolute()
+        .left(px(sx))
+        .top(px(sy))
+        .size(px(socket_size))
+        .rounded_full()
+        .bg(port_color)
+        .border_2()
+        .border_color(if is_connecting {
+            hsla(45.0 / 360.0, 0.95, 0.65, 1.0)
+        } else {
+            hsla(220.0 / 360.0, 0.35, 0.15, 1.0)
+        })
         .cursor_pointer()
         .hover(|s| s.opacity(0.85))
         .on_mouse_up(MouseButton::Left, move |_, _, cx| {
@@ -236,38 +251,19 @@ fn render_input_port(
                 cx.notify();
             });
         })
-        // Port socket dot
-        .child(
-            div()
-                .size(px(10.0 * zoom.clamp(0.8, 1.2)))
-                .rounded_full()
-                .bg(port_color)
-                .border_2()
-                .border_color(if is_connecting {
-                    hsla(45.0 / 360.0, 0.95, 0.65, 1.0)
-                } else {
-                    hsla(220.0 / 360.0, 0.35, 0.15, 1.0)
-                }),
-        )
-        // Port label
-        .child(
-            div()
-                .text_size(px(10.0 * zoom.clamp(0.75, 1.1)))
-                .text_color(hsla(0.0, 0.0, 0.85, 1.0))
-                .child(port.name.clone()),
-        )
 }
 
-fn render_output_port(
+fn render_absolute_output_socket(
     port: &Port,
     node: &NodeData,
+    offset: (f32, f32),
     zoom: f32,
+    socket_size: f32,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
     let port_id = port.id.clone();
     let n_id = node.id.clone();
-    let port_offset_y = node.get_port_offset_y(&port.id, PortDirection::Output);
-    let port_pos = (node.pos.0 + node.size.0, node.pos.1 + port_offset_y);
+    let port_pos = (node.pos.0 + offset.0, node.pos.1 + offset.1);
     let model_start_wire = model.clone();
 
     let port_color = match port.port_type {
@@ -276,10 +272,18 @@ fn render_output_port(
         PortType::Data => hsla(200.0 / 360.0, 0.85, 0.60, 1.0),
     };
 
+    let sx = offset.0 * zoom - socket_size / 2.0;
+    let sy = offset.1 * zoom - socket_size / 2.0;
+
     div()
-        .flex()
-        .items_center()
-        .gap_1p5()
+        .absolute()
+        .left(px(sx))
+        .top(px(sy))
+        .size(px(socket_size))
+        .rounded_full()
+        .bg(port_color)
+        .border_2()
+        .border_color(hsla(220.0 / 360.0, 0.35, 0.15, 1.0))
         .cursor_crosshair()
         .hover(|s| s.opacity(0.85))
         .on_mouse_down(MouseButton::Left, move |e, _, cx| {
@@ -297,20 +301,4 @@ fn render_output_port(
                 cx.notify();
             });
         })
-        // Port label
-        .child(
-            div()
-                .text_size(px(10.0 * zoom.clamp(0.75, 1.1)))
-                .text_color(hsla(0.0, 0.0, 0.85, 1.0))
-                .child(port.name.clone()),
-        )
-        // Port socket dot
-        .child(
-            div()
-                .size(px(10.0 * zoom.clamp(0.8, 1.2)))
-                .rounded_full()
-                .bg(port_color)
-                .border_2()
-                .border_color(hsla(220.0 / 360.0, 0.35, 0.15, 1.0)),
-        )
 }

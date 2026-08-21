@@ -1,7 +1,8 @@
 use super::graph::Graph;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-/// 纯 Rust 拓扑分层排版算法 (Sugiyama Layered DAG Layout, 支持多连通分量与多入口流)
+/// 纯 Rust 垂直流拓扑分层排版算法 (Vertical Top-to-Bottom Sugiyama DAG Layout)
+/// 入口点 (EntryPoint) 位于顶部，各子剧情流向下延展，多个子流程从左到右并行排列
 pub fn auto_layout_graph(graph: &mut Graph) {
     if graph.nodes.is_empty() {
         return;
@@ -14,7 +15,7 @@ pub fn auto_layout_graph(graph: &mut Graph) {
         .map(|(idx, n)| (n.id.clone(), idx))
         .collect();
 
-    // 1. 构建有向邻接表与无向连通分量邻接表
+    // 1. 构建有向邻接表、无向连通分量邻接表与入度
     let mut directed_adj: HashMap<String, Vec<String>> = HashMap::new();
     let mut undirected_adj: HashMap<String, HashSet<String>> = HashMap::new();
     let mut in_degrees: HashMap<String, usize> = HashMap::new();
@@ -44,11 +45,11 @@ pub fn auto_layout_graph(graph: &mut Graph) {
         }
     }
 
-    // 2. 识别所有连通分量 (Connected Components)，保证各 EntryPoint 独立分支不重叠
+    // 2. 识别所有连通分量 (Connected Components)，每个分量对应一个独立的垂直流通道
     let mut visited_comp: HashSet<String> = HashSet::new();
     let mut components: Vec<Vec<String>> = Vec::new();
 
-    // 优先从 EntryPoint 节点开始切分分量，使主流程排列在上方
+    // 优先从 EntryPoint 节点开始切分，确保各个入口排在醒目位置
     let mut ordered_node_ids: Vec<String> = graph.nodes.iter().map(|n| n.id.clone()).collect();
     ordered_node_ids.sort_by_key(|id| {
         if id.starts_with("ep_") {
@@ -80,17 +81,19 @@ pub fn auto_layout_graph(graph: &mut Graph) {
         }
     }
 
-    // 3. 对每个连通分量独立进行拓扑分层与排版
+    // 3. 垂直排版参数
     let start_x = 80.0;
-    let mut current_comp_y = 80.0;
-    let layer_spacing_x = 340.0;
-    let node_spacing_y = 36.0;
-    let component_spacing_y = 70.0;
+    let start_y = 80.0;
+    let layer_spacing_y = 220.0; // 垂直层级间距 (卡片高度 ~130px + 间隙 ~90px)
+    let node_spacing_x = 48.0;   // 同层平行分支横向间距
+    let component_spacing_x = 96.0; // 独立流程泳道横向间距
+
+    let mut current_comp_x = start_x;
 
     for comp in &components {
         let comp_nodes_set: HashSet<&String> = comp.iter().collect();
 
-        // 局部入度
+        // 计算当前分量内部入度
         let mut local_in_degrees: HashMap<String, usize> = HashMap::new();
         for id in comp {
             local_in_degrees.insert(id.clone(), 0);
@@ -105,7 +108,7 @@ pub fn auto_layout_graph(graph: &mut Graph) {
             }
         }
 
-        // 寻找当前分量的根节点 (入度为 0 或 EntryPoint)
+        // 寻找分量根节点 (入度为 0 或 EntryPoint) -> 赋予 Rank 0 (顶部)
         let mut ranks: HashMap<String, usize> = HashMap::new();
         let mut queue: VecDeque<String> = VecDeque::new();
 
@@ -144,7 +147,7 @@ pub fn auto_layout_graph(graph: &mut Graph) {
             }
         }
 
-        // 处理未遍历到的节点
+        // 补充未遍历节点
         for id in comp {
             ranks.entry(id.clone()).or_insert(0);
         }
@@ -159,44 +162,52 @@ pub fn auto_layout_graph(graph: &mut Graph) {
         let mut layer_indices: Vec<usize> = layers.keys().copied().collect();
         layer_indices.sort_unstable();
 
-        // 计算当前分量所需的最大高度
-        let mut comp_max_height = 0.0f32;
+        // 计算当前分量所需的最大总宽度 (横向宽度)
+        let mut comp_max_width = 0.0f32;
         for &l_idx in &layer_indices {
             if let Some(node_ids) = layers.get(&l_idx) {
-                let mut total_h = 0.0f32;
-                for id in node_ids {
+                let mut layer_w = 0.0f32;
+                for (i, id) in node_ids.iter().enumerate() {
                     if let Some(&n_idx) = node_indices.get(id) {
-                        total_h += graph.nodes[n_idx].size.1 + node_spacing_y;
+                        layer_w += graph.nodes[n_idx].size.0;
+                        if i > 0 {
+                            layer_w += node_spacing_x;
+                        }
                     }
                 }
-                comp_max_height = comp_max_height.max(total_h);
+                comp_max_width = comp_max_width.max(layer_w);
             }
         }
-        comp_max_height = comp_max_height.max(120.0);
+        comp_max_width = comp_max_width.max(240.0);
 
-        // 放置节点
+        // 垂直自顶向下放置节点 (Top-to-Bottom)
         for &l_idx in &layer_indices {
             if let Some(node_ids) = layers.get(&l_idx) {
-                let mut layer_h = 0.0f32;
-                for id in node_ids {
+                let mut layer_w = 0.0f32;
+                for (i, id) in node_ids.iter().enumerate() {
                     if let Some(&n_idx) = node_indices.get(id) {
-                        layer_h += graph.nodes[n_idx].size.1 + node_spacing_y;
+                        layer_w += graph.nodes[n_idx].size.0;
+                        if i > 0 {
+                            layer_w += node_spacing_x;
+                        }
                     }
                 }
 
-                let y_offset = (comp_max_height - layer_h) / 2.0;
-                let mut current_y = current_comp_y + y_offset.max(0.0);
-                let layer_x = start_x + (l_idx as f32) * layer_spacing_x;
+                // 本层节点在分量宽度内水平居中
+                let x_offset = (comp_max_width - layer_w) / 2.0;
+                let mut current_x = current_comp_x + x_offset.max(0.0);
+                let layer_y = start_y + (l_idx as f32) * layer_spacing_y;
 
                 for id in node_ids {
                     if let Some(&n_idx) = node_indices.get(id) {
-                        graph.nodes[n_idx].pos = (layer_x, current_y);
-                        current_y += graph.nodes[n_idx].size.1 + node_spacing_y;
+                        graph.nodes[n_idx].pos = (current_x, layer_y);
+                        current_x += graph.nodes[n_idx].size.0 + node_spacing_x;
                     }
                 }
             }
         }
 
-        current_comp_y += comp_max_height + component_spacing_y;
+        // 下一个独立子流程横向顺延
+        current_comp_x += comp_max_width + component_spacing_x;
     }
 }
