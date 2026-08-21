@@ -3532,6 +3532,7 @@ dependencies = [
  "revfl",
  "serde",
  "serde_json",
+ "smol",
  "uuid",
 ]
 
