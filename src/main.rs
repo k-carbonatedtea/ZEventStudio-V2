@@ -7,7 +7,7 @@ use gpui::*;
 use ui::AppView;
 
 fn main() {
-    Application::new().run(|cx: &mut App| {
+    gpui_platform::application().run(|cx: &mut App| {
         gpui_component::init(cx);
 
         let window_options = WindowOptions {

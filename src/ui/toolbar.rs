@@ -3,16 +3,20 @@ use crate::ui::state::AppState;
 
 pub fn render_toolbar(
     state: &AppState,
+    fps: f32,
+    frame_time: f32,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
     let zoom_pct = (state.zoom * 100.0).round() as i32;
     let knife_mode = state.knife_mode;
     let expand_all = state.expand_all_params;
-    let fps = state.fps;
+    let perf_mode = state.performance_mode;
 
     let model_layout = model.clone();
     let model_expand = model.clone();
     let model_knife = model.clone();
+    let model_perf = model.clone();
+    let model_fps_toggle = model.clone();
     let model_fit = model.clone();
     let model_zoom_in = model.clone();
     let model_zoom_out = model.clone();
@@ -20,7 +24,13 @@ pub fn render_toolbar(
     let model_lang = model.clone();
 
     // Dynamic FPS Indicator Color
-    let (fps_bg, fps_border, fps_dot) = if fps >= 50.0 {
+    let (fps_bg, fps_border, fps_dot) = if perf_mode {
+        (
+            hsla(15.0 / 360.0, 0.65, 0.20, 0.95),
+            hsla(25.0 / 360.0, 0.95, 0.55, 1.0),
+            hsla(25.0 / 360.0, 1.0, 0.60, 1.0),
+        )
+    } else if fps >= 50.0 {
         (
             hsla(145.0 / 360.0, 0.45, 0.16, 0.95),
             hsla(145.0 / 360.0, 0.70, 0.45, 1.0),
@@ -169,6 +179,43 @@ pub fn render_toolbar(
                             format!("📋 {}", state.t("toolbar.collapse_params"))
                         } else {
                             format!("📋 {}", state.t("toolbar.expand_params"))
+                        }),
+                )
+                // Performance Mode (GPU Extreme Performance Toggle)
+                .child(
+                    div()
+                        .px_3()
+                        .py_1p5()
+                        .rounded_lg()
+                        .bg(if perf_mode {
+                            hsla(15.0 / 360.0, 0.75, 0.28, 1.0)
+                        } else {
+                            hsla(220.0 / 360.0, 0.25, 0.18, 1.0)
+                        })
+                        .border_1()
+                        .border_color(if perf_mode {
+                            hsla(25.0 / 360.0, 0.90, 0.55, 1.0)
+                        } else {
+                            hsla(220.0 / 360.0, 0.25, 0.28, 1.0)
+                        })
+                        .hover(|s| s.opacity(0.85))
+                        .cursor_pointer()
+                        .flex()
+                        .items_center()
+                        .gap_1p5()
+                        .text_size(px(11.5))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(rgb(0xffffff))
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            model_perf.update(cx, |st, cx| {
+                                st.toggle_performance_mode();
+                                cx.notify();
+                            });
+                        })
+                        .child(if perf_mode {
+                            format!("🔥 {}", state.t("toolbar.perf_active"))
+                        } else {
+                            format!("⚡ {}", state.t("toolbar.perf_mode"))
                         }),
                 )
                 // Knife Mode Toggle
@@ -323,7 +370,7 @@ pub fn render_toolbar(
                         })
                         .child(state.t("toolbar.lang_btn")),
                 )
-                // Real-time FPS Capsule Badge
+                // Real-time FPS Capsule Badge (Clickable toggle for Performance Mode)
                 .child(
                     div()
                         .flex()
@@ -336,6 +383,14 @@ pub fn render_toolbar(
                         .border_1()
                         .border_color(fps_border)
                         .shadow_sm()
+                        .cursor_pointer()
+                        .hover(|s| s.opacity(0.88))
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            model_fps_toggle.update(cx, |st, cx| {
+                                st.toggle_performance_mode();
+                                cx.notify();
+                            });
+                        })
                         .child(
                             div()
                                 .size(px(7.0))
@@ -347,7 +402,11 @@ pub fn render_toolbar(
                                 .font_weight(FontWeight::BOLD)
                                 .text_size(px(11.0))
                                 .text_color(rgb(0xffffff))
-                                .child(format!("{:.0} FPS", fps)),
+                                .child(if perf_mode {
+                                    format!("🔥 {:.0} FPS ({:.1}ms)", fps, frame_time)
+                                } else {
+                                    format!("{:.0} FPS ({:.1}ms)", fps, frame_time)
+                                }),
                         ),
                 ),
         )

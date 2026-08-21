@@ -36,6 +36,11 @@ pub fn draw_canvas_grid(
     let dot_size = (1.6 * zoom.clamp(0.6, 1.2)).clamp(1.0, 2.4);
     let major_dot_size = dot_size * 1.5;
 
+    let mut normal_dots = PathBuilder::fill();
+    let mut major_dots = PathBuilder::fill();
+    let mut has_normal = false;
+    let mut has_major = false;
+
     let mut x = start_x;
     let mut col_idx = 0;
     while x <= orig_x + w {
@@ -44,23 +49,39 @@ pub fn draw_canvas_grid(
         while y <= orig_y + h {
             let is_major = (col_idx % 4 == 0) && (row_idx % 4 == 0);
             let cur_dot_size = if is_major { major_dot_size } else { dot_size };
-            let color = if is_major { major_dot_color } else { dot_color };
+            let r = cur_dot_size * 0.5;
 
-            window.paint_quad(fill(
-                Bounds {
-                    origin: Point {
-                        x: px(x - cur_dot_size * 0.5),
-                        y: px(y - cur_dot_size * 0.5),
-                    },
-                    size: size(px(cur_dot_size), px(cur_dot_size)),
-                },
-                color,
-            ));
+            if is_major {
+                has_major = true;
+                major_dots.move_to(point(px(x - r), px(y - r)));
+                major_dots.line_to(point(px(x + r), px(y - r)));
+                major_dots.line_to(point(px(x + r), px(y + r)));
+                major_dots.line_to(point(px(x - r), px(y + r)));
+                major_dots.close();
+            } else {
+                has_normal = true;
+                normal_dots.move_to(point(px(x - r), px(y - r)));
+                normal_dots.line_to(point(px(x + r), px(y - r)));
+                normal_dots.line_to(point(px(x + r), px(y + r)));
+                normal_dots.line_to(point(px(x - r), px(y + r)));
+                normal_dots.close();
+            }
 
             y += grid_step;
             row_idx += 1;
         }
         x += grid_step;
         col_idx += 1;
+    }
+
+    if has_normal {
+        if let Ok(path) = normal_dots.build() {
+            window.paint_path(path, dot_color);
+        }
+    }
+    if has_major {
+        if let Ok(path) = major_dots.build() {
+            window.paint_path(path, major_dot_color);
+        }
     }
 }

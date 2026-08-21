@@ -19,6 +19,12 @@ pub fn translate<'a>(key: &'a str, lang: Language) -> &'a str {
         ("toolbar.knife_active", Language::Zh) => "✂ 剪断模式中",
         ("toolbar.knife_active", Language::En) => "✂ Cutting Mode",
 
+        ("toolbar.perf_mode", Language::Zh) => "性能模式",
+        ("toolbar.perf_mode", Language::En) => "Performance Mode",
+
+        ("toolbar.perf_active", Language::Zh) => "🔥 极速性能",
+        ("toolbar.perf_active", Language::En) => "🔥 Extreme Perf",
+
         ("toolbar.fit_view", Language::Zh) => "自适应视口",
         ("toolbar.fit_view", Language::En) => "Fit View",
 

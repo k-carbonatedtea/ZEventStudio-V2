@@ -42,6 +42,8 @@ pub struct AppState {
     pub sidebar_open: bool,
     pub search_query: String,
     pub expand_all_params: bool,
+    pub performance_mode: bool,
+    pub frame_time_ms: f32,
     pub lang: crate::i18n::Language,
 }
 
@@ -71,6 +73,8 @@ impl AppState {
             sidebar_open: true,
             search_query: String::new(),
             expand_all_params: false,
+            performance_mode: false,
+            frame_time_ms: 1.0,
             lang: crate::i18n::Language::Zh,
         };
         state.fit_view();
@@ -99,6 +103,15 @@ impl AppState {
         auto_layout_graph(&mut self.graph);
         self.fit_view();
         self.toast = Some(Toast::success("✨ 已完成 DAG 拓扑分层自动排版"));
+    }
+
+    pub fn toggle_performance_mode(&mut self) {
+        self.performance_mode = !self.performance_mode;
+        if self.performance_mode {
+            self.toast = Some(Toast::success("🔥 极速性能模式已开启：GPU 全速无锁帧渲染"));
+        } else {
+            self.toast = Some(Toast::info("🌿 标准模式已恢复：动态按需省电渲染"));
+        }
     }
 
     pub fn toggle_expand_params(&mut self) {

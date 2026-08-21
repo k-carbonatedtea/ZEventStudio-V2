@@ -68,7 +68,7 @@ fn render_single_node(
         let pad_x = (14.0 * z).clamp(2.0, 20.0);
         let pad_y = (6.0 * z).clamp(1.0, 12.0);
 
-        return div()
+        let mut entry_card = div()
             .id(SharedString::from(format!("node_{}", node.id)))
             .absolute()
             .left(px(screen_x))
@@ -83,8 +83,13 @@ fn render_single_node(
             } else {
                 hsla(160.0 / 360.0, 0.84, 0.28, 1.0) // #059669
             })
-            .shadow_md()
-            .cursor_move()
+            .cursor_move();
+
+        if z >= 0.45 {
+            entry_card = entry_card.shadow_md();
+        }
+
+        return entry_card
             .on_mouse_down(MouseButton::Left, move |e, _, cx| {
                 let id = node_id.clone();
                 let mx: f32 = e.position.x.into();
@@ -151,7 +156,7 @@ fn render_single_node(
         node.kind.border_color()
     };
 
-    div()
+    let mut card = div()
         .id(SharedString::from(format!("node_{}", node.id)))
         .absolute()
         .left(px(screen_x))
@@ -162,8 +167,13 @@ fn render_single_node(
         .bg(hsla(240.0 / 360.0, 0.06, 0.10, 0.98)) // #18181b (Dark Zinc)
         .border_1()
         .border_color(card_border)
-        .shadow_md()
-        .cursor_default()
+        .cursor_default();
+
+    if z >= 0.45 {
+        card = card.shadow_md();
+    }
+
+    card
         // Card Main Content Area
         .child(
             div()

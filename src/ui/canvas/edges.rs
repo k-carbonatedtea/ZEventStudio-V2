@@ -2,50 +2,6 @@ use gpui::*;
 use crate::model::{NodeKind, PortDirection};
 use crate::ui::state::{AppState, DragState};
 
-/// 使用 GPUI 原生 GPU 硬件加速 Lyon 矢量路径引擎绘制平滑贝塞尔连线与原生虚线
-fn draw_gpu_bezier_edge(
-    start: (f32, f32),
-    end: (f32, f32),
-    color: Hsla,
-    stroke_width: f32,
-    is_dashed: bool,
-    window: &mut Window,
-) {
-    let dy = (end.1 - start.1).abs().max(36.0);
-    let ctrl1 = (start.0, start.1 + dy * 0.45);
-    let ctrl2 = (end.0, end.1 - dy * 0.45);
-
-    let mut builder = PathBuilder::stroke(px(stroke_width));
-    if is_dashed {
-        builder = builder.dash_array(&[px(6.0), px(6.0)]);
-    }
-
-    builder.move_to(point(px(start.0), px(start.1)));
-    builder.cubic_bezier_to(
-        point(px(end.0), px(end.1)),
-        point(px(ctrl1.0), px(ctrl1.1)),
-        point(px(ctrl2.0), px(ctrl2.1)),
-    );
-
-    if let Ok(path) = builder.build() {
-        window.paint_path(path, color);
-    }
-
-    // 终点闭合向下三角箭头 (使用 GPU Fill 路径单次绘制)
-    let arrow_w = (stroke_width * 3.5).clamp(4.5, 9.0);
-    let arrow_h = (stroke_width * 3.0).clamp(4.0, 8.0);
-
-    let mut arrow_builder = PathBuilder::fill();
-    arrow_builder.move_to(point(px(end.0), px(end.1)));
-    arrow_builder.line_to(point(px(end.0 - arrow_w * 0.5), px(end.1 - arrow_h)));
-    arrow_builder.line_to(point(px(end.0 + arrow_w * 0.5), px(end.1 - arrow_h)));
-    arrow_builder.close();
-
-    if let Ok(arrow_path) = arrow_builder.build() {
-        window.paint_path(arrow_path, color);
-    }
-}
-
 pub fn render_edges_layer(
     state: &AppState,
     model: &Entity<AppState>,
@@ -91,35 +47,42 @@ pub fn render_edges_layer(
         None
     };
 
-    let model_bounds = model.clone();
     let edge_items_clone = edge_items.clone();
 
     div()
         .absolute()
         .inset_0()
-        // 1. GPU 原生硬件加速 Canvas 绘制所有平滑贝塞尔曲线
+        // 1. GPU 原生硬件加速批处理 Canvas (单次渲染全部 90+ 贝塞尔曲线与箭头)
         .child(
             canvas(
-                move |bounds, _window, cx| {
-                    let orig_x: f32 = bounds.origin.x.into();
-                    let orig_y: f32 = bounds.origin.y.into();
-                    model_bounds.update(cx, |st, _| {
-                        st.canvas_origin = (orig_x, orig_y);
-                    });
-                },
+                |_bounds, _window, _cx| {},
                 move |bounds, _, window, _cx| {
                     let orig_x: f32 = bounds.origin.x.into();
                     let orig_y: f32 = bounds.origin.y.into();
+                    let view_w: f32 = bounds.size.width.into();
+                    let view_h: f32 = bounds.size.height.into();
 
                     let stroke_w = (1.8 * zoom).clamp(1.2, 3.2);
 
-                    // 参考图2规范：
-                    // - EntryPoint 起始连线: 翡翠绿 (#10b981)
-                    // - 并行汇合连线 (连接到 Join 节点): 原生 GPU 虚线 (#94a3b8)
-                    // - 普通/分支事件连线: 石板灰蓝 (#94a3b8)
-                    // - 切刀模式: 警示红 (#ef4444)
-                    let view_w: f32 = bounds.size.width.into();
-                    let view_h: f32 = bounds.size.height.into();
+                    let entry_color = hsla(160.0 / 360.0, 0.84, 0.39, 1.0); // #10b981
+                    let normal_color = if knife_mode {
+                        hsla(0.0, 0.85, 0.55, 0.95) // #ef4444
+                    } else {
+                        hsla(215.0 / 360.0, 0.25, 0.65, 0.90) // #94a3b8
+                    };
+
+                    let mut batch_entry = PathBuilder::stroke(px(stroke_w * 1.15));
+                    let mut batch_normal = PathBuilder::stroke(px(stroke_w));
+                    let mut batch_dashed = PathBuilder::stroke(px(stroke_w)).dash_array(&[px(6.0), px(6.0)]);
+                    let mut batch_arrows = PathBuilder::fill();
+
+                    let mut has_entry = false;
+                    let mut has_normal = false;
+                    let mut has_dashed = false;
+                    let mut has_arrows = false;
+
+                    let arrow_w = (stroke_w * 3.5).clamp(4.5, 9.0);
+                    let arrow_h = (stroke_w * 3.0).clamp(4.0, 8.0);
 
                     for (_, _, _, is_entry_point, is_dashed, (sx, sy), (ex, ey)) in &edge_items_clone {
                         let screen_sx = orig_x + pan.0 + sx * zoom;
@@ -127,10 +90,10 @@ pub fn render_edges_layer(
                         let screen_ex = orig_x + pan.0 + ex * zoom;
                         let screen_ey = orig_y + pan.1 + ey * zoom;
 
-                        // 快速边界框视口裁剪 (BBox Culling): 剔除两端均在屏幕外的无效绘制
+                        // 快速边界框视口裁剪 (BBox Culling)
                         let min_x = screen_sx.min(screen_ex);
                         let max_x = screen_sx.max(screen_ex);
-                        let min_y = screen_sy.min(screen_sy.min(screen_ey));
+                        let min_y = screen_sy.min(screen_ey);
                         let max_y = screen_sy.max(screen_ey);
 
                         if max_x < orig_x - 60.0
@@ -141,22 +104,64 @@ pub fn render_edges_layer(
                             continue;
                         }
 
-                        let edge_color = if knife_mode {
-                            hsla(0.0, 0.85, 0.55, 0.95) // #ef4444
-                        } else if *is_entry_point {
-                            hsla(160.0 / 360.0, 0.84, 0.39, 1.0) // #10b981
-                        } else {
-                            hsla(215.0 / 360.0, 0.25, 0.65, 0.90) // #94a3b8
-                        };
+                        let dy = (screen_ey - screen_sy).abs().max(36.0 * zoom);
+                        let ctrl1 = (screen_sx, screen_sy + dy * 0.45);
+                        let ctrl2 = (screen_ex, screen_ey - dy * 0.45);
 
-                        draw_gpu_bezier_edge(
-                            (screen_sx, screen_sy),
-                            (screen_ex, screen_ey),
-                            edge_color,
-                            if *is_entry_point { stroke_w * 1.15 } else { stroke_w },
-                            *is_dashed,
-                            window,
-                        );
+                        if *is_entry_point {
+                            has_entry = true;
+                            batch_entry.move_to(point(px(screen_sx), px(screen_sy)));
+                            batch_entry.cubic_bezier_to(
+                                point(px(screen_ex), px(screen_ey)),
+                                point(px(ctrl1.0), px(ctrl1.1)),
+                                point(px(ctrl2.0), px(ctrl2.1)),
+                            );
+                        } else if *is_dashed {
+                            has_dashed = true;
+                            batch_dashed.move_to(point(px(screen_sx), px(screen_sy)));
+                            batch_dashed.cubic_bezier_to(
+                                point(px(screen_ex), px(screen_ey)),
+                                point(px(ctrl1.0), px(ctrl1.1)),
+                                point(px(ctrl2.0), px(ctrl2.1)),
+                            );
+                        } else {
+                            has_normal = true;
+                            batch_normal.move_to(point(px(screen_sx), px(screen_sy)));
+                            batch_normal.cubic_bezier_to(
+                                point(px(screen_ex), px(screen_ey)),
+                                point(px(ctrl1.0), px(ctrl1.1)),
+                                point(px(ctrl2.0), px(ctrl2.1)),
+                            );
+                        }
+
+                        // 终点箭头
+                        has_arrows = true;
+                        batch_arrows.move_to(point(px(screen_ex), px(screen_ey)));
+                        batch_arrows.line_to(point(px(screen_ex - arrow_w * 0.5), px(screen_ey - arrow_h)));
+                        batch_arrows.line_to(point(px(screen_ex + arrow_w * 0.5), px(screen_ey - arrow_h)));
+                        batch_arrows.close();
+                    }
+
+                    // 单次提交 GPU 批量路径渲染
+                    if has_normal {
+                        if let Ok(p) = batch_normal.build() {
+                            window.paint_path(p, normal_color);
+                        }
+                    }
+                    if has_entry {
+                        if let Ok(p) = batch_entry.build() {
+                            window.paint_path(p, entry_color);
+                        }
+                    }
+                    if has_dashed {
+                        if let Ok(p) = batch_dashed.build() {
+                            window.paint_path(p, normal_color);
+                        }
+                    }
+                    if has_arrows {
+                        if let Ok(p) = batch_arrows.build() {
+                            window.paint_path(p, normal_color);
+                        }
                     }
 
                     // 实时拖拽连线
@@ -166,15 +171,21 @@ pub fn render_edges_layer(
                         let screen_ex = orig_x + pan.0 + end_pt.0 * zoom;
                         let screen_ey = orig_y + pan.1 + end_pt.1 * zoom;
 
-                        let live_color = hsla(45.0 / 360.0, 0.95, 0.60, 0.95);
-                        draw_gpu_bezier_edge(
-                            (screen_sx, screen_sy),
-                            (screen_ex, screen_ey),
-                            live_color,
-                            stroke_w * 1.2,
-                            false,
-                            window,
+                        let dy = (screen_ey - screen_sy).abs().max(36.0 * zoom);
+                        let ctrl1 = (screen_sx, screen_sy + dy * 0.45);
+                        let ctrl2 = (screen_ex, screen_ey - dy * 0.45);
+
+                        let mut live_builder = PathBuilder::stroke(px(stroke_w * 1.2));
+                        live_builder.move_to(point(px(screen_sx), px(screen_sy)));
+                        live_builder.cubic_bezier_to(
+                            point(px(screen_ex), px(screen_ey)),
+                            point(px(ctrl1.0), px(ctrl1.1)),
+                            point(px(ctrl2.0), px(ctrl2.1)),
                         );
+
+                        if let Ok(p) = live_builder.build() {
+                            window.paint_path(p, hsla(45.0 / 360.0, 0.95, 0.60, 0.95));
+                        }
                     }
                 },
             )
@@ -198,50 +209,26 @@ pub fn render_edges_layer(
                     .px_2()
                     .py_0p5()
                     .rounded_md()
-                    .bg(if knife_mode {
-                        hsla(0.0, 0.8, 0.35, 1.0)
-                    } else {
-                        hsla(240.0 / 360.0, 0.06, 0.12, 0.92)
-                    })
+                    .bg(hsla(0.0, 0.8, 0.35, 1.0))
                     .border_1()
-                    .border_color(if knife_mode {
-                        hsla(0.0, 0.8, 0.65, 1.0)
-                    } else {
-                        hsla(215.0 / 360.0, 0.25, 0.35, 0.8)
-                    })
+                    .border_color(hsla(0.0, 0.8, 0.65, 1.0))
                     .shadow_sm()
                     .cursor_pointer()
-                    .hover(|s| {
-                        if knife_mode {
-                            s.bg(hsla(0.0, 0.9, 0.45, 1.0))
-                        } else {
-                            s.bg(hsla(240.0 / 360.0, 0.06, 0.18, 1.0))
-                        }
-                    })
+                    .hover(|s| s.bg(hsla(0.0, 0.9, 0.45, 1.0)))
                     .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                        if knife_mode {
-                            let s = s_id.clone();
-                            let t = t_id.clone();
-                            model_cut.update(cx, |state, cx| {
-                                state.sever_edge(&s, &t);
-                                cx.notify();
-                            });
-                        }
+                        let s = s_id.clone();
+                        let t = t_id.clone();
+                        model_cut.update(cx, |state, cx| {
+                            state.sever_edge(&s, &t);
+                            cx.notify();
+                        });
                     })
                     .child(
                         div()
                             .text_size(px(9.5 * zoom.clamp(0.75, 1.1)))
                             .font_weight(FontWeight::BOLD)
-                            .text_color(if knife_mode {
-                                hsla(0.0, 0.0, 1.0, 1.0)
-                            } else {
-                                hsla(215.0 / 360.0, 0.25, 0.80, 1.0)
-                            })
-                            .child(if knife_mode {
-                                "✂ 剪断".to_string()
-                            } else {
-                                label.unwrap_or_default()
-                            }),
+                            .text_color(hsla(0.0, 0.0, 1.0, 1.0))
+                            .child(label.unwrap_or_else(|| "✂ 剪断".to_string())),
                     ),
             )
         }))
