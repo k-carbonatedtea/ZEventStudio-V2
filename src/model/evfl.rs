@@ -7,10 +7,9 @@ use revfl::event::EventData;
 use revfl::evfl::EventFlow;
 use revfl::flowchart::Flowchart;
 
-/// 从任天堂 BFEVFL 二进制字节流中加载并转换为 Graph 图结构
+/// 从任天堂 BFEVFL 二进制字节流中加载并转换为 Graph 图结构 (完美对齐图2规范)
 pub fn load_bfevfl_from_bytes(bytes: &[u8]) -> Result<Graph, String> {
     let mut evfl = EventFlow::new();
-    // 使用 Revfl 库解析 BFEVFL 格式二进制
     evfl.read(bytes);
 
     if let Some(flowchart) = &evfl.flowchart {
@@ -34,16 +33,17 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
     let events = &fc.events;
     let actors = &fc.actors;
 
-    // 1. 生成 EntryPoints 顶部入口节点
+    // 1. 生成 EntryPoints 顶部绿色胶囊节点 (对齐图2)
     for ep in &fc.entry_points {
         let ep_id = format!("ep_{}", ep.name);
         let mut ep_node = NodeData::new(
             ep_id.clone(),
-            format!("🏁 {}", ep.name),
+            format!("Entry: {}", ep.name),
             NodeKind::EntryPoint,
             (0.0, 0.0),
         );
-        ep_node.subtitle = Some("Entry Point".to_string());
+        ep_node.size = (180.0, 42.0);
+        ep_node.subtitle = None;
 
         if !ep.sub_flow_event_indices.is_empty() {
             let callers: Vec<u16> = ep.sub_flow_event_indices.clone();
@@ -66,7 +66,7 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
         }
     }
 
-    // 2. 生成所有 Events 节点
+    // 2. 生成所有 Events 节点 (对齐图2: 标题为 EventID, 副标题为 Actor :: Action)
     for ev in events {
         let ev_id = ev.name.clone();
 
@@ -89,17 +89,17 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
                     "Action".to_string()
                 };
 
-                let mut node = NodeData::new(ev_id.clone(), action_name, NodeKind::Action, (0.0, 0.0));
-                node.subtitle = Some(actor_name);
+                let mut node = NodeData::new(ev_id.clone(), ev_id.clone(), NodeKind::Action, (0.0, 0.0));
+                node.subtitle = Some(format!("{} :: {}", actor_name, action_name));
+                node.size = (240.0, 115.0);
 
-                // 添加动作参数
                 if let Some(params) = &a.params {
                     add_container_properties(&mut node, params);
                 }
 
                 graph.add_node(node);
 
-                // 添加连线至 NextEvent
+                // 连接至 NextEvent
                 let next_idx = a.nxt.idx;
                 if next_idx != 0xFFFF && (next_idx as usize) < events.len() {
                     let next_ev = &events[next_idx as usize];
@@ -131,36 +131,32 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
                     "Query".to_string()
                 };
 
-                let mut node = NodeData::new(ev_id.clone(), query_name, NodeKind::Switch, (0.0, 0.0));
-                node.subtitle = Some(actor_name);
+                let mut node = NodeData::new(ev_id.clone(), ev_id.clone(), NodeKind::Switch, (0.0, 0.0));
+                node.subtitle = Some(format!("{} :: {}", actor_name, query_name));
 
-                // 构造 Switch 各分支端口
                 let mut out_ports = Vec::new();
                 for (&case_val, _) in &s.cases {
                     let port_id = format!("{}_case_{}", ev_id, case_val);
                     let label = match case_val {
-                        0 => "0 (False / Default)".to_string(),
-                        1 => "1 (True / Branch)".to_string(),
+                        0 => "Case 0".to_string(),
+                        1 => "Case 1".to_string(),
                         v => format!("Case {}", v),
                     };
                     out_ports.push(Port::new_condition_out(port_id, label));
                 }
                 if out_ports.is_empty() {
-                    out_ports.push(Port::new_condition_out(format!("{}_case_0", ev_id), "Default"));
+                    out_ports.push(Port::new_condition_out(format!("{}_case_0", ev_id), "Case 0"));
                 }
 
-                let calculated_height = 80.0 + (s.cases.len().max(2) as f32) * 26.0;
-                node.size = (250.0, calculated_height.max(130.0));
+                node.size = (240.0, 120.0);
                 node.outputs = out_ports;
 
-                // 添加查询参数
                 if let Some(params) = &s.params {
                     add_container_properties(&mut node, params);
                 }
 
                 graph.add_node(node);
 
-                // 添加分支连线
                 for (&case_val, target_idx) in &s.cases {
                     let t_idx = target_idx.idx;
                     if t_idx != 0xFFFF && (t_idx as usize) < events.len() {
@@ -171,27 +167,22 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
                             &source_port,
                             &target_ev.name,
                             &format!("{}_in", target_ev.name),
-                        );
+                        ).with_label(format!("Case {}", case_val));
                         graph.add_edge(edge);
                     }
                 }
             }
 
             EventData::SubFlow(sf) => {
-                let entry_title = if sf.entry_point_name.is_empty() {
-                    "SubFlow".to_string()
-                } else {
-                    sf.entry_point_name.clone()
-                };
-
                 let subtitle = if sf.res_flowchart_name.is_empty() {
-                    "SubFlow (Local)".to_string()
+                    sf.entry_point_name.clone()
                 } else {
-                    format!("SubFlow: {}", sf.res_flowchart_name)
+                    format!("{} :: {}", sf.res_flowchart_name, sf.entry_point_name)
                 };
 
-                let mut node = NodeData::new(ev_id.clone(), entry_title, NodeKind::SubFlow, (0.0, 0.0));
+                let mut node = NodeData::new(ev_id.clone(), ev_id.clone(), NodeKind::SubFlow, (0.0, 0.0));
                 node.subtitle = Some(subtitle);
+                node.size = (220.0, 105.0);
 
                 if !sf.entry_point_name.is_empty() {
                     node = node.with_property("EntryPoint", &sf.entry_point_name, "string");
@@ -219,31 +210,29 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
             }
 
             EventData::Fork(f) => {
-                let mut node = NodeData::new(ev_id.clone(), "🔱 并行分支 (Fork)", NodeKind::Fork, (0.0, 0.0));
-                node.subtitle = Some("Parallel Split".to_string());
+                let mut node = NodeData::new(ev_id.clone(), ev_id.clone(), NodeKind::Fork, (0.0, 0.0));
+                node.subtitle = Some(format!("Forks: {}", f.forks.len()));
+                node.size = (210.0, 95.0);
 
                 let mut out_ports = Vec::new();
                 for (b_idx, _) in f.forks.iter().enumerate() {
                     out_ports.push(Port::new_flow_out(
                         format!("{}_fork_{}", ev_id, b_idx),
-                        format!("Branch {}", b_idx + 1),
+                        format!("Fork {}", b_idx),
                     ));
                 }
                 if out_ports.is_empty() {
-                    out_ports.push(Port::new_flow_out(format!("{}_fork_0", ev_id), "Branch 1"));
-                    out_ports.push(Port::new_flow_out(format!("{}_fork_1", ev_id), "Branch 2"));
+                    out_ports.push(Port::new_flow_out(format!("{}_fork_0", ev_id), "Fork 0"));
+                    out_ports.push(Port::new_flow_out(format!("{}_fork_1", ev_id), "Fork 1"));
                 }
-                let calculated_height = 80.0 + (f.forks.len().max(2) as f32) * 26.0;
-                node.size = (230.0, calculated_height.max(120.0));
                 node.outputs = out_ports;
 
                 if f.join.idx != 0xFFFF {
-                    node = node.with_property("JoinTargetIndex", f.join.idx.to_string(), "number");
+                    node = node.with_property("JoinTarget", f.join.idx.to_string(), "number");
                 }
 
                 graph.add_node(node);
 
-                // 各并行分支连线
                 for (b_idx, fork_target) in f.forks.iter().enumerate() {
                     let f_idx = fork_target.idx;
                     if f_idx != 0xFFFF && (f_idx as usize) < events.len() {
@@ -253,15 +242,16 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
                             &format!("{}_fork_{}", ev_id, b_idx),
                             &target_ev.name,
                             &format!("{}_in", target_ev.name),
-                        );
+                        ).with_label(format!("Fork {}", b_idx));
                         graph.add_edge(edge);
                     }
                 }
             }
 
             EventData::Join(j) => {
-                let mut node = NodeData::new(ev_id.clone(), "🔗 并行汇合 (Join)", NodeKind::Join, (0.0, 0.0));
-                node.subtitle = Some("Parallel Sync".to_string());
+                let mut node = NodeData::new(ev_id.clone(), ev_id.clone(), NodeKind::Join, (0.0, 0.0));
+                node.subtitle = Some("Wait for parallel join".to_string());
+                node.size = (210.0, 95.0);
 
                 graph.add_node(node);
 

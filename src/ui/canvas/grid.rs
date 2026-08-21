@@ -11,9 +11,9 @@ pub fn draw_canvas_grid(
     let w: f32 = bounds.size.width.into();
     let h: f32 = bounds.size.height.into();
 
-    let grid_step = 32.0 * zoom;
-    let dot_color = hsla(220.0 / 360.0, 0.20, 0.22, 0.65);
-    let major_dot_color = hsla(220.0 / 360.0, 0.35, 0.35, 0.85);
+    let grid_step = 28.0 * zoom;
+    let dot_color = hsla(240.0 / 360.0, 0.05, 0.22, 0.40);
+    let major_dot_color = hsla(240.0 / 360.0, 0.10, 0.35, 0.65);
 
     let start_x = (pan.0 % grid_step) + orig_x;
     let start_y = (pan.1 % grid_step) + orig_y;

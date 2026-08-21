@@ -32,7 +32,6 @@ pub struct AppState {
     pub hovered_port: Option<(String, String)>,
     pub drag_state: DragState,
     pub knife_mode: bool,
-    pub particles_enabled: bool,
     pub canvas_origin: (f32, f32),
     pub fps: f32,
     pub active_preset_id: String,
@@ -47,7 +46,7 @@ pub struct AppState {
 #[allow(dead_code)]
 impl AppState {
     pub fn new() -> Self {
-        // 项目打开时，加载 100enemy.json 真实 EVFL 事件流
+        // 项目打开时，加载 100enemy.bfevfl 真实 EVFL 事件流
         let mut graph = get_startup_preset();
         auto_layout_graph(&mut graph);
 
@@ -60,7 +59,6 @@ impl AppState {
             hovered_port: None,
             drag_state: DragState::None,
             knife_mode: false,
-            particles_enabled: true,
             canvas_origin: (0.0, 0.0),
             fps: 60.0,
             active_preset_id: "zelda_100enemy".to_string(),

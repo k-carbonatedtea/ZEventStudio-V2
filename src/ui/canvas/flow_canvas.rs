@@ -25,7 +25,7 @@ pub fn render_flow_canvas(
         .flex_1()
         .size_full()
         .overflow_hidden()
-        .bg(hsla(220.0 / 360.0, 0.35, 0.08, 1.0))
+        .bg(hsla(240.0 / 360.0, 0.06, 0.09, 1.0))
         .cursor(match &drag_state {
             DragState::PanCanvas { .. } => CursorStyle::ClosedHand,
             DragState::Connecting { .. } => CursorStyle::Crosshair,

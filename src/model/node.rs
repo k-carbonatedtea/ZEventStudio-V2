@@ -17,15 +17,15 @@ pub enum NodeKind {
 impl NodeKind {
     pub fn display_name(&self) -> &'static str {
         match self {
-            NodeKind::EntryPoint => "Entry Point",
-            NodeKind::Action => "Action",
-            NodeKind::Switch => "Switch Branch",
-            NodeKind::Query => "Query",
-            NodeKind::SubFlow => "SubFlow",
-            NodeKind::Fork => "Fork Parallel",
-            NodeKind::Join => "Join Sync",
-            NodeKind::Math => "Math / Logic",
-            NodeKind::Comment => "Comment Note",
+            NodeKind::EntryPoint => "ENTRY",
+            NodeKind::Action => "ACTION",
+            NodeKind::Switch => "SWITCH",
+            NodeKind::Query => "QUERY",
+            NodeKind::SubFlow => "SUBFLOW",
+            NodeKind::Fork => "FORK",
+            NodeKind::Join => "JOIN",
+            NodeKind::Math => "MATH",
+            NodeKind::Comment => "NOTE",
         }
     }
 
@@ -43,18 +43,46 @@ impl NodeKind {
         }
     }
 
+    pub fn badge_color(&self) -> gpui::Hsla {
+        match self {
+            NodeKind::EntryPoint => gpui::hsla(160.0 / 360.0, 0.84, 0.39, 1.0), // Emerald #10b981
+            NodeKind::Action => gpui::hsla(200.0 / 360.0, 0.98, 0.39, 1.0),     // Sky Blue #0284c7
+            NodeKind::Switch => gpui::hsla(38.0 / 360.0, 0.92, 0.45, 1.0),      // Amber #d97706
+            NodeKind::Query => gpui::hsla(210.0 / 360.0, 0.80, 0.50, 1.0),
+            NodeKind::SubFlow => gpui::hsla(271.0 / 360.0, 0.81, 0.56, 1.0),    // Purple #7c3aed
+            NodeKind::Fork => gpui::hsla(142.0 / 360.0, 0.72, 0.36, 1.0),       // Green #16a34a
+            NodeKind::Join => gpui::hsla(142.0 / 360.0, 0.72, 0.36, 1.0),       // Green #16a34a
+            NodeKind::Math => gpui::hsla(230.0 / 360.0, 0.70, 0.55, 1.0),
+            NodeKind::Comment => gpui::hsla(215.0 / 360.0, 0.20, 0.35, 1.0),
+        }
+    }
+
+    pub fn border_color(&self) -> gpui::Hsla {
+        match self {
+            NodeKind::EntryPoint => gpui::hsla(160.0 / 360.0, 0.84, 0.28, 1.0), // #059669
+            NodeKind::Action => gpui::hsla(200.0 / 360.0, 0.98, 0.39, 0.45),
+            NodeKind::Switch => gpui::hsla(38.0 / 360.0, 0.92, 0.45, 0.45),
+            NodeKind::Query => gpui::hsla(210.0 / 360.0, 0.80, 0.50, 0.45),
+            NodeKind::SubFlow => gpui::hsla(271.0 / 360.0, 0.81, 0.56, 0.45),
+            NodeKind::Fork => gpui::hsla(142.0 / 360.0, 0.72, 0.36, 0.45),
+            NodeKind::Join => gpui::hsla(142.0 / 360.0, 0.72, 0.36, 0.45),
+            NodeKind::Math => gpui::hsla(230.0 / 360.0, 0.70, 0.55, 0.45),
+            NodeKind::Comment => gpui::hsla(215.0 / 360.0, 0.20, 0.35, 0.45),
+        }
+    }
+
     pub fn header_color(&self) -> (f32, f32, f32) {
         // (Hue, Saturation, Lightness)
         match self {
-            NodeKind::EntryPoint => (0.0, 0.75, 0.52),        // Crimson Red
-            NodeKind::Action => (145.0 / 360.0, 0.65, 0.42), // Emerald Green
-            NodeKind::Switch => (35.0 / 360.0, 0.85, 0.50),  // Amber Orange
-            NodeKind::Query => (210.0 / 360.0, 0.75, 0.50),   // Sky Blue
-            NodeKind::SubFlow => (275.0 / 360.0, 0.70, 0.55), // Purple
-            NodeKind::Fork => (185.0 / 360.0, 0.70, 0.45),    // Teal
-            NodeKind::Join => (170.0 / 360.0, 0.65, 0.40),    // Cyan Dark
-            NodeKind::Math => (230.0 / 360.0, 0.70, 0.55),    // Indigo
-            NodeKind::Comment => (215.0 / 360.0, 0.15, 0.35), // Slate Gray
+            NodeKind::EntryPoint => (160.0 / 360.0, 0.84, 0.39),
+            NodeKind::Action => (200.0 / 360.0, 0.98, 0.39),
+            NodeKind::Switch => (38.0 / 360.0, 0.92, 0.45),
+            NodeKind::Query => (210.0 / 360.0, 0.75, 0.50),
+            NodeKind::SubFlow => (271.0 / 360.0, 0.81, 0.56),
+            NodeKind::Fork => (142.0 / 360.0, 0.72, 0.36),
+            NodeKind::Join => (142.0 / 360.0, 0.72, 0.36),
+            NodeKind::Math => (230.0 / 360.0, 0.70, 0.55),
+            NodeKind::Comment => (215.0 / 360.0, 0.15, 0.35),
         }
     }
 }

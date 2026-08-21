@@ -1,5 +1,5 @@
 use gpui::*;
-use crate::model::PortDirection;
+use crate::model::{NodeKind, PortDirection};
 use crate::ui::state::{AppState, DragState};
 
 fn eval_cubic_bezier(
@@ -20,23 +20,31 @@ fn eval_cubic_bezier(
     (x, y)
 }
 
-fn draw_vertical_bezier_curve(
+/// 绘制基于图2规范的垂直平滑贝塞尔曲线（支持实线与汇合虚线 Dashed Curve）
+fn draw_bezier_edge(
     start: (f32, f32),
     end: (f32, f32),
     color: Hsla,
     stroke_width: f32,
+    is_dashed: bool,
     window: &mut Window,
 ) {
-    let dy = (end.1 - start.1).abs().max(40.0);
+    let dy = (end.1 - start.1).abs().max(36.0);
     let ctrl1 = (start.0, start.1 + dy * 0.45);
     let ctrl2 = (end.0, end.1 - dy * 0.45);
 
-    let segments = 24;
+    let segments = if is_dashed { 32 } else { 24 };
     let mut prev_pt = start;
 
     for i in 1..=segments {
         let t = (i as f32) / (segments as f32);
         let curr_pt = eval_cubic_bezier(start, ctrl1, ctrl2, end, t);
+
+        // 虚线模式：每 4 段跳过 2 段形成虚线效果 (对应 React Flow strokeDasharray: 5,5)
+        if is_dashed && (i % 4 >= 2) {
+            prev_pt = curr_pt;
+            continue;
+        }
 
         let min_x = prev_pt.0.min(curr_pt.0);
         let min_y = prev_pt.1.min(curr_pt.1);
@@ -57,71 +65,19 @@ fn draw_vertical_bezier_curve(
         prev_pt = curr_pt;
     }
 
-    // Draw end arrow head pointing downwards
-    let arrow_size = (stroke_width * 3.0).max(6.0);
+    // 终点闭合三角箭头 (Closed Arrowhead)
+    let arrow_w = (stroke_width * 3.5).clamp(4.0, 10.0);
+    let arrow_h = (stroke_width * 3.0).clamp(3.5, 9.0);
     window.paint_quad(fill(
         Bounds {
             origin: Point {
-                x: px(end.0 - arrow_size * 0.5),
-                y: px(end.1 - arrow_size * 0.8),
+                x: px(end.0 - arrow_w * 0.5),
+                y: px(end.1 - arrow_h),
             },
-            size: size(px(arrow_size), px(arrow_size)),
+            size: size(px(arrow_w), px(arrow_h)),
         },
         color,
     ));
-}
-
-fn draw_vertical_flowing_particles(
-    start: (f32, f32),
-    end: (f32, f32),
-    particle_color: Hsla,
-    particle_size: f32,
-    window: &mut Window,
-) {
-    let dy = (end.1 - start.1).abs().max(40.0);
-    let ctrl1 = (start.0, start.1 + dy * 0.45);
-    let ctrl2 = (end.0, end.1 - dy * 0.45);
-
-    // Calculate phase based on system time for smooth 60fps flowing animation
-    let time_ms = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as f32;
-
-    let base_phase = (time_ms * 0.0012) % 1.0;
-
-    let particle_count = 3;
-    for i in 0..particle_count {
-        let t = (base_phase + (i as f32) / (particle_count as f32)) % 1.0;
-        let pt = eval_cubic_bezier(start, ctrl1, ctrl2, end, t);
-
-        // Core glowing dot
-        window.paint_quad(fill(
-            Bounds {
-                origin: Point {
-                    x: px(pt.0 - particle_size / 2.0),
-                    y: px(pt.1 - particle_size / 2.0),
-                },
-                size: size(px(particle_size), px(particle_size)),
-            },
-            particle_color,
-        ));
-
-        // Outer aura
-        let aura_size = particle_size * 2.0;
-        let mut aura_color = particle_color;
-        aura_color.a *= 0.35;
-        window.paint_quad(fill(
-            Bounds {
-                origin: Point {
-                    x: px(pt.0 - aura_size / 2.0),
-                    y: px(pt.1 - aura_size / 2.0),
-                },
-                size: size(px(aura_size), px(aura_size)),
-            },
-            aura_color,
-        ));
-    }
 }
 
 pub fn render_edges_layer(
@@ -131,10 +87,9 @@ pub fn render_edges_layer(
     let pan = state.pan;
     let zoom = state.zoom;
     let knife_mode = state.knife_mode;
-    let particles_enabled = state.particles_enabled;
 
-    // Collect all edge coordinates from bottom of source to top of target
-    let mut edge_coords = Vec::new();
+    // 收集所有连线坐标与类型 (EntryPoint / Normal / Join 虚线)
+    let mut edge_items = Vec::new();
     for edge in &state.graph.edges {
         if let (Some(s_node), Some(t_node)) = (
             state.graph.find_node(&edge.source_node_id),
@@ -148,17 +103,21 @@ pub fn render_edges_layer(
             let ex = t_node.pos.0 + t_offset.0;
             let ey = t_node.pos.1 + t_offset.1;
 
-            edge_coords.push((
+            let is_entry_point = s_node.kind == NodeKind::EntryPoint;
+            let is_join_target = t_node.kind == NodeKind::Join;
+
+            edge_items.push((
                 edge.source_node_id.clone(),
                 edge.target_node_id.clone(),
                 edge.label.clone(),
+                is_entry_point,
+                is_join_target,
                 (sx, sy),
                 (ex, ey),
             ));
         }
     }
 
-    // Live connecting wire if currently dragging connection
     let live_connection = if let DragState::Connecting { source_pos, current_mouse, .. } = &state.drag_state {
         let (canvas_mx, canvas_my) = state.screen_to_canvas(current_mouse.0, current_mouse.1);
         Some((*source_pos, (canvas_mx, canvas_my)))
@@ -167,12 +126,12 @@ pub fn render_edges_layer(
     };
 
     let model_bounds = model.clone();
-    let edge_coords_clone = edge_coords.clone();
+    let edge_items_clone = edge_items.clone();
 
     div()
         .absolute()
         .inset_0()
-        // Draw background bezier curves using GPUI canvas
+        // 1. 静态 Canvas 绘制所有平滑贝塞尔曲线
         .child(
             canvas(
                 move |bounds, _window, cx| {
@@ -186,43 +145,38 @@ pub fn render_edges_layer(
                     let orig_x: f32 = bounds.origin.x.into();
                     let orig_y: f32 = bounds.origin.y.into();
 
-                    let default_edge_color = if knife_mode {
-                        hsla(0.0, 0.75, 0.55, 0.9)
-                    } else {
-                        hsla(215.0 / 360.0, 0.35, 0.50, 0.8)
-                    };
+                    let stroke_w = (2.0 * zoom).clamp(1.2, 3.5);
 
-                    let stroke_w = (2.2 * zoom).clamp(1.5, 4.0);
-                    let particle_size = (5.5 * zoom).clamp(3.5, 9.0);
-                    let particle_color = hsla(145.0 / 360.0, 0.85, 0.65, 1.0);
-
-                    // 1. Draw static edges
-                    for (_, _, _, (sx, sy), (ex, ey)) in &edge_coords_clone {
+                    // 参考图2规范：
+                    // - EntryPoint 起始连线: 翡翠绿 (#10b981)
+                    // - 并行汇合连线 (连接到 Join 节点): 虚线 (#94a3b8)
+                    // - 普通/分支事件连线: 石板灰蓝 (#94a3b8)
+                    // - 切刀模式: 警示红 (#ef4444)
+                    for (_, _, _, is_entry_point, is_join_target, (sx, sy), (ex, ey)) in &edge_items_clone {
                         let screen_sx = orig_x + pan.0 + sx * zoom;
                         let screen_sy = orig_y + pan.1 + sy * zoom;
                         let screen_ex = orig_x + pan.0 + ex * zoom;
                         let screen_ey = orig_y + pan.1 + ey * zoom;
 
-                        draw_vertical_bezier_curve(
+                        let edge_color = if knife_mode {
+                            hsla(0.0, 0.85, 0.55, 0.95) // #ef4444
+                        } else if *is_entry_point {
+                            hsla(160.0 / 360.0, 0.84, 0.39, 1.0) // #10b981
+                        } else {
+                            hsla(215.0 / 360.0, 0.25, 0.65, 0.90) // #94a3b8
+                        };
+
+                        draw_bezier_edge(
                             (screen_sx, screen_sy),
                             (screen_ex, screen_ey),
-                            default_edge_color,
-                            stroke_w,
+                            edge_color,
+                            if *is_entry_point { stroke_w * 1.15 } else { stroke_w },
+                            *is_join_target,
                             window,
                         );
-
-                        if particles_enabled && !knife_mode {
-                            draw_vertical_flowing_particles(
-                                (screen_sx, screen_sy),
-                                (screen_ex, screen_ey),
-                                particle_color,
-                                particle_size,
-                                window,
-                            );
-                        }
                     }
 
-                    // 2. Draw live dragging wire
+                    // 实时拖拽连线
                     if let Some((start_pt, end_pt)) = live_connection {
                         let screen_sx = orig_x + pan.0 + start_pt.0 * zoom;
                         let screen_sy = orig_y + pan.1 + start_pt.1 * zoom;
@@ -230,11 +184,12 @@ pub fn render_edges_layer(
                         let screen_ey = orig_y + pan.1 + end_pt.1 * zoom;
 
                         let live_color = hsla(45.0 / 360.0, 0.95, 0.60, 0.95);
-                        draw_vertical_bezier_curve(
+                        draw_bezier_edge(
                             (screen_sx, screen_sy),
                             (screen_ex, screen_ey),
                             live_color,
-                            stroke_w * 1.3,
+                            stroke_w * 1.2,
+                            false,
                             window,
                         );
                     }
@@ -242,8 +197,8 @@ pub fn render_edges_layer(
             )
             .size_full(),
         )
-        // Edge interactive badges (Branch labels and Knife cut triggers)
-        .children(edge_coords.into_iter().filter_map(move |(s_id, t_id, label, (sx, sy), (ex, ey))| {
+        // 2. 连线交互徽章（Switch 条件分支标签与切刀剪断触发器）
+        .children(edge_items.into_iter().filter_map(move |(s_id, t_id, label, _, _, (sx, sy), (ex, ey))| {
             if !knife_mode && label.is_none() {
                 return None;
             }
@@ -255,21 +210,21 @@ pub fn render_edges_layer(
             Some(
                 div()
                     .absolute()
-                    .left(px(mid_x - 30.0))
-                    .top(px(mid_y - 11.0))
+                    .left(px(mid_x - 28.0))
+                    .top(px(mid_y - 10.0))
                     .px_2()
                     .py_0p5()
                     .rounded_md()
                     .bg(if knife_mode {
                         hsla(0.0, 0.8, 0.35, 1.0)
                     } else {
-                        hsla(220.0 / 360.0, 0.35, 0.14, 0.92)
+                        hsla(240.0 / 360.0, 0.06, 0.12, 0.92)
                     })
                     .border_1()
                     .border_color(if knife_mode {
                         hsla(0.0, 0.8, 0.65, 1.0)
                     } else {
-                        hsla(215.0 / 360.0, 0.35, 0.35, 1.0)
+                        hsla(215.0 / 360.0, 0.25, 0.35, 0.8)
                     })
                     .shadow_sm()
                     .cursor_pointer()
@@ -277,7 +232,7 @@ pub fn render_edges_layer(
                         if knife_mode {
                             s.bg(hsla(0.0, 0.9, 0.45, 1.0))
                         } else {
-                            s.bg(hsla(220.0 / 360.0, 0.35, 0.22, 1.0))
+                            s.bg(hsla(240.0 / 360.0, 0.06, 0.18, 1.0))
                         }
                     })
                     .on_mouse_down(MouseButton::Left, move |_, _, cx| {
@@ -292,12 +247,12 @@ pub fn render_edges_layer(
                     })
                     .child(
                         div()
-                            .text_size(px(10.0 * zoom.clamp(0.75, 1.1)))
+                            .text_size(px(9.5 * zoom.clamp(0.75, 1.1)))
                             .font_weight(FontWeight::BOLD)
                             .text_color(if knife_mode {
                                 hsla(0.0, 0.0, 1.0, 1.0)
                             } else {
-                                hsla(45.0 / 360.0, 0.9, 0.75, 1.0)
+                                hsla(215.0 / 360.0, 0.25, 0.80, 1.0)
                             })
                             .child(if knife_mode {
                                 "✂ 剪断".to_string()

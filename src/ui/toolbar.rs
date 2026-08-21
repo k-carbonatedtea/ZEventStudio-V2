@@ -7,12 +7,10 @@ pub fn render_toolbar(
 ) -> impl IntoElement {
     let zoom_pct = (state.zoom * 100.0).round() as i32;
     let knife_mode = state.knife_mode;
-    let particles_enabled = state.particles_enabled;
     let fps = state.fps;
 
     let model_layout = model.clone();
     let model_knife = model.clone();
-    let model_particles = model.clone();
     let model_fit = model.clone();
     let model_zoom_in = model.clone();
     let model_zoom_out = model.clone();
@@ -133,43 +131,7 @@ pub fn render_toolbar(
                         })
                         .child("✨ 自动排版"),
                 )
-                // Particles Toggle
-                .child(
-                    div()
-                        .px_3()
-                        .py_1p5()
-                        .rounded_lg()
-                        .bg(if particles_enabled {
-                            hsla(145.0 / 360.0, 0.45, 0.22, 1.0)
-                        } else {
-                            hsla(220.0 / 360.0, 0.25, 0.18, 1.0)
-                        })
-                        .border_1()
-                        .border_color(if particles_enabled {
-                            hsla(145.0 / 360.0, 0.65, 0.45, 1.0)
-                        } else {
-                            hsla(220.0 / 360.0, 0.25, 0.28, 1.0)
-                        })
-                        .hover(|s| s.opacity(0.85))
-                        .cursor_pointer()
-                        .flex()
-                        .items_center()
-                        .gap_1p5()
-                        .text_size(px(11.5))
-                        .font_weight(FontWeight::BOLD)
-                        .text_color(rgb(0xffffff))
-                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                            model_particles.update(cx, |st, cx| {
-                                st.particles_enabled = !st.particles_enabled;
-                                cx.notify();
-                            });
-                        })
-                        .child(if particles_enabled {
-                            "🌊 粒子: 开启"
-                        } else {
-                            "🌊 粒子: 关闭"
-                        }),
-                )
+
                 // Knife Mode Toggle
                 .child(
                     div()

@@ -38,11 +38,7 @@ impl Render for AppView {
             });
         }
 
-        // Keep 60fps+ redraw loop when particle flowing animation is active
-        let particles_active = self.model.read(cx).particles_enabled;
-        if particles_active {
-            cx.notify();
-        }
+
 
         let state = self.model.read(cx);
         let toast = state.toast.clone();
