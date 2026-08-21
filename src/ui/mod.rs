@@ -1,0 +1,10 @@
+pub mod app;
+pub mod canvas;
+pub mod components;
+pub mod inspector;
+pub mod quick_add;
+pub mod sidebar;
+pub mod state;
+pub mod toolbar;
+
+pub use app::AppView;

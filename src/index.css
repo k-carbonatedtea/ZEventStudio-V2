@@ -1,7 +1,0 @@
-/* 全局样式表引入 */
-@import './styles/base.css';
-@import './styles/layout.css';
-@import './styles/nodes.css';
-@import './styles/modals.css';
-@import './styles/components.css';
-@import './styles/manager.css';
