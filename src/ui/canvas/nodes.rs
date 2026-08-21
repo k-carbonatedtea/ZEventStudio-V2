@@ -12,11 +12,30 @@ pub fn render_nodes_layer(
     let connecting_state = state.drag_state.clone();
     let expand_all = state.expand_all_params;
 
+    // 视口边界裁剪 (Viewport Culling): 剔除屏幕外的节点，大幅减轻缩放与拖拽时的渲染压力
+    let view_min_x = -150.0;
+    let view_min_y = -150.0;
+    let view_max_x = 2600.0;
+    let view_max_y = 1600.0;
+
     div()
         .absolute()
         .inset_0()
-        .children(state.graph.nodes.iter().map(|node| {
-            render_single_node(node, pan, zoom, &selected_id, &connecting_state, expand_all, model)
+        .children(state.graph.nodes.iter().filter_map(|node| {
+            let screen_x = pan.0 + node.pos.0 * zoom;
+            let screen_y = pan.1 + node.pos.1 * zoom;
+            let node_w = (node.size.0 * zoom).max(16.0);
+            let node_h = (node.size.1 * zoom).max(12.0);
+
+            if screen_x + node_w < view_min_x
+                || screen_x > view_max_x
+                || screen_y + node_h < view_min_y
+                || screen_y > view_max_y
+            {
+                return None;
+            }
+
+            Some(render_single_node(node, pan, zoom, &selected_id, &connecting_state, expand_all, model))
         }))
 }
 
@@ -103,10 +122,14 @@ fn render_single_node(
                     ),
             )
             // Bottom Output Socket
-            .children(node.outputs.iter().map(|p| {
-                let offset = node.get_port_offset(&p.id, PortDirection::Output);
-                render_absolute_output_socket(p, node, offset, z, socket_size, model)
-            }));
+            .children(if z >= 0.32 {
+                node.outputs.iter().map(|p| {
+                    let offset = node.get_port_offset(&p.id, PortDirection::Output);
+                    render_absolute_output_socket(p, node, offset, z, socket_size, model)
+                }).collect::<Vec<_>>()
+            } else {
+                vec![]
+            });
     }
 
     // ==========================================
@@ -263,15 +286,23 @@ fn render_single_node(
                 }),
         )
         // Top Input Socket (Centered Handle Ring)
-        .children(node.inputs.iter().map(|p| {
-            let offset = node.get_port_offset(&p.id, PortDirection::Input);
-            render_absolute_input_socket(p, &node.id, offset, z, socket_size, connecting_state, model)
-        }))
+        .children(if z >= 0.32 {
+            node.inputs.iter().map(|p| {
+                let offset = node.get_port_offset(&p.id, PortDirection::Input);
+                render_absolute_input_socket(p, &node.id, offset, z, socket_size, connecting_state, model)
+            }).collect::<Vec<_>>()
+        } else {
+            vec![]
+        })
         // Bottom Output Socket (Centered Handle Ring)
-        .children(node.outputs.iter().map(|p| {
-            let offset = node.get_port_offset(&p.id, PortDirection::Output);
-            render_absolute_output_socket(p, node, offset, z, socket_size, model)
-        }))
+        .children(if z >= 0.32 {
+            node.outputs.iter().map(|p| {
+                let offset = node.get_port_offset(&p.id, PortDirection::Output);
+                render_absolute_output_socket(p, node, offset, z, socket_size, model)
+            }).collect::<Vec<_>>()
+        } else {
+            vec![]
+        })
 }
 
 fn render_absolute_input_socket(

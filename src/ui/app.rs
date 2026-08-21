@@ -48,24 +48,18 @@ impl Render for AppView {
             });
         }
 
-        // 动态帧率控制与真实检测调度：
-        // 1. 窗口处于聚焦激活状态时：全速无等待刷新，真实测算硬件实际帧率 (如 60/120/144/240 Hz)
-        // 2. 窗口处于非聚焦/后台状态时：限制刷新频率至 60 FPS (每帧休眠 16.6ms 降耗节能)
-        if is_active {
-            cx.on_next_frame(window, |_, _, cx| {
-                cx.notify();
-            });
-        } else {
-            cx.spawn_in(window, async move |view, cx| {
-                smol::Timer::after(Duration::from_millis(16)).await;
-                let _ = cx.update(|_window, cx| {
-                    let _ = view.update(cx, |_, cx| {
-                        cx.notify();
-                    });
+        // 动态帧率平滑调度：
+        // 配合 smol 微定时器让渡 CPU/GPU 时间片，保障极致流畅响应（~120-144 FPS）的同时消除无节制空转掉帧
+        let sleep_ms = if is_active { 7 } else { 33 };
+        cx.spawn_in(window, async move |view, cx| {
+            smol::Timer::after(Duration::from_millis(sleep_ms)).await;
+            let _ = cx.update(|_window, cx| {
+                let _ = view.update(cx, |_, cx| {
+                    cx.notify();
                 });
-            })
-            .detach();
-        }
+            });
+        })
+        .detach();
 
         let state = self.model.read(cx);
         let toast = state.toast.clone();

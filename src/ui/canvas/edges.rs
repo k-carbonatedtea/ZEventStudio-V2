@@ -118,11 +118,28 @@ pub fn render_edges_layer(
                     // - 并行汇合连线 (连接到 Join 节点): 原生 GPU 虚线 (#94a3b8)
                     // - 普通/分支事件连线: 石板灰蓝 (#94a3b8)
                     // - 切刀模式: 警示红 (#ef4444)
+                    let view_w: f32 = bounds.size.width.into();
+                    let view_h: f32 = bounds.size.height.into();
+
                     for (_, _, _, is_entry_point, is_dashed, (sx, sy), (ex, ey)) in &edge_items_clone {
                         let screen_sx = orig_x + pan.0 + sx * zoom;
                         let screen_sy = orig_y + pan.1 + sy * zoom;
                         let screen_ex = orig_x + pan.0 + ex * zoom;
                         let screen_ey = orig_y + pan.1 + ey * zoom;
+
+                        // 快速边界框视口裁剪 (BBox Culling): 剔除两端均在屏幕外的无效绘制
+                        let min_x = screen_sx.min(screen_ex);
+                        let max_x = screen_sx.max(screen_ex);
+                        let min_y = screen_sy.min(screen_sy.min(screen_ey));
+                        let max_y = screen_sy.max(screen_ey);
+
+                        if max_x < orig_x - 60.0
+                            || min_x > orig_x + view_w + 60.0
+                            || max_y < orig_y - 60.0
+                            || min_y > orig_y + view_h + 60.0
+                        {
+                            continue;
+                        }
 
                         let edge_color = if knife_mode {
                             hsla(0.0, 0.85, 0.55, 0.95) // #ef4444
