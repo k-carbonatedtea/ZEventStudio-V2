@@ -163,9 +163,9 @@ pub fn render_edges_layer(
             )
             .size_full(),
         )
-        // 2. 连线交互徽章（Switch 条件分支标签与切刀剪断触发器）
+        // 2. 连线交互徽章（切刀剪断触发器）
         .children(edge_items.into_iter().filter_map(move |(s_id, t_id, label, _, _, (sx, sy), (ex, ey))| {
-            if !knife_mode && label.is_none() {
+            if !knife_mode {
                 return None;
             }
 
