@@ -16,6 +16,7 @@ pub enum SidebarTab {
     Palette,
 }
 
+/// 渲染左侧预设与组件侧边栏
 pub fn render_sidebar(
     state: &AppState,
     model: &Entity<AppState>,
@@ -70,7 +71,7 @@ pub fn render_sidebar(
                                 cx.notify();
                             });
                         })
-                        .child("🏁 流程入口")
+                        .child(state.t("sidebar.tab_entry_points"))
                 })
                 .child({
                     let is_active = active_tab == SidebarTab::Presets;
@@ -100,7 +101,7 @@ pub fn render_sidebar(
                                 cx.notify();
                             });
                         })
-                        .child("🎮 预设案例")
+                        .child(state.t("sidebar.tab_presets"))
                 })
                 .child({
                     let is_active = active_tab == SidebarTab::Palette;
@@ -130,7 +131,7 @@ pub fn render_sidebar(
                                 cx.notify();
                             });
                         })
-                        .child("📦 节点组件")
+                        .child(state.t("sidebar.tab_palette"))
                 }),
         )
         // Search bar (in palette mode)
@@ -161,7 +162,7 @@ pub fn render_sidebar(
                                     .text_size(px(11.5))
                                     .text_color(rgb(0xffffff))
                                     .child(if search_val.is_empty() {
-                                        "搜索节点类型...".to_string()
+                                        state.t("sidebar.search_placeholder").to_string()
                                     } else {
                                         search_val
                                     }),
@@ -184,3 +185,4 @@ pub fn render_sidebar(
                 }),
         )
 }
+

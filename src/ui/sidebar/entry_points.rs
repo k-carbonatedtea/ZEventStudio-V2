@@ -2,6 +2,7 @@ use gpui::*;
 use crate::model::NodeKind;
 use crate::ui::state::AppState;
 
+/// 渲染流程入口列表组件
 pub fn render_entry_point_list(
     state: &AppState,
     model: &Entity<AppState>,
@@ -26,7 +27,7 @@ pub fn render_entry_point_list(
                 .text_size(px(11.0))
                 .font_weight(FontWeight::BOLD)
                 .text_color(hsla(215.0 / 360.0, 0.3, 0.70, 1.0))
-                .child(format!("🚩 流程入口列表 ({})", entry_points.len())),
+                .child(format!("{} ({})", state.t("sidebar.entry_points_title"), entry_points.len())),
         )
         .children(entry_points.into_iter().map(|(id, title, _)| {
             let is_selected = selected_id.as_deref() == Some(&id);
@@ -83,8 +84,9 @@ pub fn render_entry_point_list(
                                 .text_size(px(9.5))
                                 .font_weight(FontWeight::MEDIUM)
                                 .text_color(rgb(0xffffff))
-                                .child("跳转聚焦"),
+                                .child(state.t("sidebar.jump_focus")),
                         ),
                 )
         }))
 }
+

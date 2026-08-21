@@ -16,14 +16,14 @@ pub fn translate<'a>(key: &'a str, lang: Language) -> &'a str {
         ("toolbar.knife_mode", Language::Zh) => "切刀工具",
         ("toolbar.knife_mode", Language::En) => "Knife Tool",
 
-        ("toolbar.knife_active", Language::Zh) => "✂ 剪断模式中",
-        ("toolbar.knife_active", Language::En) => "✂ Cutting Mode",
+        ("toolbar.knife_active", Language::Zh) => "剪断模式中",
+        ("toolbar.knife_active", Language::En) => "Cutting Mode",
 
         ("toolbar.perf_mode", Language::Zh) => "性能模式",
         ("toolbar.perf_mode", Language::En) => "Performance Mode",
 
-        ("toolbar.perf_active", Language::Zh) => "🔥 极速性能",
-        ("toolbar.perf_active", Language::En) => "🔥 Extreme Perf",
+        ("toolbar.perf_active", Language::Zh) => "极速性能",
+        ("toolbar.perf_active", Language::En) => "Extreme Perf",
 
         ("toolbar.fit_view", Language::Zh) => "自适应视口",
         ("toolbar.fit_view", Language::En) => "Fit View",
@@ -46,6 +46,12 @@ pub fn translate<'a>(key: &'a str, lang: Language) -> &'a str {
         ("toolbar.lang_btn", Language::Zh) => "中 / EN",
         ("toolbar.lang_btn", Language::En) => "EN / 中",
 
+        ("toolbar.nodes_label", Language::Zh) => "节点",
+        ("toolbar.nodes_label", Language::En) => "Nodes",
+
+        ("toolbar.edges_label", Language::Zh) => "连线",
+        ("toolbar.edges_label", Language::En) => "Edges",
+
         // ---------------- 节点卡片与图形 (Nodes & Canvas) ----------------
         ("node.parameters_label", Language::Zh) => "参数属性 (Parameters):",
         ("node.parameters_label", Language::En) => "Parameters:",
@@ -63,6 +69,12 @@ pub fn translate<'a>(key: &'a str, lang: Language) -> &'a str {
         ("inspector.title", Language::Zh) => "属性检查器",
         ("inspector.title", Language::En) => "Inspector",
 
+        ("inspector.selected_node", Language::Zh) => "已选中节点",
+        ("inspector.selected_node", Language::En) => "Selected Node",
+
+        ("inspector.global_info", Language::Zh) => "全局信息",
+        ("inspector.global_info", Language::En) => "Global Graph",
+
         ("inspector.basic_info", Language::Zh) => "基础信息",
         ("inspector.basic_info", Language::En) => "Basic Information",
 
@@ -78,36 +90,191 @@ pub fn translate<'a>(key: &'a str, lang: Language) -> &'a str {
         ("inspector.position", Language::Zh) => "画布坐标 (Position)",
         ("inspector.position", Language::En) => "Canvas Position",
 
-        ("inspector.dimensions", Language::Zh) => "尺寸大小 (Size)",
-        ("inspector.dimensions", Language::En) => "Dimensions",
+        ("inspector.ports_summary", Language::Zh) => "端口引脚",
+        ("inspector.ports_summary", Language::En) => "Port Sockets",
 
-        ("inspector.parameters", Language::Zh) => "参数属性列表 (Properties)",
-        ("inspector.parameters", Language::En) => "Parameters & Properties",
+        ("inspector.port_in", Language::Zh) => "◀ 输入",
+        ("inspector.port_in", Language::En) => "◀ Input",
 
-        ("inspector.add_param", Language::Zh) => "+ 添加参数属性",
-        ("inspector.add_param", Language::En) => "+ Add Parameter",
+        ("inspector.port_out", Language::Zh) => "▶ 输出",
+        ("inspector.port_out", Language::En) => "▶ Output",
 
-        ("inspector.empty_hint", Language::Zh) => "请在画布中选中节点以查看和编辑属性",
-        ("inspector.empty_hint", Language::En) => "Select a node on the canvas to view and edit properties",
+        ("inspector.parameters", Language::Zh) => "EVFL 参数属性列表",
+        ("inspector.parameters", Language::En) => "EVFL Parameters",
+
+        ("inspector.no_parameters", Language::Zh) => "暂无自定义参数",
+        ("inspector.no_parameters", Language::En) => "No custom parameters",
+
+        ("inspector.delete_node", Language::Zh) => "🗑️ 删除节点",
+        ("inspector.delete_node", Language::En) => "🗑️ Delete Node",
+
+        ("inspector.topology_stats", Language::Zh) => "📊 图谱拓扑统计",
+        ("inspector.topology_stats", Language::En) => "📊 Graph Topology Stats",
+
+        ("inspector.total_nodes", Language::Zh) => "📦 总节点数",
+        ("inspector.total_nodes", Language::En) => "📦 Total Nodes",
+
+        ("inspector.total_edges", Language::Zh) => "🔗 拓扑连线数",
+        ("inspector.total_edges", Language::En) => "🔗 Total Edges",
+
+        ("inspector.stat_entry_points", Language::Zh) => "🚩 入口 (EntryPoints)",
+        ("inspector.stat_entry_points", Language::En) => "🚩 Entry Points",
+
+        ("inspector.stat_actions", Language::Zh) => "⚡ 动作 (Actions)",
+        ("inspector.stat_actions", Language::En) => "⚡ Actions",
+
+        ("inspector.stat_switches", Language::Zh) => "🔀 条件 (Switches)",
+        ("inspector.stat_switches", Language::En) => "🔀 Switches",
+
+        ("inspector.tips_title", Language::Zh) => "💡 交互操作提示",
+        ("inspector.tips_title", Language::En) => "💡 Interaction Tips",
+
+        ("inspector.tip_entry_jump", Language::Zh) => "• 点击左侧「流程入口」可一键跳转至对应子剧情流",
+        ("inspector.tip_entry_jump", Language::En) => "• Click 'Entry Points' on left sidebar to jump to flow",
+
+        ("inspector.tip_pan_zoom", Language::Zh) => "• 鼠标拖拽画布平移，滚轮缩放，按住节点拖动重排",
+        ("inspector.tip_pan_zoom", Language::En) => "• Drag canvas to pan, wheel to zoom, drag nodes to move",
+
+        ("inspector.tip_quick_add", Language::Zh) => "• 双击或右键画布空白处可快速唤出新建节点面板",
+        ("inspector.tip_quick_add", Language::En) => "• Right click or drag wire on canvas to open Quick Add",
 
         // ---------------- 侧边栏与预设 (Sidebar & Presets) ----------------
-        ("sidebar.title", Language::Zh) => "官方 EVFL 预设流",
-        ("sidebar.title", Language::En) => "Official EVFL Presets",
+        ("sidebar.tab_entry_points", Language::Zh) => "🏁 流程入口",
+        ("sidebar.tab_entry_points", Language::En) => "🏁 Entry Points",
 
-        ("sidebar.nodes_count", Language::Zh) => "节点总数",
-        ("sidebar.nodes_count", Language::En) => "Total Nodes",
+        ("sidebar.tab_presets", Language::Zh) => "🎮 预设案例",
+        ("sidebar.tab_presets", Language::En) => "🎮 Presets",
 
-        ("sidebar.edges_count", Language::Zh) => "连线总数",
-        ("sidebar.edges_count", Language::En) => "Total Edges",
+        ("sidebar.tab_palette", Language::Zh) => "📦 节点组件",
+        ("sidebar.tab_palette", Language::En) => "📦 Components",
 
-        // ---------------- 快捷添加 (Quick Add) ----------------
-        ("quick_add.title", Language::Zh) => "快捷新建节点",
-        ("quick_add.title", Language::En) => "Quick Add Node",
+        ("sidebar.search_placeholder", Language::Zh) => "搜索节点类型...",
+        ("sidebar.search_placeholder", Language::En) => "Search node type...",
 
-        ("quick_add.placeholder", Language::Zh) => "搜索节点类型 (如 Action, Switch, Fork)...",
-        ("quick_add.placeholder", Language::En) => "Search node type (e.g. Action, Switch, Fork)...",
+        ("sidebar.entry_points_title", Language::Zh) => "🚩 流程入口列表",
+        ("sidebar.entry_points_title", Language::En) => "🚩 Entry Points",
+
+        ("sidebar.jump_focus", Language::Zh) => "跳转聚焦",
+        ("sidebar.jump_focus", Language::En) => "Focus",
+
+        ("sidebar.active_badge", Language::Zh) => "当前激活",
+        ("sidebar.active_badge", Language::En) => "Active",
+
+        // ---------------- 节点组件库与类型名称 (Palette & Kinds) ----------------
+        ("node_kind.action_title", Language::Zh) => "⚡ Action 动作",
+        ("node_kind.action_title", Language::En) => "⚡ Action Node",
+        ("node_kind.action_desc", Language::Zh) => "执行对话/音效/道具等具体行为",
+        ("node_kind.action_desc", Language::En) => "Execute dialogue, audio, or item action",
+
+        ("node_kind.switch_title", Language::Zh) => "🔀 Switch 分支",
+        ("node_kind.switch_title", Language::En) => "🔀 Switch Node",
+        ("node_kind.switch_desc", Language::Zh) => "多条件动态分支路由",
+        ("node_kind.switch_desc", Language::En) => "Multi-condition dynamic branch routing",
+
+        ("node_kind.query_title", Language::Zh) => "🔍 Query 查询",
+        ("node_kind.query_title", Language::En) => "🔍 Query Node",
+        ("node_kind.query_desc", Language::Zh) => "检查状态与游戏条件",
+        ("node_kind.query_desc", Language::En) => "Evaluate game condition and variable state",
+
+        ("node_kind.subflow_title", Language::Zh) => "📦 SubFlow 子流程",
+        ("node_kind.subflow_title", Language::En) => "📦 SubFlow Node",
+        ("node_kind.subflow_desc", Language::Zh) => "调用已封装的子节点图",
+        ("node_kind.subflow_desc", Language::En) => "Invoke modular subflow graph",
+
+        ("node_kind.fork_title", Language::Zh) => "🔱 Fork 并行",
+        ("node_kind.fork_title", Language::En) => "🔱 Fork Node",
+        ("node_kind.fork_desc", Language::Zh) => "分发多条并行流水线",
+        ("node_kind.fork_desc", Language::En) => "Dispatch parallel asynchronous execution streams",
+
+        ("node_kind.join_title", Language::Zh) => "🔗 Join 汇合",
+        ("node_kind.join_title", Language::En) => "🔗 Join Node",
+        ("node_kind.join_desc", Language::Zh) => "汇合同步多条流水线",
+        ("node_kind.join_desc", Language::En) => "Wait and synchronize parallel branches",
+
+        ("node_kind.math_title", Language::Zh) => "🧮 Math 运算",
+        ("node_kind.math_title", Language::En) => "🧮 Math Node",
+        ("node_kind.math_desc", Language::Zh) => "数据计算与逻辑判断",
+        ("node_kind.math_desc", Language::En) => "Arithmetic calculations and logic expressions",
+
+        ("node_kind.entry_title", Language::Zh) => "🚩 EntryPoint 入口",
+        ("node_kind.entry_title", Language::En) => "🚩 EntryPoint",
+        ("node_kind.entry_desc", Language::Zh) => "定义事件流触发源",
+        ("node_kind.entry_desc", Language::En) => "Define event flow root entry trigger",
+
+        // ---------------- 快捷新建节点 (Quick Add) ----------------
+        ("quick_add.title", Language::Zh) => "➕ 快速新建节点 (Quick Add)",
+        ("quick_add.title", Language::En) => "➕ Quick Add Node",
+
+        ("quick_add.auto_connect", Language::Zh) => "🔗 自动连接到新节点",
+        ("quick_add.auto_connect", Language::En) => "🔗 Auto-connect to new node",
+
+        ("quick_add.click_create", Language::Zh) => "点击立即生成",
+        ("quick_add.click_create", Language::En) => "Click to create node",
+
+        // 默认节点标题
+        ("default_node.action", Language::Zh) => "新动作 (Action)",
+        ("default_node.action", Language::En) => "New Action",
+
+        ("default_node.switch", Language::Zh) => "新分支 (Switch)",
+        ("default_node.switch", Language::En) => "New Switch",
+
+        ("default_node.query", Language::Zh) => "新查询 (Query)",
+        ("default_node.query", Language::En) => "New Query",
+
+        ("default_node.subflow", Language::Zh) => "新子流程 (SubFlow)",
+        ("default_node.subflow", Language::En) => "New SubFlow",
+
+        ("default_node.fork", Language::Zh) => "新分流 (Fork)",
+        ("default_node.fork", Language::En) => "New Fork",
+
+        ("default_node.join", Language::Zh) => "新汇合 (Join)",
+        ("default_node.join", Language::En) => "New Join",
+
+        ("default_node.math", Language::Zh) => "新运算 (Math)",
+        ("default_node.math", Language::En) => "New Math",
+
+        ("default_node.entry", Language::Zh) => "新入口 (EntryPoint)",
+        ("default_node.entry", Language::En) => "New EntryPoint",
+
+        ("default_node.comment", Language::Zh) => "便签备注 (Comment)",
+        ("default_node.comment", Language::En) => "Note (Comment)",
+
+        // ---------------- Toast 提示信息 (Toast Notifications) ----------------
+        ("toast.preset_loaded", Language::Zh) => "⚡ 已成功载入 100enemy.bfevfl 官方 EVFL 事件流",
+        ("toast.preset_loaded", Language::En) => "⚡ Loaded 100enemy.bfevfl official EVFL graph",
+
+        ("toast.switch_preset", Language::Zh) => "已切换至案例：",
+        ("toast.switch_preset", Language::En) => "Switched to preset: ",
+
+        ("toast.auto_layout_done", Language::Zh) => "✨ 已完成 DAG 拓扑分层自动排版",
+        ("toast.auto_layout_done", Language::En) => "✨ DAG hierarchical layout completed",
+
+        ("toast.perf_on", Language::Zh) => "🔥 极速性能模式已开启：GPU 全速无锁帧渲染",
+        ("toast.perf_on", Language::En) => "🔥 Extreme Perf Mode Enabled (Uncapped GPU Rendering)",
+
+        ("toast.perf_off", Language::Zh) => "🌿 标准模式已恢复：动态按需省电渲染",
+        ("toast.perf_off", Language::En) => "🌿 Standard Mode Restored (Dynamic Power Saving)",
+
+        ("toast.expand_params_on", Language::Zh) => "📋 已展开全部节点参数详情",
+        ("toast.expand_params_on", Language::En) => "📋 Expanded all node parameters",
+
+        ("toast.expand_params_off", Language::Zh) => "📋 已折叠节点参数详情",
+        ("toast.expand_params_off", Language::En) => "📋 Collapsed node parameters",
+
+        ("toast.focus_node", Language::Zh) => "已跳转聚焦至: ",
+        ("toast.focus_node", Language::En) => "Focused on node: ",
+
+        ("toast.deleted_node", Language::Zh) => "🗑️ 已删除选中节点",
+        ("toast.deleted_node", Language::En) => "🗑️ Deleted selected node",
+
+        ("toast.sever_edge", Language::Zh) => "✂️ 已剪断连线",
+        ("toast.sever_edge", Language::En) => "✂️ Severed edge connection",
+
+        ("toast.connect_edge", Language::Zh) => "🔗 已建立连线",
+        ("toast.connect_edge", Language::En) => "🔗 Connected edge successfully",
 
         // 默认回退原字符串
         _ => key,
     }
 }
+

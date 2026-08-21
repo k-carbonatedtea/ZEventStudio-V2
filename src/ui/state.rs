@@ -67,7 +67,7 @@ impl AppState {
             fps: 60.0,
             active_preset_id: "zelda_100enemy".to_string(),
             active_sidebar_tab: SidebarTab::EntryPoints,
-            toast: Some(Toast::success("⚡ 已成功载入 100enemy.bfevfl 官方 EVFL 事件流")),
+            toast: Some(Toast::success(crate::i18n::t("toast.preset_loaded", crate::i18n::Language::Zh))),
             quick_add_modal: None,
             inspector_open: true,
             sidebar_open: true,
@@ -94,7 +94,7 @@ impl AppState {
             self.update_node_sizes();
             auto_layout_graph(&mut self.graph);
             self.fit_view();
-            self.toast = Some(Toast::success(format!("已切换至案例：{}", self.graph.name)));
+            self.toast = Some(Toast::success(format!("{}{}", self.t("toast.switch_preset"), self.graph.name)));
         }
     }
 
@@ -102,15 +102,15 @@ impl AppState {
         self.update_node_sizes();
         auto_layout_graph(&mut self.graph);
         self.fit_view();
-        self.toast = Some(Toast::success("✨ 已完成 DAG 拓扑分层自动排版"));
+        self.toast = Some(Toast::success(self.t("toast.auto_layout_done")));
     }
 
     pub fn toggle_performance_mode(&mut self) {
         self.performance_mode = !self.performance_mode;
         if self.performance_mode {
-            self.toast = Some(Toast::success("🔥 极速性能模式已开启：GPU 全速无锁帧渲染"));
+            self.toast = Some(Toast::success(self.t("toast.perf_on")));
         } else {
-            self.toast = Some(Toast::info("🌿 标准模式已恢复：动态按需省电渲染"));
+            self.toast = Some(Toast::info(self.t("toast.perf_off")));
         }
     }
 
@@ -120,9 +120,9 @@ impl AppState {
         auto_layout_graph(&mut self.graph);
         self.fit_view();
         if self.expand_all_params {
-            self.toast = Some(Toast::info("📋 已展开全部节点参数详情"));
+            self.toast = Some(Toast::info(self.t("toast.expand_params_on")));
         } else {
-            self.toast = Some(Toast::info("📋 已折叠节点参数详情"));
+            self.toast = Some(Toast::info(self.t("toast.expand_params_off")));
         }
     }
 
@@ -196,7 +196,7 @@ impl AppState {
                 vp_h / 2.0 - (pos.1 + size.1 / 2.0) * self.zoom,
             );
             self.selected_node_id = Some(node_id.to_string());
-            self.toast = Some(Toast::info(format!("已跳转聚焦至: {}", node.title)));
+            self.toast = Some(Toast::info(format!("{}{}", self.t("toast.focus_node"), node.title)));
         }
     }
 
@@ -211,7 +211,7 @@ impl AppState {
     pub fn delete_selected_node(&mut self) {
         if let Some(id) = self.selected_node_id.take() {
             self.graph.remove_node(&id);
-            self.toast = Some(Toast::info("🗑️ 已删除选中节点"));
+            self.toast = Some(Toast::info(self.t("toast.deleted_node")));
         }
     }
 
@@ -229,7 +229,7 @@ impl AppState {
 
     pub fn sever_edge(&mut self, source_node: &str, target_node: &str) {
         self.graph.sever_edge(source_node, target_node);
-        self.toast = Some(Toast::info("✂️ 已剪断连线"));
+        self.toast = Some(Toast::info(self.t("toast.sever_edge")));
     }
 
     pub fn connect_ports(
@@ -245,9 +245,10 @@ impl AppState {
 
         let edge = Edge::new(source_node_id, source_port_id, target_node_id, target_port_id);
         self.graph.add_edge(edge);
-        self.toast = Some(Toast::success("🔗 已建立连线"));
+        self.toast = Some(Toast::success(self.t("toast.connect_edge")));
     }
 }
+
 
 #[cfg(test)]
 mod tests {

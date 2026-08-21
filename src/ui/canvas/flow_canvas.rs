@@ -150,6 +150,7 @@ pub fn render_flow_canvas(
         .child(render_nodes_layer(state, model))
         // Quick Add modal overlay if active
         .children(quick_add.map(|(cx, cy, src)| {
-            render_quick_add_modal((cx, cy), src, model)
+            render_quick_add_modal(state, (cx, cy), src, model)
         }))
 }
+

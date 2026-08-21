@@ -2,6 +2,7 @@ use gpui::*;
 use crate::presets::get_available_presets;
 use crate::ui::state::AppState;
 
+/// 渲染官方 EVFL 预设流案例列表
 pub fn render_preset_list(
     state: &AppState,
     model: &Entity<AppState>,
@@ -70,7 +71,7 @@ pub fn render_preset_list(
                                     .text_size(px(9.5))
                                     .font_weight(FontWeight::BOLD)
                                     .text_color(rgb(0xffffff))
-                                    .child("当前激活"),
+                                    .child(state.t("sidebar.active_badge")),
                             )
                         } else {
                             None
@@ -85,3 +86,4 @@ pub fn render_preset_list(
                 )
         }))
 }
+

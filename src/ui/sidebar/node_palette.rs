@@ -2,25 +2,66 @@ use gpui::*;
 use crate::model::NodeKind;
 use crate::ui::state::AppState;
 
+/// 渲染左侧节点组件库面板
 pub fn render_node_palette(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
     let node_items = vec![
-        (NodeKind::Action, "⚡ Action 动作", "执行对话/音效/道具等具体行为"),
-        (NodeKind::Switch, "🔀 Switch 分支", "多条件动态分支路由"),
-        (NodeKind::Query, "🔍 Query 查询", "检查状态与游戏条件"),
-        (NodeKind::SubFlow, "📦 SubFlow 子流程", "调用已封装的子节点图"),
-        (NodeKind::Fork, "🔱 Fork 并行", "分发多条并行流水线"),
-        (NodeKind::Join, "🔗 Join 汇合", "汇合同步多条流水线"),
-        (NodeKind::Math, "🧮 Math 运算", "数据计算与逻辑判断"),
-        (NodeKind::EntryPoint, "🚩 EntryPoint 入口", "定义事件流触发源"),
+        (
+            NodeKind::Action,
+            state.t("node_kind.action_title"),
+            state.t("node_kind.action_desc"),
+            state.t("default_node.action"),
+        ),
+        (
+            NodeKind::Switch,
+            state.t("node_kind.switch_title"),
+            state.t("node_kind.switch_desc"),
+            state.t("default_node.switch"),
+        ),
+        (
+            NodeKind::Query,
+            state.t("node_kind.query_title"),
+            state.t("node_kind.query_desc"),
+            state.t("default_node.query"),
+        ),
+        (
+            NodeKind::SubFlow,
+            state.t("node_kind.subflow_title"),
+            state.t("node_kind.subflow_desc"),
+            state.t("default_node.subflow"),
+        ),
+        (
+            NodeKind::Fork,
+            state.t("node_kind.fork_title"),
+            state.t("node_kind.fork_desc"),
+            state.t("default_node.fork"),
+        ),
+        (
+            NodeKind::Join,
+            state.t("node_kind.join_title"),
+            state.t("node_kind.join_desc"),
+            state.t("default_node.join"),
+        ),
+        (
+            NodeKind::Math,
+            state.t("node_kind.math_title"),
+            state.t("node_kind.math_desc"),
+            state.t("default_node.math"),
+        ),
+        (
+            NodeKind::EntryPoint,
+            state.t("node_kind.entry_title"),
+            state.t("node_kind.entry_desc"),
+            state.t("default_node.entry"),
+        ),
     ];
 
     let query = state.search_query.to_lowercase();
     let filtered_items: Vec<_> = node_items
         .into_iter()
-        .filter(|(_, title, desc)| {
+        .filter(|(_, title, desc, _)| {
             query.is_empty()
                 || title.to_lowercase().contains(&query)
                 || desc.to_lowercase().contains(&query)
@@ -32,8 +73,9 @@ pub fn render_node_palette(
         .flex_col()
         .gap_2()
         .p_3()
-        .children(filtered_items.into_iter().map(|(kind, title, desc)| {
+        .children(filtered_items.into_iter().map(|(kind, title, desc, default_title)| {
             let k = kind.clone();
+            let def_t = default_title.to_string();
             let model_add = model.clone();
 
             div()
@@ -49,21 +91,10 @@ pub fn render_node_palette(
                 .cursor_pointer()
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     let node_k = k.clone();
+                    let dt = def_t.clone();
                     model_add.update(cx, |st, cx| {
-                        // Place near canvas center
                         let (cx_pos, cy_pos) = st.screen_to_canvas(500.0, 300.0);
-                        let default_title = match &node_k {
-                            NodeKind::Action => "新动作 (Action)",
-                            NodeKind::Switch => "新分支 (Switch)",
-                            NodeKind::Query => "新查询 (Query)",
-                            NodeKind::SubFlow => "新子流程 (SubFlow)",
-                            NodeKind::Fork => "新分流 (Fork)",
-                            NodeKind::Join => "新汇合 (Join)",
-                            NodeKind::Math => "新运算 (Math)",
-                            NodeKind::EntryPoint => "新入口 (EntryPoint)",
-                            NodeKind::Comment => "便签备注 (Comment)",
-                        };
-                        st.add_node_at(node_k, default_title, (cx_pos, cy_pos));
+                        st.add_node_at(node_k, dt, (cx_pos, cy_pos));
                         cx.notify();
                     });
                 })
@@ -72,14 +103,15 @@ pub fn render_node_palette(
                         .font_weight(FontWeight::SEMIBOLD)
                         .text_size(px(12.0))
                         .text_color(rgb(0xffffff))
-                        .child(title),
+                        .child(title.to_string()),
                 )
                 .child(
                     div()
                         .mt_0p5()
                         .text_size(px(10.0))
                         .text_color(hsla(215.0 / 360.0, 0.25, 0.65, 1.0))
-                        .child(desc),
+                        .child(desc.to_string()),
                 )
         }))
 }
+

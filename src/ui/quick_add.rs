@@ -3,23 +3,70 @@ use gpui::StatefulInteractiveElement;
 use crate::model::NodeKind;
 use crate::ui::state::AppState;
 
+/// 渲染双击/连线拉出时的快速新建节点浮层
 pub fn render_quick_add_modal(
+    state: &AppState,
     canvas_pos: (f32, f32),
     source_connection: Option<(String, String)>,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
     let node_types = vec![
-        (NodeKind::Action, "⚡ Action 动作节点", "执行具体指令/对话/行为"),
-        (NodeKind::Switch, "🔀 Switch 分支路由", "条件路由与多分支判断"),
-        (NodeKind::Query, "🔍 Query 状态查询", "评估游戏变量与状态判断"),
-        (NodeKind::SubFlow, "📦 SubFlow 子流程", "调用封装的独立子节点图"),
-        (NodeKind::Fork, "🔱 Fork 并行分流", "分发多路并行执行支流"),
-        (NodeKind::Join, "🔗 Join 汇合同步", "等待多路并行支流全部完成"),
-        (NodeKind::Math, "🧮 Math 数学逻辑", "数值加减乘除与数据处理"),
-        (NodeKind::EntryPoint, "🚩 EntryPoint 入口点", "定义事件流触发源"),
+        (
+            NodeKind::Action,
+            state.t("node_kind.action_title"),
+            state.t("node_kind.action_desc"),
+            state.t("default_node.action"),
+        ),
+        (
+            NodeKind::Switch,
+            state.t("node_kind.switch_title"),
+            state.t("node_kind.switch_desc"),
+            state.t("default_node.switch"),
+        ),
+        (
+            NodeKind::Query,
+            state.t("node_kind.query_title"),
+            state.t("node_kind.query_desc"),
+            state.t("default_node.query"),
+        ),
+        (
+            NodeKind::SubFlow,
+            state.t("node_kind.subflow_title"),
+            state.t("node_kind.subflow_desc"),
+            state.t("default_node.subflow"),
+        ),
+        (
+            NodeKind::Fork,
+            state.t("node_kind.fork_title"),
+            state.t("node_kind.fork_desc"),
+            state.t("default_node.fork"),
+        ),
+        (
+            NodeKind::Join,
+            state.t("node_kind.join_title"),
+            state.t("node_kind.join_desc"),
+            state.t("default_node.join"),
+        ),
+        (
+            NodeKind::Math,
+            state.t("node_kind.math_title"),
+            state.t("node_kind.math_desc"),
+            state.t("default_node.math"),
+        ),
+        (
+            NodeKind::EntryPoint,
+            state.t("node_kind.entry_title"),
+            state.t("node_kind.entry_desc"),
+            state.t("default_node.entry"),
+        ),
     ];
 
     let model_close = model.clone();
+    let status_hint = if source_connection.is_some() {
+        state.t("quick_add.auto_connect")
+    } else {
+        state.t("quick_add.click_create")
+    };
 
     div()
         .absolute()
@@ -46,8 +93,8 @@ pub fn render_quick_add_modal(
                 .flex()
                 .flex_col()
                 .gap_3()
-                .on_mouse_down(MouseButton::Left, |_, _, _| {}) // stop propagation
-                // Header
+                .on_mouse_down(MouseButton::Left, |_, _, _| {}) // 阻止向底层画布冒泡
+                // 顶部标题
                 .child(
                     div()
                         .flex()
@@ -61,20 +108,16 @@ pub fn render_quick_add_modal(
                                 .font_weight(FontWeight::BOLD)
                                 .text_size(px(14.0))
                                 .text_color(rgb(0xffffff))
-                                .child("➕ 快速新建节点 (Quick Add)"),
+                                .child(state.t("quick_add.title")),
                         )
                         .child(
                             div()
                                 .text_size(px(11.0))
                                 .text_color(hsla(215.0 / 360.0, 0.3, 0.65, 1.0))
-                                .child(if source_connection.is_some() {
-                                    "🔗 自动连接到新节点"
-                                } else {
-                                    "点击立即生成"
-                                }),
+                                .child(status_hint),
                         ),
                 )
-                // Node list
+                // 节点类型列表
                 .child(
                     div()
                         .id("quick_add_scroll_body")
@@ -83,10 +126,11 @@ pub fn render_quick_add_modal(
                         .gap_1p5()
                         .max_h(px(320.0))
                         .overflow_y_scroll()
-                        .children(node_types.into_iter().map(|(kind, label, desc)| {
+                        .children(node_types.into_iter().map(|(kind, label, desc, def_title)| {
                             let k = kind.clone();
                             let model_add = model.clone();
                             let src_conn = source_connection.clone();
+                            let dt = def_title.to_string();
 
                             div()
                                 .flex()
@@ -103,22 +147,11 @@ pub fn render_quick_add_modal(
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     let node_k = k.clone();
                                     let src = src_conn.clone();
+                                    let node_title = dt.clone();
                                     model_add.update(cx, |st, cx| {
-                                        let default_title = match &node_k {
-                                            NodeKind::Action => "新动作 (Action)",
-                                            NodeKind::Switch => "新分支 (Switch)",
-                                            NodeKind::Query => "新查询 (Query)",
-                                            NodeKind::SubFlow => "新子流程 (SubFlow)",
-                                            NodeKind::Fork => "新分流 (Fork)",
-                                            NodeKind::Join => "新汇合 (Join)",
-                                            NodeKind::Math => "新运算 (Math)",
-                                            NodeKind::EntryPoint => "新入口 (EntryPoint)",
-                                            NodeKind::Comment => "便签备注 (Comment)",
-                                        };
+                                        let new_id = st.add_node_at(node_k, node_title, canvas_pos);
 
-                                        let new_id = st.add_node_at(node_k, default_title, canvas_pos);
-
-                                        // Auto-connect if created from wire drag
+                                        // 若由拉线触发，则自动连接到新节点第一个输入引脚
                                         if let Some((s_node, s_port)) = src {
                                             if let Some(target_n) = st.graph.find_node(&new_id) {
                                                 if let Some(first_in) = target_n.inputs.first() {
@@ -137,15 +170,16 @@ pub fn render_quick_add_modal(
                                         .font_weight(FontWeight::SEMIBOLD)
                                         .text_size(px(12.5))
                                         .text_color(rgb(0xffffff))
-                                        .child(label),
+                                        .child(label.to_string()),
                                 )
                                 .child(
                                     div()
                                         .text_size(px(10.5))
                                         .text_color(hsla(215.0 / 360.0, 0.25, 0.65, 1.0))
-                                        .child(desc),
+                                        .child(desc.to_string()),
                                 )
                         })),
                 ),
         )
 }
+

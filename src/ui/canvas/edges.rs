@@ -201,6 +201,8 @@ pub fn render_edges_layer(
             let mid_y = pan.1 + ((sy + ey) / 2.0) * zoom;
             let model_cut = model.clone();
 
+            let cut_label = label.unwrap_or_else(|| state.t("edge.cut").to_string());
+
             Some(
                 div()
                     .absolute()
@@ -228,8 +230,9 @@ pub fn render_edges_layer(
                             .text_size(px(9.5 * zoom.clamp(0.75, 1.1)))
                             .font_weight(FontWeight::BOLD)
                             .text_color(hsla(0.0, 0.0, 1.0, 1.0))
-                            .child(label.unwrap_or_else(|| "✂ 剪断".to_string())),
+                            .child(cut_label),
                     ),
             )
         }))
 }
+
