@@ -22,6 +22,7 @@ pub enum DragState {
     },
 }
 
+#[allow(dead_code)]
 pub struct AppState {
     pub graph: Graph,
     pub pan: (f32, f32),
@@ -43,15 +44,17 @@ pub struct AppState {
     pub search_query: String,
 }
 
+#[allow(dead_code)]
 impl AppState {
     pub fn new() -> Self {
-        // 项目打开时，加载预设节点案例 (默认 RPG 任务对话与条件分支流)
-        let graph = get_startup_preset();
+        // 项目打开时，加载 100enemy.json 真实 EVFL 事件流
+        let mut graph = get_startup_preset();
+        auto_layout_graph(&mut graph);
 
-        Self {
+        let mut state = Self {
             graph,
             pan: (80.0, 60.0),
-            zoom: 1.0,
+            zoom: 0.85,
             selected_node_id: None,
             hovered_node_id: None,
             hovered_port: None,
@@ -60,14 +63,16 @@ impl AppState {
             particles_enabled: true,
             canvas_origin: (0.0, 0.0),
             fps: 60.0,
-            active_preset_id: "quest_dialogue".to_string(),
-            active_sidebar_tab: SidebarTab::Palette,
-            toast: Some(Toast::success("⚡ 已加载预设节点案例：任务与对话事件流")),
+            active_preset_id: "zelda_100enemy".to_string(),
+            active_sidebar_tab: SidebarTab::EntryPoints,
+            toast: Some(Toast::success("⚡ 已成功载入 100enemy.json 真实 EVFL 事件流")),
             quick_add_modal: None,
             inspector_open: true,
             sidebar_open: true,
             search_query: String::new(),
-        }
+        };
+        state.fit_view();
+        state
     }
 
     pub fn load_preset(&mut self, preset_id: &str) {
@@ -98,18 +103,33 @@ impl AppState {
         let graph_h = (max_y - min_y).max(100.0);
 
         // Target viewport approx 1100x650
-        let vp_w = 1100.0;
-        let vp_h = 650.0;
+        let vp_w: f32 = 1100.0;
+        let vp_h: f32 = 650.0;
 
-        let scale_x = (vp_w - 120.0) / graph_w;
-        let scale_y = (vp_h - 120.0) / graph_h;
-        let target_zoom = scale_x.min(scale_y).clamp(0.6, 1.25);
+        let scale_x: f32 = (vp_w - 120.0) / graph_w;
+        let scale_y: f32 = (vp_h - 120.0) / graph_h;
+        let target_zoom = scale_x.min(scale_y).clamp(0.45, 1.25);
 
         let target_pan_x = (vp_w - graph_w * target_zoom) / 2.0 - min_x * target_zoom;
         let target_pan_y = (vp_h - graph_h * target_zoom) / 2.0 - min_y * target_zoom;
 
         self.zoom = target_zoom;
         self.pan = (target_pan_x, target_pan_y);
+    }
+
+    pub fn focus_node(&mut self, node_id: &str) {
+        if let Some(node) = self.graph.find_node(node_id) {
+            let pos = node.pos;
+            let size = node.size;
+            let vp_w: f32 = 1100.0;
+            let vp_h: f32 = 650.0;
+            self.pan = (
+                vp_w / 2.0 - (pos.0 + size.0 / 2.0) * self.zoom,
+                vp_h / 2.0 - (pos.1 + size.1 / 2.0) * self.zoom,
+            );
+            self.selected_node_id = Some(node_id.to_string());
+            self.toast = Some(Toast::info(format!("已跳转聚焦至: {}", node.title)));
+        }
     }
 
     pub fn add_node_at(&mut self, kind: NodeKind, title: impl Into<String>, pos: (f32, f32)) -> String {

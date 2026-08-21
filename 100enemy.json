@@ -1,0 +1,2129 @@
+{
+  "FileName": "100enemy",
+  "Version": "0.3.0.0",
+  "Flowcharts": {
+    "100enemy": {
+      "Name": "100enemy",
+      "Actors": [
+        {
+          "Name": "EventSystemActor",
+          "SecondaryName": "",
+          "ArgumentName": "",
+          "EntryPointIndex": -1,
+          "CutNumber": 1,
+          "Actions": [
+            "Demo_FlagON",
+            "Demo_ChangeScene",
+            "Demo_WaitFrame",
+            "Demo_AdvanceQuest",
+            "Demo_RollbackQuest",
+            "Demo_FlagOFF",
+            "Demo_RestorePouchForQuest",
+            "Demo_InitPouchForQuest",
+            "Demo_IncreaseGameDataInt",
+            "Demo_CallDemo",
+            "Demo_SetGameDataInt"
+          ],
+          "Queries": [
+            "CheckFlag",
+            "CheckGameDataInt"
+          ],
+          "Parameters": {
+            "CreateMode": {
+              "Int": 0
+            },
+            "IsGrounding": {
+              "Bool": false
+            },
+            "IsWorld": {
+              "Bool": false
+            },
+            "PosX": {
+              "Float": 0
+            },
+            "PosY": {
+              "Float": 0
+            },
+            "PosZ": {
+              "Float": 0
+            },
+            "RotX": {
+              "Float": 0
+            },
+            "RotY": {
+              "Float": 0
+            },
+            "RotZ": {
+              "Float": 0
+            }
+          }
+        },
+        {
+          "Name": "GameROMPlayer",
+          "SecondaryName": "",
+          "ArgumentName": "",
+          "EntryPointIndex": -1,
+          "CutNumber": 1,
+          "Actions": [
+            "Demo_UpdateEquip",
+            "Demo_PlayerWait"
+          ],
+          "Queries": [],
+          "Parameters": {
+            "ArmorHead": {
+              "String": ""
+            },
+            "ArmorLower": {
+              "String": ""
+            },
+            "ArmorUpper": {
+              "String": ""
+            },
+            "Bow": {
+              "String": ""
+            },
+            "CreateMode": {
+              "Int": 0
+            },
+            "DisableBow": {
+              "Bool": false
+            },
+            "DisableSheikPad": {
+              "Bool": false
+            },
+            "DisableShield": {
+              "Bool": false
+            },
+            "DisableWeapon": {
+              "Bool": false
+            },
+            "IsGrounding": {
+              "Bool": false
+            },
+            "IsWorld": {
+              "Bool": false
+            },
+            "PosX": {
+              "Float": 0
+            },
+            "PosY": {
+              "Float": 0
+            },
+            "PosZ": {
+              "Float": 0
+            },
+            "RotX": {
+              "Float": 0
+            },
+            "RotY": {
+              "Float": 0
+            },
+            "RotZ": {
+              "Float": 0
+            },
+            "Shield": {
+              "String": ""
+            },
+            "Weapon": {
+              "String": ""
+            }
+          }
+        },
+        {
+          "Name": "GameDataCalcMachine",
+          "SecondaryName": "",
+          "ArgumentName": "",
+          "EntryPointIndex": -1,
+          "CutNumber": 1,
+          "Actions": [
+            "Demo_GameDataCopyInt"
+          ],
+          "Queries": [],
+          "Parameters": {
+            "CreateMode": {
+              "Int": 0
+            },
+            "IsGrounding": {
+              "Bool": false
+            },
+            "IsWorld": {
+              "Bool": false
+            },
+            "PosX": {
+              "Float": 0
+            },
+            "PosY": {
+              "Float": 0
+            },
+            "PosZ": {
+              "Float": 0
+            },
+            "RotX": {
+              "Float": 0
+            },
+            "RotY": {
+              "Float": 0
+            },
+            "RotZ": {
+              "Float": 0
+            }
+          }
+        },
+        {
+          "Name": "TwnObj_Village_Korok_DekuTree_A_01",
+          "SecondaryName": "",
+          "ArgumentName": "",
+          "EntryPointIndex": -1,
+          "CutNumber": 1,
+          "Actions": [
+            "Demo_Talk"
+          ],
+          "Queries": [],
+          "Parameters": {
+            "CreateMode": {
+              "Int": 0
+            },
+            "IsGrounding": {
+              "Bool": false
+            },
+            "IsWorld": {
+              "Bool": false
+            },
+            "PosX": {
+              "Float": 0
+            },
+            "PosY": {
+              "Float": 0
+            },
+            "PosZ": {
+              "Float": 0
+            },
+            "RotX": {
+              "Float": 0
+            },
+            "RotY": {
+              "Float": 0
+            },
+            "RotZ": {
+              "Float": 0
+            }
+          }
+        },
+        {
+          "Name": "SceneSoundCtrlTag",
+          "SecondaryName": "",
+          "ArgumentName": "",
+          "EntryPointIndex": -1,
+          "CutNumber": 1,
+          "Actions": [
+            "Demo_NotifyTalk"
+          ],
+          "Queries": [],
+          "Parameters": {
+            "CreateMode": {
+              "Int": 0
+            },
+            "IsGrounding": {
+              "Bool": false
+            },
+            "IsWorld": {
+              "Bool": false
+            },
+            "PosX": {
+              "Float": 0
+            },
+            "PosY": {
+              "Float": 0
+            },
+            "PosZ": {
+              "Float": 0
+            },
+            "RotX": {
+              "Float": 0
+            },
+            "RotY": {
+              "Float": 0
+            },
+            "RotZ": {
+              "Float": 0
+            }
+          }
+        },
+        {
+          "Name": "GameRomCamera",
+          "SecondaryName": "",
+          "ArgumentName": "",
+          "EntryPointIndex": -1,
+          "CutNumber": 1,
+          "Actions": [
+            "Demo_SavePoint1",
+            "Demo_ReturnSavePoint_1",
+            "Demo_MovePosFlow"
+          ],
+          "Queries": [],
+          "Parameters": {
+            "CreateMode": {
+              "Int": 0
+            },
+            "IsGrounding": {
+              "Bool": false
+            },
+            "IsWorld": {
+              "Bool": false
+            },
+            "PosX": {
+              "Float": 0
+            },
+            "PosY": {
+              "Float": 0
+            },
+            "PosZ": {
+              "Float": 0
+            },
+            "RotX": {
+              "Float": 0
+            },
+            "RotY": {
+              "Float": 0
+            },
+            "RotZ": {
+              "Float": 0
+            }
+          }
+        }
+      ],
+      "Events": [
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 0,
+          "ActorActionIndex": 1,
+          "Parameters": {
+            "EntryPointName": {
+              "String": "Demo202_2"
+            },
+            "EvflName": {
+              "String": "Demo202_2"
+            },
+            "FadeType": {
+              "Int": 0
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "StartType": {
+              "Int": -1
+            },
+            "WarpDestMapName": {
+              "String": "AocField/A-1"
+            },
+            "WarpDestPosName": {
+              "String": "Air_2"
+            }
+          },
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_ChangeScene",
+          "Name": "Event20",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 48,
+          "ActorIndex": 0,
+          "ActorActionIndex": 3,
+          "Parameters": {
+            "ForceRunTelop": {
+              "Bool": false
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "QuestName": {
+              "String": "MiniGame100enemy"
+            },
+            "StepName": {
+              "String": "Battle"
+            }
+          },
+          "NextEventName": "Event286",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_AdvanceQuest",
+          "Name": "Event24",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 3,
+          "ActorIndex": 0,
+          "ActorActionIndex": 2,
+          "Parameters": {
+            "Frame": {
+              "Int": 5
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event42",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_WaitFrame",
+          "Name": "Event41",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 1,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "ActorName": "GameROMPlayer",
+          "ActorAction": "Demo_UpdateEquip",
+          "Name": "Event42",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 5,
+          "ActorIndex": 0,
+          "ActorActionIndex": 5,
+          "Parameters": {
+            "FlagName": {
+              "String": "SaveProhibition"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event54",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagOFF",
+          "Name": "Event52",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 57,
+          "ActorIndex": 0,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "AutoSaveOnOff"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event306",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagON",
+          "Name": "Event54",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 11,
+          "ActorIndex": 0,
+          "ActorActionIndex": 6,
+          "Parameters": {
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event62",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_RestorePouchForQuest",
+          "Name": "Event55",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 8,
+          "ActorIndex": 0,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "SaveProhibition"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event58",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagON",
+          "Name": "Event56",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 56,
+          "ActorIndex": 0,
+          "ActorActionIndex": 5,
+          "Parameters": {
+            "FlagName": {
+              "String": "AutoSaveOnOff"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event305",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagOFF",
+          "Name": "Event58",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 2,
+          "ActorIndex": 0,
+          "ActorActionIndex": 7,
+          "Parameters": {
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event41",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_InitPouchForQuest",
+          "Name": "Event59",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 38,
+          "FlowchartName": "",
+          "EntryPointName": "SetFlag",
+          "NextEventName": "Event266",
+          "Name": "Event60",
+          "Type": "Subflow"
+        },
+        {
+          "NextEventIndex": 12,
+          "ActorIndex": 0,
+          "ActorActionIndex": 2,
+          "Parameters": {
+            "Frame": {
+              "Int": 5
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event63",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_WaitFrame",
+          "Name": "Event62",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 1,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "ActorName": "GameROMPlayer",
+          "ActorAction": "Demo_UpdateEquip",
+          "Name": "Event63",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 44,
+          "ActorIndex": 2,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "GameDataIntDstName": {
+              "String": "100enemy_SwordPower_StartTmp"
+            },
+            "GameDataIntSrcName": {
+              "String": "MasterSword_Add_Power"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event274",
+          "ActorName": "GameDataCalcMachine",
+          "ActorAction": "Demo_GameDataCopyInt",
+          "Name": "Event188",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 0,
+          "ActorActionIndex": 1,
+          "Parameters": {
+            "EntryPointName": {
+              "String": "Demo205_1"
+            },
+            "EvflName": {
+              "String": "Demo205_1"
+            },
+            "FadeType": {
+              "Int": 0
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "StartType": {
+              "Int": -1
+            },
+            "WarpDestMapName": {
+              "String": "MainField/F-2"
+            },
+            "WarpDestPosName": {
+              "String": "MasterSword"
+            }
+          },
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_ChangeScene",
+          "Name": "Event189",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 14,
+          "ActorIndex": 0,
+          "ActorActionIndex": 4,
+          "Parameters": {
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "QuestName": {
+              "String": "MiniGame100enemy"
+            },
+            "StepName": {
+              "String": "Ready"
+            }
+          },
+          "NextEventName": "Event189",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_RollbackQuest",
+          "Name": "Event190",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 40,
+          "FlowchartName": "",
+          "EntryPointName": "ResetFlag",
+          "NextEventName": "Event268",
+          "Name": "Event191",
+          "Type": "Subflow"
+        },
+        {
+          "NextEventIndex": 41,
+          "FlowchartName": "",
+          "EntryPointName": "ResetFlag",
+          "NextEventName": "Event270",
+          "Name": "Event210",
+          "Type": "Subflow"
+        },
+        {
+          "NextEventIndex": 22,
+          "ActorIndex": 0,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "Open_MasterSword_FullPower"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event215",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagON",
+          "Name": "Event211",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 0,
+          "ActorActionIndex": 1,
+          "Parameters": {
+            "EntryPointName": {
+              "String": "Demo210_0"
+            },
+            "EvflName": {
+              "String": "Demo210_0"
+            },
+            "FadeType": {
+              "Int": 1
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "StartType": {
+              "Int": -1
+            },
+            "WarpDestMapName": {
+              "String": "MainField/F-2"
+            },
+            "WarpDestPosName": {
+              "String": "MasterSword"
+            }
+          },
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_ChangeScene",
+          "Name": "Event212",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 21,
+          "ActorIndex": 0,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_Clear_Senior"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event214",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagON",
+          "Name": "Event213",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 18,
+          "ActorIndex": 0,
+          "ActorActionIndex": 8,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "MasterSword_Add_Power"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "Value": {
+              "Int": 10
+            }
+          },
+          "NextEventName": "Event211",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_IncreaseGameDataInt",
+          "Name": "Event214",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 19,
+          "ActorIndex": 0,
+          "ActorActionIndex": 3,
+          "Parameters": {
+            "ForceRunTelop": {
+              "Bool": false
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "QuestName": {
+              "String": "100enemy"
+            },
+            "StepName": {
+              "String": "Finish"
+            }
+          },
+          "NextEventName": "Event212",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_AdvanceQuest",
+          "Name": "Event215",
+          "Type": "Action"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "Open_MasterSword_FullPower"
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 34
+            },
+            {
+              "Value": 1,
+              "EventIndex": 29
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckFlag",
+          "Name": "Event244",
+          "Type": "Switch"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 1,
+          "ActorActionIndex": 1,
+          "Parameters": {
+            "IsWaitFinish": {
+              "Bool": false
+            }
+          },
+          "ActorName": "GameROMPlayer",
+          "ActorAction": "Demo_PlayerWait",
+          "Name": "Event246",
+          "Type": "Action"
+        },
+        {
+          "JoinEventIndex": 26,
+          "ForkEventIndicies": [
+            28,
+            24
+          ],
+          "Name": "Event247",
+          "Type": "Fork"
+        },
+        {
+          "NextEventIndex": 33,
+          "NextEventName": "Event260",
+          "Name": "Event248",
+          "Type": "Join"
+        },
+        {
+          "NextEventIndex": 32,
+          "ActorIndex": 3,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "ASName": {
+              "String": "Face_C_Talk"
+            },
+            "CloseDialogOption": {
+              "Int": 0
+            },
+            "IsBecomingSpeaker": {
+              "Bool": true
+            },
+            "IsCloseMessageDialog": {
+              "Bool": true
+            },
+            "IsOverWriteLabelActorName": {
+              "Bool": false
+            },
+            "IsWaitAS": {
+              "Bool": false
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "MessageId": {
+              "String": "EventFlowMsg/TwnObj_Village_Korok_DekuTree_A_01:DekuTree_A_01_Talk020"
+            },
+            "MessageOpenDelayTime": {
+              "Int": 0
+            }
+          },
+          "NextEventName": "Event258",
+          "ActorName": "TwnObj_Village_Korok_DekuTree_A_01",
+          "ActorAction": "Demo_Talk",
+          "Name": "Event250",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 4,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "CtrlType": {
+              "String": "BeginTalk"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "ActorName": "SceneSoundCtrlTag",
+          "ActorAction": "Demo_NotifyTalk",
+          "Name": "Event254",
+          "Type": "Action"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 1,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "MsterSword_TalkLv"
+            },
+            "Operator": {
+              "String": "GreaterThanOrEqualTo"
+            },
+            "Value": {
+              "Int": 4
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 27
+            },
+            {
+              "Value": 1,
+              "EventIndex": 30
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckGameDataInt",
+          "Name": "Event255",
+          "Type": "Switch"
+        },
+        {
+          "NextEventIndex": 32,
+          "ActorIndex": 3,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "ASName": {
+              "String": "Face_C_Talk"
+            },
+            "CloseDialogOption": {
+              "Int": 0
+            },
+            "IsBecomingSpeaker": {
+              "Bool": true
+            },
+            "IsCloseMessageDialog": {
+              "Bool": true
+            },
+            "IsOverWriteLabelActorName": {
+              "Bool": false
+            },
+            "IsWaitAS": {
+              "Bool": false
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "MessageId": {
+              "String": "EventFlowMsg/TwnObj_Village_Korok_DekuTree_A_01:DekuTree_A_01_Talk030"
+            },
+            "MessageOpenDelayTime": {
+              "Int": 0
+            }
+          },
+          "NextEventName": "Event258",
+          "ActorName": "TwnObj_Village_Korok_DekuTree_A_01",
+          "ActorAction": "Demo_Talk",
+          "Name": "Event256",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 25,
+          "ActorIndex": 5,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event247",
+          "ActorName": "GameRomCamera",
+          "ActorAction": "Demo_SavePoint1",
+          "Name": "Event257",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 5,
+          "ActorActionIndex": 1,
+          "Parameters": {
+            "CollisionInterpolateSkip": {
+              "Bool": false
+            },
+            "Count": {
+              "Float": 0
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "ReviseMode": {
+              "Int": 1
+            }
+          },
+          "ActorName": "GameRomCamera",
+          "ActorAction": "Demo_ReturnSavePoint_1",
+          "Name": "Event258",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 77,
+          "ActorIndex": 5,
+          "ActorActionIndex": 2,
+          "Parameters": {
+            "Accept1FrameDelay": {
+              "Bool": true
+            },
+            "ActorIgnoringCollision": {
+              "Int": -1
+            },
+            "ActorName1": {
+              "String": ""
+            },
+            "ActorName2": {
+              "String": ""
+            },
+            "AtAppendMode": {
+              "Int": 1
+            },
+            "CollisionInterpolateSkip": {
+              "Bool": true
+            },
+            "Count": {
+              "Float": 0
+            },
+            "Cushion": {
+              "Float": 0
+            },
+            "FovyAppendMode": {
+              "Int": 1
+            },
+            "GameDataVec3fCameraAt": {
+              "String": ""
+            },
+            "GameDataVec3fCameraPos": {
+              "String": ""
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "LatShiftRange": {
+              "Float": 0
+            },
+            "LngShiftRange": {
+              "Float": 0
+            },
+            "MotionMode": {
+              "Int": 0
+            },
+            "Pattern1AtX": {
+              "Float": 426.8063
+            },
+            "Pattern1AtY": {
+              "Float": 266.35315
+            },
+            "Pattern1AtZ": {
+              "Float": -2132.5122
+            },
+            "Pattern1Fovy": {
+              "Float": 50.00002
+            },
+            "Pattern1PosX": {
+              "Float": 426.75586
+            },
+            "Pattern1PosY": {
+              "Float": 263.69043
+            },
+            "Pattern1PosZ": {
+              "Float": -2128.2356
+            },
+            "PosAppendMode": {
+              "Int": 1
+            },
+            "ReviseModeEnd": {
+              "Int": 2
+            },
+            "StartCalcOnly": {
+              "Bool": true
+            },
+            "TargetActor1": {
+              "Int": -1
+            },
+            "TargetActor2": {
+              "Int": -1
+            },
+            "UniqueName1": {
+              "String": ""
+            },
+            "UniqueName2": {
+              "String": ""
+            }
+          },
+          "NextEventName": "Event341",
+          "ActorName": "GameRomCamera",
+          "ActorAction": "Demo_MovePosFlow",
+          "Name": "Event260",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 32,
+          "ActorIndex": 3,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "ASName": {
+              "String": "Face_C_Talk"
+            },
+            "CloseDialogOption": {
+              "Int": 0
+            },
+            "IsBecomingSpeaker": {
+              "Bool": true
+            },
+            "IsCloseMessageDialog": {
+              "Bool": true
+            },
+            "IsOverWriteLabelActorName": {
+              "Bool": false
+            },
+            "IsWaitAS": {
+              "Bool": false
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "MessageId": {
+              "String": "EventFlowMsg/100enemy:talk14"
+            },
+            "MessageOpenDelayTime": {
+              "Int": 0
+            }
+          },
+          "NextEventName": "Event258",
+          "ActorName": "TwnObj_Village_Korok_DekuTree_A_01",
+          "ActorAction": "Demo_Talk",
+          "Name": "Event262",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 32,
+          "ActorIndex": 3,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "ASName": {
+              "String": "Face_C_Talk"
+            },
+            "CloseDialogOption": {
+              "Int": 0
+            },
+            "IsBecomingSpeaker": {
+              "Bool": true
+            },
+            "IsCloseMessageDialog": {
+              "Bool": true
+            },
+            "IsOverWriteLabelActorName": {
+              "Bool": false
+            },
+            "IsWaitAS": {
+              "Bool": false
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "MessageId": {
+              "String": "EventFlowMsg/100enemy:talk13"
+            },
+            "MessageOpenDelayTime": {
+              "Int": 0
+            }
+          },
+          "NextEventName": "Event258",
+          "ActorName": "TwnObj_Village_Korok_DekuTree_A_01",
+          "ActorAction": "Demo_Talk",
+          "Name": "Event263",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 0,
+          "ActorActionIndex": 9,
+          "Parameters": {
+            "DemoName": {
+              "String": "Demo209_0"
+            },
+            "EndFade": {
+              "Int": 0
+            },
+            "EntryPointName": {
+              "String": "Demo209_0"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_CallDemo",
+          "Name": "Event264",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 0,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_ToDeku"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagON",
+          "Name": "Event265",
+          "Type": "Action"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_Finish"
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 39
+            },
+            {
+              "Value": 1,
+              "EventIndex": 1
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckFlag",
+          "Name": "Event266",
+          "Type": "Switch"
+        },
+        {
+          "NextEventIndex": 48,
+          "ActorIndex": 0,
+          "ActorActionIndex": 3,
+          "Parameters": {
+            "ForceRunTelop": {
+              "Bool": false
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "QuestName": {
+              "String": "100enemy"
+            },
+            "StepName": {
+              "String": "Battle"
+            }
+          },
+          "NextEventName": "Event286",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_AdvanceQuest",
+          "Name": "Event267",
+          "Type": "Action"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_Finish"
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 62
+            },
+            {
+              "Value": 1,
+              "EventIndex": 15
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckFlag",
+          "Name": "Event268",
+          "Type": "Switch"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_Finish"
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 20
+            },
+            {
+              "Value": 1,
+              "EventIndex": 46
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckFlag",
+          "Name": "Event270",
+          "Type": "Switch"
+        },
+        {
+          "NextEventIndex": 43,
+          "ActorIndex": 0,
+          "ActorActionIndex": 4,
+          "Parameters": {
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "QuestName": {
+              "String": "MiniGame100enemy"
+            },
+            "StepName": {
+              "String": "Ready"
+            }
+          },
+          "NextEventName": "Event272",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_RollbackQuest",
+          "Name": "Event271",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 0,
+          "ActorActionIndex": 1,
+          "Parameters": {
+            "EntryPointName": {
+              "String": ""
+            },
+            "EvflName": {
+              "String": ""
+            },
+            "FadeType": {
+              "Int": 0
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "StartType": {
+              "Int": -1
+            },
+            "WarpDestMapName": {
+              "String": "MainField/F-2"
+            },
+            "WarpDestPosName": {
+              "String": "MasterSword"
+            }
+          },
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_ChangeScene",
+          "Name": "Event272",
+          "Type": "Action"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_Finish"
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 51
+            },
+            {
+              "Value": 1,
+              "EventIndex": 45
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckFlag",
+          "Name": "Event274",
+          "Type": "Switch"
+        },
+        {
+          "NextEventIndex": -1,
+          "FlowchartName": "MiniGame100enemy",
+          "EntryPointName": "Start_MiniGame",
+          "Name": "Event275",
+          "Type": "Subflow"
+        },
+        {
+          "NextEventIndex": 42,
+          "FlowchartName": "MiniGame100enemy",
+          "EntryPointName": "End_MiniGame",
+          "NextEventName": "Event271",
+          "Name": "Event276",
+          "Type": "Subflow"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 0,
+          "ActorActionIndex": 1,
+          "Parameters": {
+            "EntryPointName": {
+              "String": "Demo202_1"
+            },
+            "EvflName": {
+              "String": "Demo202_1"
+            },
+            "FadeType": {
+              "Int": 0
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "StartType": {
+              "Int": -1
+            },
+            "WarpDestMapName": {
+              "String": "AocField/A-1"
+            },
+            "WarpDestPosName": {
+              "String": "Entrance_1"
+            }
+          },
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_ChangeScene",
+          "Name": "Event277",
+          "Type": "Action"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 1,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "100enemy_CurrentCourse"
+            },
+            "Operator": {
+              "String": "Equal"
+            },
+            "Value": {
+              "Int": 2
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 49
+            },
+            {
+              "Value": 1,
+              "EventIndex": 50
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckGameDataInt",
+          "Name": "Event286",
+          "Type": "Switch"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 1,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "100enemy_CurrentCourse"
+            },
+            "Operator": {
+              "String": "Equal"
+            },
+            "Value": {
+              "Int": 1
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 47
+            },
+            {
+              "Value": 1,
+              "EventIndex": 0
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckGameDataInt",
+          "Name": "Event288",
+          "Type": "Switch"
+        },
+        {
+          "NextEventIndex": 78,
+          "ActorIndex": 0,
+          "ActorActionIndex": 1,
+          "Parameters": {
+            "EntryPointName": {
+              "String": "Demo202_3"
+            },
+            "EvflName": {
+              "String": "Demo202_3"
+            },
+            "FadeType": {
+              "Int": 0
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "StartType": {
+              "Int": -1
+            },
+            "WarpDestMapName": {
+              "String": "AocField/B-2"
+            },
+            "WarpDestPosName": {
+              "String": "Night_1"
+            }
+          },
+          "NextEventName": "Event78",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_ChangeScene",
+          "Name": "Event289",
+          "Type": "Action"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 1,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "100enemy_CurrentCourse"
+            },
+            "Operator": {
+              "String": "Equal"
+            },
+            "Value": {
+              "Int": 2
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 52
+            },
+            {
+              "Value": 1,
+              "EventIndex": 53
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckGameDataInt",
+          "Name": "Event290",
+          "Type": "Switch"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 1,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "100enemy_CurrentCourse"
+            },
+            "Operator": {
+              "String": "Equal"
+            },
+            "Value": {
+              "Int": 1
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 1,
+              "EventIndex": 54
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckGameDataInt",
+          "Name": "Event291",
+          "Type": "Switch"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 0,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "FirstTry_100enemy_Senior"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagON",
+          "Name": "Event292",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 0,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "FirstTry_100enemy_Middle"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagON",
+          "Name": "Event293",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 13,
+          "ActorIndex": 0,
+          "ActorActionIndex": 10,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "100enemy_Now_Floor_Number"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "Value": {
+              "Int": 1
+            }
+          },
+          "NextEventName": "Event188",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_SetGameDataInt",
+          "Name": "Event298",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 9,
+          "ActorIndex": 0,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "KillTimeProhibition"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event59",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagON",
+          "Name": "Event305",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 6,
+          "ActorIndex": 0,
+          "ActorActionIndex": 5,
+          "Parameters": {
+            "FlagName": {
+              "String": "KillTimeProhibition"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event55",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagOFF",
+          "Name": "Event306",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 0,
+          "ActorActionIndex": 3,
+          "Parameters": {
+            "ForceRunTelop": {
+              "Bool": false
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "QuestName": {
+              "String": "100enemy"
+            },
+            "StepName": {
+              "String": "Active2"
+            }
+          },
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_AdvanceQuest",
+          "Name": "Event314",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 0,
+          "ActorActionIndex": 3,
+          "Parameters": {
+            "ForceRunTelop": {
+              "Bool": false
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "QuestName": {
+              "String": "100enemy"
+            },
+            "StepName": {
+              "String": "Active3"
+            }
+          },
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_AdvanceQuest",
+          "Name": "Event315",
+          "Type": "Action"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_Clear_Middle"
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 61
+            },
+            {
+              "Value": 1,
+              "EventIndex": 59
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckFlag",
+          "Name": "Event316",
+          "Type": "Switch"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_Clear_Junior"
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 58
+            },
+            {
+              "Value": 1,
+              "EventIndex": 58
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckFlag",
+          "Name": "Event317",
+          "Type": "Switch"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 1,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "100enemy_CurrentCourse"
+            },
+            "Operator": {
+              "String": "Equal"
+            },
+            "Value": {
+              "Int": 2
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 63
+            },
+            {
+              "Value": 1,
+              "EventIndex": 68
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckGameDataInt",
+          "Name": "Event323",
+          "Type": "Switch"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 1,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "100enemy_CurrentCourse"
+            },
+            "Operator": {
+              "String": "Equal"
+            },
+            "Value": {
+              "Int": 1
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 72
+            },
+            {
+              "Value": 1,
+              "EventIndex": 73
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckGameDataInt",
+          "Name": "Event324",
+          "Type": "Switch"
+        },
+        {
+          "NextEventIndex": 70,
+          "ActorIndex": 0,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_Clear_Junior"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event334",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagON",
+          "Name": "Event325",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 71,
+          "ActorIndex": 0,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_Clear_Middle"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event335",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagON",
+          "Name": "Event327",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 14,
+          "ActorIndex": 0,
+          "ActorActionIndex": 4,
+          "Parameters": {
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "QuestName": {
+              "String": "100enemy"
+            },
+            "StepName": {
+              "String": "Active"
+            }
+          },
+          "NextEventName": "Event189",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_RollbackQuest",
+          "Name": "Event329",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 14,
+          "ActorIndex": 0,
+          "ActorActionIndex": 4,
+          "Parameters": {
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "QuestName": {
+              "String": "100enemy"
+            },
+            "StepName": {
+              "String": "Active2"
+            }
+          },
+          "NextEventName": "Event189",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_RollbackQuest",
+          "Name": "Event330",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 14,
+          "ActorIndex": 0,
+          "ActorActionIndex": 4,
+          "Parameters": {
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "QuestName": {
+              "String": "100enemy"
+            },
+            "StepName": {
+              "String": "Active3"
+            }
+          },
+          "NextEventName": "Event189",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_RollbackQuest",
+          "Name": "Event331",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 14,
+          "ActorIndex": 0,
+          "ActorActionIndex": 4,
+          "Parameters": {
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "QuestName": {
+              "String": "100enemy"
+            },
+            "StepName": {
+              "String": "Active2"
+            }
+          },
+          "NextEventName": "Event189",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_RollbackQuest",
+          "Name": "Event332",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 66,
+          "ActorIndex": 0,
+          "ActorActionIndex": 10,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "MasterSword_Add_Power"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "Value": {
+              "Int": 10
+            }
+          },
+          "NextEventName": "Event329",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_SetGameDataInt",
+          "Name": "Event334",
+          "Type": "Action"
+        },
+        {
+          "NextEventIndex": 69,
+          "ActorIndex": 0,
+          "ActorActionIndex": 10,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "MasterSword_Add_Power"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            },
+            "Value": {
+              "Int": 20
+            }
+          },
+          "NextEventName": "Event332",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_SetGameDataInt",
+          "Name": "Event335",
+          "Type": "Action"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 1,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "100enemy_SwordPower_StartTmp"
+            },
+            "Operator": {
+              "String": "GreaterThan"
+            },
+            "Value": {
+              "Int": 0
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 64
+            },
+            {
+              "Value": 1,
+              "EventIndex": 76
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckGameDataInt",
+          "Name": "Event336",
+          "Type": "Switch"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 1,
+          "Parameters": {
+            "GameDataIntName": {
+              "String": "100enemy_SwordPower_StartTmp"
+            },
+            "Operator": {
+              "String": "GreaterThan"
+            },
+            "Value": {
+              "Int": 10
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 65
+            },
+            {
+              "Value": 1,
+              "EventIndex": 68
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckGameDataInt",
+          "Name": "Event337",
+          "Type": "Switch"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_Finish"
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 60
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckFlag",
+          "Name": "Event338",
+          "Type": "Switch"
+        },
+        {
+          "NextEventIndex": 7,
+          "ActorIndex": 0,
+          "ActorActionIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "Guide_Pause"
+            },
+            "IsWaitFinish": {
+              "Bool": true
+            }
+          },
+          "NextEventName": "Event56",
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagON",
+          "Name": "Event339",
+          "Type": "Action"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_Clear_Middle"
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 67
+            },
+            {
+              "Value": 1,
+              "EventIndex": 68
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckFlag",
+          "Name": "Event340",
+          "Type": "Switch"
+        },
+        {
+          "ActorIndex": 0,
+          "ActorQueryIndex": 0,
+          "Parameters": {
+            "FlagName": {
+              "String": "100enemy_Clear_Junior"
+            }
+          },
+          "SwitchCases": [
+            {
+              "Value": 0,
+              "EventIndex": 35
+            },
+            {
+              "Value": 1,
+              "EventIndex": 23
+            }
+          ],
+          "ActorName": "EventSystemActor",
+          "ActorQuery": "CheckFlag",
+          "Name": "Event341",
+          "Type": "Switch"
+        },
+        {
+          "NextEventIndex": -1,
+          "ActorIndex": 0,
+          "ActorActionIndex": 0,
+          "ActorName": "EventSystemActor",
+          "ActorAction": "Demo_FlagON",
+          "Name": "Event78",
+          "Type": "Action"
+        }
+      ],
+      "EntryPoints": {
+        "Active_Talk": {
+          "SubFlowEventIndices": [],
+          "EventIndex": 31
+        },
+        "Clear": {
+          "SubFlowEventIndices": [
+            17,
+            46
+          ],
+          "EventIndex": 17
+        },
+        "ClearJuniorMiddle": {
+          "SubFlowEventIndices": [],
+          "EventIndex": 74
+        },
+        "Demo_Talk": {
+          "SubFlowEventIndices": [],
+          "EventIndex": 36
+        },
+        "EndDekuTalk": {
+          "SubFlowEventIndices": [],
+          "EventIndex": 37
+        },
+        "ResetFlag": {
+          "SubFlowEventIndices": [],
+          "EventIndex": 4
+        },
+        "RetireBattle": {
+          "SubFlowEventIndices": [
+            16
+          ],
+          "EventIndex": 16
+        },
+        "SetFlag": {
+          "SubFlowEventIndices": [],
+          "EventIndex": 75
+        },
+        "Start": {
+          "SubFlowEventIndices": [
+            10
+          ],
+          "EventIndex": 10
+        },
+        "WarpIn": {
+          "SubFlowEventIndices": [
+            45
+          ],
+          "EventIndex": 55
+        }
+      }
+    }
+  },
+  "Timelines": {}
+}

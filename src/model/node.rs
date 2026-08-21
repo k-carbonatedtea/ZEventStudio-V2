@@ -66,6 +66,7 @@ pub struct PropertyItem {
     pub val_type: String, // "string", "number", "bool", "actor", "event"
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeData {
     pub id: String,
@@ -81,6 +82,7 @@ pub struct NodeData {
     pub collapsed: bool,
 }
 
+#[allow(dead_code)]
 impl NodeData {
     pub fn new(
         id: impl Into<String>,

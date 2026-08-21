@@ -1,11 +1,13 @@
 pub mod combat_ai;
 pub mod quest_dialogue;
 pub mod signal_math;
+pub mod zelda_100enemy;
 
 use crate::model::Graph;
 pub use combat_ai::create_combat_ai_preset;
 pub use quest_dialogue::create_quest_dialogue_preset;
 pub use signal_math::create_signal_math_preset;
+pub use zelda_100enemy::create_zelda_100enemy_preset;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PresetInfo {
@@ -18,8 +20,14 @@ pub struct PresetInfo {
 pub fn get_available_presets() -> Vec<PresetInfo> {
     vec![
         PresetInfo {
+            id: "zelda_100enemy",
+            name: "🗡️ 100enemy.json (塞尔达百人斩/剑之试炼)",
+            icon: "🗡️",
+            description: "真实 EVFL 事件流：包含 10 个 EntryPoints、53 个 Action、19 个 Switch 分支、Fork/Join 与 Subflow，共 89 个节点及 89 条连线。",
+        },
+        PresetInfo {
             id: "quest_dialogue",
-            name: "🎮 任务与对话事件流 (默认)",
+            name: "🎮 任务与对话事件流",
             icon: "🎮",
             description: "经典 RPG 任务流：入口、状态查询、3路分支、并行发放道具/音效、汇合与存档子流程。",
         },
@@ -39,11 +47,12 @@ pub fn get_available_presets() -> Vec<PresetInfo> {
 }
 
 pub fn get_startup_preset() -> Graph {
-    create_quest_dialogue_preset()
+    create_zelda_100enemy_preset()
 }
 
 pub fn load_preset_by_id(id: &str) -> Option<Graph> {
     match id {
+        "zelda_100enemy" => Some(create_zelda_100enemy_preset()),
         "quest_dialogue" => Some(create_quest_dialogue_preset()),
         "combat_ai" => Some(create_combat_ai_preset()),
         "signal_math" => Some(create_signal_math_preset()),

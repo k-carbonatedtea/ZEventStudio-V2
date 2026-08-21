@@ -2,6 +2,7 @@ use super::edge::Edge;
 use super::node::NodeData;
 use serde::{Deserialize, Serialize};
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Graph {
     pub name: String,
@@ -10,6 +11,7 @@ pub struct Graph {
     pub edges: Vec<Edge>,
 }
 
+#[allow(dead_code)]
 impl Graph {
     pub fn new(name: impl Into<String>) -> Self {
         Self {

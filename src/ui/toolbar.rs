@@ -83,7 +83,23 @@ pub fn render_toolbar(
                         .text_size(px(10.5))
                         .font_weight(FontWeight::BOLD)
                         .text_color(hsla(215.0 / 360.0, 0.5, 0.85, 1.0))
-                        .child("Rust + GPUI"),
+                        .child("EVFL Studio"),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap_1p5()
+                        .px_2p5()
+                        .py_1()
+                        .rounded_md()
+                        .bg(hsla(145.0 / 360.0, 0.35, 0.18, 0.95))
+                        .border_1()
+                        .border_color(hsla(145.0 / 360.0, 0.6, 0.40, 1.0))
+                        .text_size(px(11.0))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(hsla(145.0 / 360.0, 0.8, 0.90, 1.0))
+                        .child(format!("{} ({} 节点 / {} 连线)", state.graph.name, state.graph.nodes.len(), state.graph.edges.len())),
                 ),
         )
         // Center: Interactive Toolbar Controls

@@ -1,6 +1,7 @@
 use gpui::*;
 
-#[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToastKind {
     Success,
     Info,
@@ -8,6 +9,7 @@ pub enum ToastKind {
     Error,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Toast {
     pub message: String,
@@ -16,6 +18,7 @@ pub struct Toast {
     pub duration_secs: f32,
 }
 
+#[allow(dead_code)]
 impl Toast {
     pub fn new(message: impl Into<String>, kind: ToastKind) -> Self {
         Self {

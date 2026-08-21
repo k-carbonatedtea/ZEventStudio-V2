@@ -1,5 +1,6 @@
 use gpui::*;
 use gpui::StatefulInteractiveElement;
+use crate::model::NodeKind;
 use crate::ui::state::AppState;
 
 pub fn render_inspector(
@@ -92,7 +93,14 @@ pub fn render_inspector(
                                         .text_size(px(10.5))
                                         .text_color(hsla(215.0 / 360.0, 0.25, 0.65, 1.0))
                                         .child(format!("ID: {}", node.id)),
-                                ),
+                                )
+                                .children(node.subtitle.as_ref().map(|sub| {
+                                    div()
+                                        .text_size(px(10.5))
+                                        .font_weight(FontWeight::MEDIUM)
+                                        .text_color(hsla(45.0 / 360.0, 0.85, 0.65, 1.0))
+                                        .child(format!("Actor / Scope: {}", sub))
+                                })),
                         )
                         // Coordinates
                         .child(
@@ -190,7 +198,7 @@ pub fn render_inspector(
                                         .text_size(px(11.0))
                                         .font_weight(FontWeight::BOLD)
                                         .text_color(hsla(215.0 / 360.0, 0.2, 0.7, 1.0))
-                                        .child("参数键值表 (Properties)"),
+                                        .child(format!("EVFL 参数列表 ({})", node.properties.len())),
                                 )
                                 .children(if node.properties.is_empty() {
                                     vec![div()
@@ -204,6 +212,14 @@ pub fn render_inspector(
                                     node.properties
                                         .iter()
                                         .map(|prop| {
+                                            let (badge_bg, badge_text) = match prop.val_type.as_str() {
+                                                "string" => (hsla(145.0 / 360.0, 0.5, 0.25, 1.0), "STR"),
+                                                "number" | "int" => (hsla(200.0 / 360.0, 0.5, 0.25, 1.0), "INT"),
+                                                "float" => (hsla(280.0 / 360.0, 0.5, 0.25, 1.0), "FLT"),
+                                                "bool" => (hsla(40.0 / 360.0, 0.5, 0.25, 1.0), "BOOL"),
+                                                _ => (hsla(215.0 / 360.0, 0.3, 0.25, 1.0), "VAL"),
+                                            };
+
                                             div()
                                                 .p_2()
                                                 .rounded_md()
@@ -212,18 +228,36 @@ pub fn render_inspector(
                                                 .border_color(hsla(215.0 / 360.0, 0.25, 0.22, 1.0))
                                                 .flex()
                                                 .flex_col()
-                                                .gap_0p5()
+                                                .gap_1()
                                                 .child(
                                                     div()
-                                                        .text_size(px(10.0))
-                                                        .font_weight(FontWeight::BOLD)
-                                                        .text_color(hsla(215.0 / 360.0, 0.3, 0.65, 1.0))
-                                                        .child(prop.key.clone()),
+                                                        .flex()
+                                                        .items_center()
+                                                        .justify_between()
+                                                        .child(
+                                                            div()
+                                                                .text_size(px(10.5))
+                                                                .font_weight(FontWeight::BOLD)
+                                                                .text_color(hsla(215.0 / 360.0, 0.3, 0.75, 1.0))
+                                                                .child(prop.key.clone()),
+                                                        )
+                                                        .child(
+                                                            div()
+                                                                .px_1p5()
+                                                                .py_0p5()
+                                                                .rounded_sm()
+                                                                .bg(badge_bg)
+                                                                .text_size(px(8.5))
+                                                                .font_weight(FontWeight::BOLD)
+                                                                .text_color(rgb(0xffffff))
+                                                                .child(badge_text),
+                                                        ),
                                                 )
                                                 .child(
                                                     div()
                                                         .text_size(px(11.0))
-                                                        .text_color(hsla(45.0 / 360.0, 0.8, 0.8, 1.0))
+                                                        .font_weight(FontWeight::MEDIUM)
+                                                        .text_color(hsla(45.0 / 360.0, 0.85, 0.80, 1.0))
                                                         .child(prop.val.clone()),
                                                 )
                                         })
@@ -251,59 +285,129 @@ pub fn render_inspector(
                                         cx.notify();
                                     });
                                 })
-                                .child("🗑️ 删除此节点 (Delete)"),
+                                .child("🗑️ 删除节点"),
                         )
-                        .into_any_element()
                 } else {
-                    // Global graph summary
+                    let total_nodes = state.graph.nodes.len();
+                    let total_edges = state.graph.edges.len();
+                    let ep_count = state.graph.nodes.iter().filter(|n| n.kind == NodeKind::EntryPoint).count();
+                    let action_count = state.graph.nodes.iter().filter(|n| n.kind == NodeKind::Action).count();
+                    let switch_count = state.graph.nodes.iter().filter(|n| n.kind == NodeKind::Switch).count();
+
                     div()
                         .flex()
                         .flex_col()
-                        .gap_3()
-                        .child(
-                            div()
-                                .font_weight(FontWeight::BOLD)
-                                .text_size(px(13.0))
-                                .text_color(rgb(0xffffff))
-                                .child(state.graph.name.clone()),
-                        )
-                        .child(
-                            div()
-                                .text_size(px(11.0))
-                                .text_color(hsla(215.0 / 360.0, 0.25, 0.70, 1.0))
-                                .child(state.graph.description.clone()),
-                        )
+                        .gap_3p5()
                         .child(
                             div()
                                 .p_3()
                                 .rounded_lg()
-                                .bg(hsla(220.0 / 360.0, 0.25, 0.15, 1.0))
+                                .bg(hsla(215.0 / 360.0, 0.35, 0.18, 0.95))
+                                .border_1()
+                                .border_color(hsla(215.0 / 360.0, 0.45, 0.30, 1.0))
+                                .flex()
+                                .flex_col()
+                                .gap_1()
+                                .child(
+                                    div()
+                                        .font_weight(FontWeight::BOLD)
+                                        .text_size(px(13.0))
+                                        .text_color(rgb(0xffffff))
+                                        .child(state.graph.name.clone()),
+                                )
+                                .child(
+                                    div()
+                                        .text_size(px(10.5))
+                                        .text_color(hsla(215.0 / 360.0, 0.25, 0.70, 1.0))
+                                        .child(state.graph.description.clone()),
+                                ),
+                        )
+                        // Statistics
+                        .child(
+                            div()
                                 .flex()
                                 .flex_col()
                                 .gap_1p5()
                                 .child(
                                     div()
-                                        .text_size(px(11.5))
-                                        .text_color(rgb(0xffffff))
-                                        .child(format!("📊 节点总数：{} 个", state.graph.nodes.len())),
+                                        .text_size(px(11.0))
+                                        .font_weight(FontWeight::BOLD)
+                                        .text_color(hsla(215.0 / 360.0, 0.2, 0.7, 1.0))
+                                        .child("📊 图谱拓扑统计"),
                                 )
                                 .child(
                                     div()
-                                        .text_size(px(11.5))
-                                        .text_color(rgb(0xffffff))
-                                        .child(format!("🔗 连线总数：{} 条", state.graph.edges.len())),
+                                        .p_2p5()
+                                        .rounded_lg()
+                                        .bg(hsla(220.0 / 360.0, 0.25, 0.14, 1.0))
+                                        .border_1()
+                                        .border_color(hsla(215.0 / 360.0, 0.25, 0.22, 1.0))
+                                        .flex()
+                                        .flex_col()
+                                        .gap_1p5()
+                                        .child(render_stat_row("📦 总节点数", format!("{}", total_nodes)))
+                                        .child(render_stat_row("🔗 拓扑连线数", format!("{}", total_edges)))
+                                        .child(render_stat_row("🚩 入口 (EntryPoints)", format!("{}", ep_count)))
+                                        .child(render_stat_row("⚡ 动作 (Actions)", format!("{}", action_count)))
+                                        .child(render_stat_row("🔀 条件 (Switches)", format!("{}", switch_count))),
                                 ),
                         )
+                        // Quick Tips
                         .child(
                             div()
                                 .p_3()
                                 .rounded_lg()
-                                .bg(hsla(215.0 / 360.0, 0.35, 0.15, 0.6))
-                                .text_size(px(10.5))
-                                .text_color(hsla(215.0 / 360.0, 0.4, 0.8, 1.0))
-                                .child("💡 提示：点击画布中的任意节点可在本面板查看与编辑详细参数；拖拽引脚可连线；右键画布可快速新建节点。"),
+                                .bg(hsla(145.0 / 360.0, 0.25, 0.15, 0.8))
+                                .border_1()
+                                .border_color(hsla(145.0 / 360.0, 0.45, 0.30, 0.8))
+                                .flex()
+                                .flex_col()
+                                .gap_1()
+                                .child(
+                                    div()
+                                        .font_weight(FontWeight::BOLD)
+                                        .text_size(px(11.5))
+                                        .text_color(hsla(145.0 / 360.0, 0.8, 0.85, 1.0))
+                                        .child("💡 交互操作提示"),
+                                )
+                                .child(
+                                    div()
+                                        .text_size(px(10.5))
+                                        .text_color(hsla(145.0 / 360.0, 0.4, 0.80, 1.0))
+                                        .child("• 点击左侧「🏁 流程入口」可一键跳转至对应子剧情流"),
+                                )
+                                .child(
+                                    div()
+                                        .text_size(px(10.5))
+                                        .text_color(hsla(145.0 / 360.0, 0.4, 0.80, 1.0))
+                                        .child("• 鼠标拖拽画布平移，滚轮缩放，按住节点拖动重排"),
+                                )
+                                .child(
+                                    div()
+                                        .text_size(px(10.5))
+                                        .text_color(hsla(145.0 / 360.0, 0.4, 0.80, 1.0))
+                                        .child("• 双击画布空白处可快速唤出新建节点面板"),
+                                ),
                         )
-                        .into_any_element()
                 }),
+        )
+}
+
+fn render_stat_row(label: &'static str, val: String) -> impl IntoElement {
+    div()
+        .flex()
+        .items_center()
+        .justify_between()
+        .text_size(px(11.0))
+        .child(
+            div()
+                .text_color(hsla(215.0 / 360.0, 0.2, 0.65, 1.0))
+                .child(label),
+        )
+        .child(
+            div()
+                .font_weight(FontWeight::BOLD)
+                .text_color(rgb(0xffffff))
+                .child(val),
         )
 }
