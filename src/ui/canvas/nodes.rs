@@ -10,12 +10,13 @@ pub fn render_nodes_layer(
     let zoom = state.zoom;
     let selected_id = state.selected_node_id.clone();
     let connecting_state = state.drag_state.clone();
+    let expand_all = state.expand_all_params;
 
     div()
         .absolute()
         .inset_0()
         .children(state.graph.nodes.iter().map(|node| {
-            render_single_node(node, pan, zoom, &selected_id, &connecting_state, model)
+            render_single_node(node, pan, zoom, &selected_id, &connecting_state, expand_all, model)
         }))
 }
 
@@ -25,6 +26,7 @@ fn render_single_node(
     zoom: f32,
     selected_id: &Option<String>,
     connecting_state: &DragState,
+    expand_all: bool,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
     let is_selected = selected_id.as_deref() == Some(&node.id);
@@ -208,7 +210,13 @@ fn render_single_node(
                         .child(sub.clone())
                 }))
                 // Parameters Section (参数属性)
-                .children(if z >= 0.45 && !node.properties.is_empty() {
+                .children(if z >= 0.35 && !node.properties.is_empty() {
+                    let props_to_show: Vec<&crate::model::PropertyItem> = if expand_all {
+                        node.properties.iter().collect()
+                    } else {
+                        node.properties.iter().take(2).collect()
+                    };
+
                     Some(
                         div()
                             .pt(px((4.0 * z).max(1.0)))
@@ -220,13 +228,18 @@ fn render_single_node(
                                     .text_size(px(font_prop_header))
                                     .font_weight(FontWeight::BOLD)
                                     .text_color(hsla(215.0 / 360.0, 0.20, 0.50, 1.0))
-                                    .child("参数属性 (Parameters):"),
+                                    .child(if expand_all {
+                                        format!("参数属性 ({}) :", node.properties.len())
+                                    } else {
+                                        "参数属性 (Parameters):".to_string()
+                                    }),
                             )
-                            .children(node.properties.iter().take(2).map(|prop| {
+                            .children(props_to_show.into_iter().map(|prop| {
                                 div()
                                     .flex()
                                     .items_center()
                                     .justify_between()
+                                    .gap(px((4.0 * z).max(1.0)))
                                     .text_size(px(font_prop))
                                     .child(
                                         div()
@@ -237,7 +250,7 @@ fn render_single_node(
                                         div()
                                             .font_weight(FontWeight::MEDIUM)
                                             .text_color(hsla(271.0 / 360.0, 0.85, 0.75, 1.0))
-                                            .child(if prop.val.len() > 16 {
+                                            .child(if !expand_all && prop.val.len() > 16 {
                                                 format!("{}...", &prop.val[..16])
                                             } else {
                                                 prop.val.clone()

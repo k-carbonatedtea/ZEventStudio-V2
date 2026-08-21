@@ -7,9 +7,11 @@ pub fn render_toolbar(
 ) -> impl IntoElement {
     let zoom_pct = (state.zoom * 100.0).round() as i32;
     let knife_mode = state.knife_mode;
+    let expand_all = state.expand_all_params;
     let fps = state.fps;
 
     let model_layout = model.clone();
+    let model_expand = model.clone();
     let model_knife = model.clone();
     let model_fit = model.clone();
     let model_zoom_in = model.clone();
@@ -131,6 +133,43 @@ pub fn render_toolbar(
                             });
                         })
                         .child(format!("✨ {}", state.t("toolbar.auto_layout"))),
+                )
+                // Expand / Collapse Parameters Toggle Button
+                .child(
+                    div()
+                        .px_3()
+                        .py_1p5()
+                        .rounded_lg()
+                        .bg(if expand_all {
+                            hsla(271.0 / 360.0, 0.50, 0.28, 1.0)
+                        } else {
+                            hsla(220.0 / 360.0, 0.25, 0.18, 1.0)
+                        })
+                        .border_1()
+                        .border_color(if expand_all {
+                            hsla(271.0 / 360.0, 0.75, 0.55, 1.0)
+                        } else {
+                            hsla(220.0 / 360.0, 0.25, 0.28, 1.0)
+                        })
+                        .hover(|s| s.opacity(0.85))
+                        .cursor_pointer()
+                        .flex()
+                        .items_center()
+                        .gap_1p5()
+                        .text_size(px(11.5))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(rgb(0xffffff))
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            model_expand.update(cx, |st, cx| {
+                                st.toggle_expand_params();
+                                cx.notify();
+                            });
+                        })
+                        .child(if expand_all {
+                            format!("📋 {}", state.t("toolbar.collapse_params"))
+                        } else {
+                            format!("📋 {}", state.t("toolbar.expand_params"))
+                        }),
                 )
                 // Knife Mode Toggle
                 .child(

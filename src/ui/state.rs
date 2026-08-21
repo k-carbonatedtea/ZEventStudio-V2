@@ -41,6 +41,7 @@ pub struct AppState {
     pub inspector_open: bool,
     pub sidebar_open: bool,
     pub search_query: String,
+    pub expand_all_params: bool,
     pub lang: crate::i18n::Language,
 }
 
@@ -69,6 +70,7 @@ impl AppState {
             inspector_open: true,
             sidebar_open: true,
             search_query: String::new(),
+            expand_all_params: false,
             lang: crate::i18n::Language::Zh,
         };
         state.fit_view();
@@ -85,15 +87,63 @@ impl AppState {
             self.graph = g;
             self.active_preset_id = preset_id.to_string();
             self.selected_node_id = None;
+            self.update_node_sizes();
+            auto_layout_graph(&mut self.graph);
             self.fit_view();
             self.toast = Some(Toast::success(format!("已切换至案例：{}", self.graph.name)));
         }
     }
 
     pub fn auto_layout(&mut self) {
+        self.update_node_sizes();
         auto_layout_graph(&mut self.graph);
         self.fit_view();
         self.toast = Some(Toast::success("✨ 已完成 DAG 拓扑分层自动排版"));
+    }
+
+    pub fn toggle_expand_params(&mut self) {
+        self.expand_all_params = !self.expand_all_params;
+        self.update_node_sizes();
+        auto_layout_graph(&mut self.graph);
+        self.fit_view();
+        if self.expand_all_params {
+            self.toast = Some(Toast::info("📋 已展开全部节点参数详情"));
+        } else {
+            self.toast = Some(Toast::info("📋 已折叠节点参数详情"));
+        }
+    }
+
+    pub fn update_node_sizes(&mut self) {
+        for node in &mut self.graph.nodes {
+            if node.kind == NodeKind::EntryPoint {
+                node.size = (180.0, 42.0);
+                continue;
+            }
+
+            if self.expand_all_params && !node.properties.is_empty() {
+                let param_count = node.properties.len();
+                let height = 110.0 + 22.0 * (param_count as f32);
+                let mut max_text_len = node.title.len().max(node.subtitle.as_ref().map(|s| s.len()).unwrap_or(0));
+                for p in &node.properties {
+                    max_text_len = max_text_len.max(p.key.len() + p.val.len() + 4);
+                }
+                let width = 240.0f32.max(((max_text_len as f32) * 7.2 + 40.0).min(480.0));
+                node.size = (width, height);
+            } else {
+                let (base_w, base_h) = match node.kind {
+                    NodeKind::Action => (240.0, 115.0),
+                    NodeKind::Switch => (240.0, 115.0),
+                    NodeKind::Query => (230.0, 115.0),
+                    NodeKind::SubFlow => (220.0, 105.0),
+                    NodeKind::Fork => (210.0, 95.0),
+                    NodeKind::Join => (210.0, 95.0),
+                    NodeKind::Math => (200.0, 110.0),
+                    NodeKind::Comment => (240.0, 120.0),
+                    NodeKind::EntryPoint => (180.0, 42.0),
+                };
+                node.size = (base_w, base_h);
+            }
+        }
     }
 
     pub fn fit_view(&mut self) {
@@ -183,5 +233,23 @@ impl AppState {
         let edge = Edge::new(source_node_id, source_port_id, target_node_id, target_port_id);
         self.graph.add_edge(edge);
         self.toast = Some(Toast::success("🔗 已建立连线"));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_toggle_expand_params() {
+        let mut state = AppState::new();
+        assert!(!state.expand_all_params);
+
+        state.toggle_expand_params();
+        assert!(state.expand_all_params);
+        assert!(!state.graph.nodes.is_empty());
+
+        state.toggle_expand_params();
+        assert!(!state.expand_all_params);
     }
 }

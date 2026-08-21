@@ -7,6 +7,12 @@ pub fn translate<'a>(key: &'a str, lang: Language) -> &'a str {
         ("toolbar.auto_layout", Language::Zh) => "自动排版",
         ("toolbar.auto_layout", Language::En) => "Auto Layout",
 
+        ("toolbar.expand_params", Language::Zh) => "展开参数",
+        ("toolbar.expand_params", Language::En) => "Expand Params",
+
+        ("toolbar.collapse_params", Language::Zh) => "折叠参数",
+        ("toolbar.collapse_params", Language::En) => "Collapse Params",
+
         ("toolbar.knife_mode", Language::Zh) => "切刀工具",
         ("toolbar.knife_mode", Language::En) => "Knife Tool",
 
