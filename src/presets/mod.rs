@@ -21,9 +21,9 @@ pub fn get_available_presets() -> Vec<PresetInfo> {
     vec![
         PresetInfo {
             id: "zelda_100enemy",
-            name: "🗡️ 100enemy.json (塞尔达百人斩/剑之试炼)",
+            name: "🗡️ 100enemy.bfevfl (Revfl 库二进制解析)",
             icon: "🗡️",
-            description: "真实 EVFL 事件流：包含 10 个 EntryPoints、53 个 Action、19 个 Switch 分支、Fork/Join 与 Subflow，共 89 个节点及 89 条连线。",
+            description: "任天堂官方 BFEVFL 二进制解析：包含 10 个 EntryPoints、53 个 Action、19 个 Switch 分支、Fork/Join 与 Subflow，共 89 个节点及 89 条连线。",
         },
         PresetInfo {
             id: "quest_dialogue",

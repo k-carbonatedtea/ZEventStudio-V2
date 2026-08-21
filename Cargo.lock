@@ -3529,6 +3529,7 @@ version = "0.1.0"
 dependencies = [
  "gpui",
  "gpui-component",
+ "revfl",
  "serde",
  "serde_json",
  "uuid",
@@ -4686,6 +4687,15 @@ dependencies = [
  "svgtypes",
  "tiny-skia",
  "usvg",
+]
+
+[[package]]
+name = "revfl"
+version = "0.1.1"
+source = "git+https://github.com/k-carbonatedtea/Revfl#f6710f7ab660b56528671daf2ce3ac18848b6b9a"
+dependencies = [
+ "indexmap",
+ "serde",
 ]
 
 [[package]]

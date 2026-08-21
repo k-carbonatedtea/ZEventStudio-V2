@@ -8,7 +8,7 @@ pub mod port;
 #[allow(unused_imports)]
 pub use edge::Edge;
 #[allow(unused_imports)]
-pub use evfl::{load_evfl_from_str, EvflFile, EvflFlowchart};
+pub use evfl::load_bfevfl_from_bytes;
 #[allow(unused_imports)]
 pub use graph::Graph;
 #[allow(unused_imports)]
