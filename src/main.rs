@@ -1,3 +1,4 @@
+pub mod i18n;
 mod model;
 mod presets;
 mod ui;

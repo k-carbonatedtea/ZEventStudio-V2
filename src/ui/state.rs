@@ -41,6 +41,7 @@ pub struct AppState {
     pub inspector_open: bool,
     pub sidebar_open: bool,
     pub search_query: String,
+    pub lang: crate::i18n::Language,
 }
 
 #[allow(dead_code)]
@@ -63,14 +64,20 @@ impl AppState {
             fps: 60.0,
             active_preset_id: "zelda_100enemy".to_string(),
             active_sidebar_tab: SidebarTab::EntryPoints,
-            toast: Some(Toast::success("⚡ 已成功载入 100enemy.json 真实 EVFL 事件流")),
+            toast: Some(Toast::success("⚡ 已成功载入 100enemy.bfevfl 官方 EVFL 事件流")),
             quick_add_modal: None,
             inspector_open: true,
             sidebar_open: true,
             search_query: String::new(),
+            lang: crate::i18n::Language::Zh,
         };
         state.fit_view();
         state
+    }
+
+    /// 获取当前语言环境下的本地化文本
+    pub fn t<'a>(&self, key: &'a str) -> &'a str {
+        crate::i18n::t(key, self.lang)
     }
 
     pub fn load_preset(&mut self, preset_id: &str) {

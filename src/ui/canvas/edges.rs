@@ -2,26 +2,8 @@ use gpui::*;
 use crate::model::{NodeKind, PortDirection};
 use crate::ui::state::{AppState, DragState};
 
-fn eval_cubic_bezier(
-    p0: (f32, f32),
-    p1: (f32, f32),
-    p2: (f32, f32),
-    p3: (f32, f32),
-    t: f32,
-) -> (f32, f32) {
-    let u = 1.0 - t;
-    let tt = t * t;
-    let uu = u * u;
-    let uuu = uu * u;
-    let ttt = tt * t;
-
-    let x = uuu * p0.0 + 3.0 * uu * t * p1.0 + 3.0 * u * tt * p2.0 + ttt * p3.0;
-    let y = uuu * p0.1 + 3.0 * uu * t * p1.1 + 3.0 * u * tt * p2.1 + ttt * p3.1;
-    (x, y)
-}
-
-/// 绘制基于图2规范的垂直平滑贝塞尔曲线（消除斜线马赛克包围盒，支持平滑实线与汇合虚线）
-fn draw_bezier_edge(
+/// 使用 GPUI 原生 GPU 硬件加速 Lyon 矢量路径引擎绘制平滑贝塞尔连线与原生虚线
+fn draw_gpu_bezier_edge(
     start: (f32, f32),
     end: (f32, f32),
     color: Hsla,
@@ -33,51 +15,34 @@ fn draw_bezier_edge(
     let ctrl1 = (start.0, start.1 + dy * 0.45);
     let ctrl2 = (end.0, end.1 - dy * 0.45);
 
-    let dx = end.0 - start.0;
-    let dist = (dx * dx + (end.1 - start.1) * (end.1 - start.1)).sqrt();
-    let num_samples = (dist * 0.9).clamp(36.0, 200.0) as usize;
-
-    let dot_size = stroke_width.max(1.5);
-    let half_dot = dot_size * 0.5;
-
-    for i in 0..=num_samples {
-        // 虚线模式：每 12 个采样点跳过 6 个形成清晰均匀的虚线 (对应 React Flow strokeDasharray: 5,5)
-        if is_dashed && ((i / 6) % 2 == 1) {
-            continue;
-        }
-
-        let t = (i as f32) / (num_samples as f32);
-        let pt = eval_cubic_bezier(start, ctrl1, ctrl2, end, t);
-
-        window.paint_quad(fill(
-            Bounds {
-                origin: Point {
-                    x: px(pt.0 - half_dot),
-                    y: px(pt.1 - half_dot),
-                },
-                size: size(px(dot_size), px(dot_size)),
-            },
-            color,
-        ));
+    let mut builder = PathBuilder::stroke(px(stroke_width));
+    if is_dashed {
+        builder = builder.dash_array(&[px(6.0), px(6.0)]);
     }
 
-    // 终点闭合向下三角箭头 (Closed Arrowhead)
-    let arrow_w = (stroke_width * 3.5).clamp(4.5, 10.0);
-    let arrow_h = (stroke_width * 3.0).clamp(4.0, 9.0);
-    for s in 0..4 {
-        let f = (s as f32) / 4.0;
-        let w = arrow_w * (1.0 - f * 0.85);
-        let y = end.1 - arrow_h * (1.0 - f);
-        window.paint_quad(fill(
-            Bounds {
-                origin: Point {
-                    x: px(end.0 - w * 0.5),
-                    y: px(y),
-                },
-                size: size(px(w), px(arrow_h * 0.3)),
-            },
-            color,
-        ));
+    builder.move_to(point(px(start.0), px(start.1)));
+    builder.cubic_bezier_to(
+        point(px(end.0), px(end.1)),
+        point(px(ctrl1.0), px(ctrl1.1)),
+        point(px(ctrl2.0), px(ctrl2.1)),
+    );
+
+    if let Ok(path) = builder.build() {
+        window.paint_path(path, color);
+    }
+
+    // 终点闭合向下三角箭头 (使用 GPU Fill 路径单次绘制)
+    let arrow_w = (stroke_width * 3.5).clamp(4.5, 9.0);
+    let arrow_h = (stroke_width * 3.0).clamp(4.0, 8.0);
+
+    let mut arrow_builder = PathBuilder::fill();
+    arrow_builder.move_to(point(px(end.0), px(end.1)));
+    arrow_builder.line_to(point(px(end.0 - arrow_w * 0.5), px(end.1 - arrow_h)));
+    arrow_builder.line_to(point(px(end.0 + arrow_w * 0.5), px(end.1 - arrow_h)));
+    arrow_builder.close();
+
+    if let Ok(arrow_path) = arrow_builder.build() {
+        window.paint_path(arrow_path, color);
     }
 }
 
@@ -132,7 +97,7 @@ pub fn render_edges_layer(
     div()
         .absolute()
         .inset_0()
-        // 1. 静态 Canvas 绘制所有平滑贝塞尔曲线
+        // 1. GPU 原生硬件加速 Canvas 绘制所有平滑贝塞尔曲线
         .child(
             canvas(
                 move |bounds, _window, cx| {
@@ -146,11 +111,11 @@ pub fn render_edges_layer(
                     let orig_x: f32 = bounds.origin.x.into();
                     let orig_y: f32 = bounds.origin.y.into();
 
-                    let stroke_w = (2.0 * zoom).clamp(1.2, 3.5);
+                    let stroke_w = (1.8 * zoom).clamp(1.2, 3.2);
 
                     // 参考图2规范：
                     // - EntryPoint 起始连线: 翡翠绿 (#10b981)
-                    // - 并行汇合连线 (连接到 Join 节点): 虚线 (#94a3b8)
+                    // - 并行汇合连线 (连接到 Join 节点): 原生 GPU 虚线 (#94a3b8)
                     // - 普通/分支事件连线: 石板灰蓝 (#94a3b8)
                     // - 切刀模式: 警示红 (#ef4444)
                     for (_, _, _, is_entry_point, is_dashed, (sx, sy), (ex, ey)) in &edge_items_clone {
@@ -167,7 +132,7 @@ pub fn render_edges_layer(
                             hsla(215.0 / 360.0, 0.25, 0.65, 0.90) // #94a3b8
                         };
 
-                        draw_bezier_edge(
+                        draw_gpu_bezier_edge(
                             (screen_sx, screen_sy),
                             (screen_ex, screen_ey),
                             edge_color,
@@ -185,7 +150,7 @@ pub fn render_edges_layer(
                         let screen_ey = orig_y + pan.1 + end_pt.1 * zoom;
 
                         let live_color = hsla(45.0 / 360.0, 0.95, 0.60, 0.95);
-                        draw_bezier_edge(
+                        draw_gpu_bezier_edge(
                             (screen_sx, screen_sy),
                             (screen_ex, screen_ey),
                             live_color,

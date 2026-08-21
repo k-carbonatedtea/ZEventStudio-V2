@@ -15,6 +15,7 @@ pub fn render_toolbar(
     let model_zoom_in = model.clone();
     let model_zoom_out = model.clone();
     let model_zoom_reset = model.clone();
+    let model_lang = model.clone();
 
     // Dynamic FPS Indicator Color
     let (fps_bg, fps_border, fps_dot) = if fps >= 50.0 {
@@ -97,7 +98,7 @@ pub fn render_toolbar(
                         .text_size(px(11.0))
                         .font_weight(FontWeight::BOLD)
                         .text_color(hsla(145.0 / 360.0, 0.8, 0.90, 1.0))
-                        .child(format!("{} ({} 节点 / {} 连线)", state.graph.name, state.graph.nodes.len(), state.graph.edges.len())),
+                        .child(format!("{} ({} Nodes / {} Edges)", state.graph.name, state.graph.nodes.len(), state.graph.edges.len())),
                 ),
         )
         // Center: Interactive Toolbar Controls
@@ -129,9 +130,8 @@ pub fn render_toolbar(
                                 cx.notify();
                             });
                         })
-                        .child("✨ 自动排版"),
+                        .child(format!("✨ {}", state.t("toolbar.auto_layout"))),
                 )
-
                 // Knife Mode Toggle
                 .child(
                     div()
@@ -164,9 +164,9 @@ pub fn render_toolbar(
                             });
                         })
                         .child(if knife_mode {
-                            "✂️ 切刀模式: 开启"
+                            format!("✂️ {}", state.t("toolbar.knife_active"))
                         } else {
-                            "✂️ 切刀剪线"
+                            format!("✂️ {}", state.t("toolbar.knife_mode"))
                         }),
                 )
                 // Fit View Button
@@ -189,7 +189,7 @@ pub fn render_toolbar(
                                 cx.notify();
                             });
                         })
-                        .child("🔍 居中自适应"),
+                        .child(format!("🔍 {}", state.t("toolbar.fit_view"))),
                 )
                 // Zoom controls group
                 .child(
@@ -216,6 +216,7 @@ pub fn render_toolbar(
                                         st.zoom = (st.zoom * 0.85).clamp(0.25, 2.5);
                                         cx.notify();
                                     });
+                                    let _ = &model_zoom_out;
                                 })
                                 .child("－"),
                         )
@@ -255,13 +256,13 @@ pub fn render_toolbar(
                         ),
                 ),
         )
-        // Right: Realtime Status & FPS Indicator Badge
+        // Right: Realtime Status & FPS Indicator Badge + Language Switch
         .child(
             div()
                 .flex()
                 .items_center()
                 .gap_2p5()
-                // Node & Edge Counts Badge
+                // Language Switch Button
                 .child(
                     div()
                         .px_2p5()
@@ -270,13 +271,18 @@ pub fn render_toolbar(
                         .bg(hsla(220.0 / 360.0, 0.25, 0.16, 1.0))
                         .border_1()
                         .border_color(hsla(220.0 / 360.0, 0.25, 0.28, 1.0))
+                        .hover(|s| s.bg(hsla(220.0 / 360.0, 0.35, 0.25, 1.0)))
+                        .cursor_pointer()
                         .text_size(px(11.0))
-                        .text_color(hsla(215.0 / 360.0, 0.25, 0.75, 1.0))
-                        .child(format!(
-                            "{} 节点 · {} 连线",
-                            state.graph.nodes.len(),
-                            state.graph.edges.len()
-                        )),
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(hsla(215.0 / 360.0, 0.25, 0.85, 1.0))
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            model_lang.update(cx, |st, cx| {
+                                st.lang = st.lang.toggle();
+                                cx.notify();
+                            });
+                        })
+                        .child(state.t("toolbar.lang_btn")),
                 )
                 // Real-time FPS Capsule Badge
                 .child(
