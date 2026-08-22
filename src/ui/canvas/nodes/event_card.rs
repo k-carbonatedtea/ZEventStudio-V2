@@ -17,10 +17,9 @@ pub fn render_event_card(
 ) -> impl IntoElement {
     let (screen_x, screen_y) = screen_pos;
     let (node_w, node_h) = node_size;
-    let node_id = node.id.clone();
-    let model_header_drag = model.clone();
 
     let z = zoom;
+
     let socket_size = (9.0 * z).clamp(3.0, 12.0);
     let font_title = (11.5 * z).clamp(2.0, 20.0);
     let font_sub = (10.0 * z).clamp(2.0, 16.0);
@@ -56,6 +55,11 @@ pub fn render_event_card(
 
     let card_opacity = if is_unrelated { 0.45 } else { 1.0 };
 
+    let node_id_left = node.id.clone();
+    let node_id_right = node.id.clone();
+    let model_drag_left = model.clone();
+    let model_drag_right = model.clone();
+
     let mut card = div()
         .id(SharedString::from(format!("node_{}", node.id)))
         .absolute()
@@ -68,7 +72,52 @@ pub fn render_event_card(
         .border_1()
         .border_color(card_border)
         .opacity(card_opacity)
-        .cursor_default();
+        .cursor_move()
+        // 点击卡片任何位置（左键或右键长按）均可拖动节点
+        .on_mouse_down(MouseButton::Left, move |e, _, cx| {
+            let id = node_id_left.clone();
+            let mx: f32 = e.position.x.into();
+            let my: f32 = e.position.y.into();
+            model_drag_left.update(cx, |state, cx| {
+                if matches!(state.drag_state, DragState::Connecting { .. }) {
+                    return;
+                }
+                state.selected_node_id = Some(id.clone());
+                let init_positions = state
+                    .graph
+                    .nodes
+                    .iter()
+                    .map(|n| (n.id.clone(), n.pos))
+                    .collect();
+                state.drag_state = DragState::DragNodes {
+                    start_mouse: (mx, my),
+                    initial_positions: init_positions,
+                };
+                cx.notify();
+            });
+        })
+        .on_mouse_down(MouseButton::Right, move |e, _, cx| {
+            let id = node_id_right.clone();
+            let mx: f32 = e.position.x.into();
+            let my: f32 = e.position.y.into();
+            model_drag_right.update(cx, |state, cx| {
+                if matches!(state.drag_state, DragState::Connecting { .. }) {
+                    return;
+                }
+                state.selected_node_id = Some(id.clone());
+                let init_positions = state
+                    .graph
+                    .nodes
+                    .iter()
+                    .map(|n| (n.id.clone(), n.pos))
+                    .collect();
+                state.drag_state = DragState::DragNodes {
+                    start_mouse: (mx, my),
+                    initial_positions: init_positions,
+                };
+                cx.notify();
+            });
+        });
 
     if z >= 0.45 && !is_unrelated {
         card = card.shadow_md();
@@ -84,7 +133,7 @@ pub fn render_event_card(
                 .flex_col()
                 .px(px(pad_x))
                 .py(px(pad_y))
-                // 1. 角色标头栏 (Actor Identity Header Banner + 类型徽章) - 可拖拽
+                // 1. 角色标头栏 (Actor Identity Header Banner + 类型徽章)
                 .child(
                     div()
                         .flex()
@@ -93,26 +142,7 @@ pub fn render_event_card(
                         .pb(px((3.0 * z).max(1.0)))
                         .border_b_1()
                         .border_color(hsla(0.0, 0.0, 1.0, 0.08))
-                        .cursor_move()
-                        .on_mouse_down(MouseButton::Left, move |e, _, cx| {
-                            let id = node_id.clone();
-                            let mx: f32 = e.position.x.into();
-                            let my: f32 = e.position.y.into();
-                            model_header_drag.update(cx, |state, cx| {
-                                state.selected_node_id = Some(id.clone());
-                                let init_positions = state
-                                    .graph
-                                    .nodes
-                                    .iter()
-                                    .map(|n| (n.id.clone(), n.pos))
-                                    .collect();
-                                state.drag_state = DragState::DragNodes {
-                                    start_mouse: (mx, my),
-                                    initial_positions: init_positions,
-                                };
-                                cx.notify();
-                            });
-                        })
+
                         // 左侧：Actor 图标 + 动作标题
                         .child(
                             div()

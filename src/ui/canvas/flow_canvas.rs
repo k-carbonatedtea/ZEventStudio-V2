@@ -84,19 +84,34 @@ pub fn render_flow_canvas(
                 });
             }
         })
-        // Right click to open Quick Add modal at cursor
+        // Right click to open Quick Add modal on canvas, or finish right-click node drag
         .on_mouse_down(MouseButton::Right, {
             let model_right = model.clone();
             move |e, _, cx| {
                 let mx: f32 = e.position.x.into();
                 let my: f32 = e.position.y.into();
                 model_right.update(cx, |st, cx| {
+                    if matches!(st.drag_state, DragState::DragNodes { .. }) {
+                        return;
+                    }
                     let (canvas_x, canvas_y) = st.screen_to_canvas(mx, my);
                     st.quick_add_modal = Some((canvas_x, canvas_y, None));
                     cx.notify();
                 });
             }
         })
+        .on_mouse_up(MouseButton::Right, {
+            let model_right_up = model.clone();
+            move |_, _, cx| {
+                model_right_up.update(cx, |st, cx| {
+                    if matches!(st.drag_state, DragState::DragNodes { .. }) {
+                        st.drag_state = DragState::None;
+                        cx.notify();
+                    }
+                });
+            }
+        })
+
 
         // Mouse move
         .on_mouse_move(move |e, _, cx| {

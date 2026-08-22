@@ -69,6 +69,9 @@ pub fn render_entry_card(
         entry_card = entry_card.shadow_md();
     }
 
+    let node_id_right = node.id.clone();
+    let model_header_drag_right = model.clone();
+
     entry_card
         .on_mouse_down(MouseButton::Left, move |e, _, cx| {
             let id = node_id.clone();
@@ -92,6 +95,29 @@ pub fn render_entry_card(
                 cx.notify();
             });
         })
+        .on_mouse_down(MouseButton::Right, move |e, _, cx| {
+            let id = node_id_right.clone();
+            let mx: f32 = e.position.x.into();
+            let my: f32 = e.position.y.into();
+            model_header_drag_right.update(cx, |state, cx| {
+                if matches!(state.drag_state, DragState::Connecting { .. }) {
+                    return;
+                }
+                state.selected_node_id = Some(id.clone());
+                let init_positions = state
+                    .graph
+                    .nodes
+                    .iter()
+                    .map(|n| (n.id.clone(), n.pos))
+                    .collect();
+                state.drag_state = DragState::DragNodes {
+                    start_mouse: (mx, my),
+                    initial_positions: init_positions,
+                };
+                cx.notify();
+            });
+        })
+
 
         // Entry Title Center
         .child(
