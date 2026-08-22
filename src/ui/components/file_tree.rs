@@ -44,8 +44,10 @@ fn render_file_tree_node(
     let is_container = node.is_dir || node.is_sarc;
     let is_expanded = state.expanded_tree_paths.contains(&node.path) || !filter.is_empty();
     let is_selected = selected_path == node.path;
+    let is_modified = !is_container && state.is_file_modified(&node.path);
     let path_clone = node.path.clone();
     let model_click = model.clone();
+
 
     let pad_left = (level * 12 + 8) as f32;
 
@@ -115,24 +117,45 @@ fn render_file_tree_node(
                                 .text_size(px(12.0))
                                 .child(get_node_icon(node)),
                         )
-                        // 节点名称
+                        // 节点名称与修改标记
                         .child(
                             div()
-                                .text_size(px(11.5))
-                                .font_weight(if is_selected { FontWeight::BOLD } else { FontWeight::NORMAL })
-                                .text_color(if is_selected {
-                                    hsla(0.0, 0.0, 1.0, 1.0)
-                                } else if is_container {
-                                    hsla(240.0 / 360.0, 0.05, 0.90, 1.0)
-                                } else {
-                                    hsla(240.0 / 360.0, 0.05, 0.75, 1.0)
-                                })
+                                .flex()
+                                .items_center()
+                                .gap_1()
                                 .overflow_hidden()
                                 .whitespace_nowrap()
-                                .child(node.name.clone()),
+                                .child(
+                                    div()
+                                        .text_size(px(11.5))
+                                        .font_weight(if is_selected || is_modified {
+                                            FontWeight::BOLD
+                                        } else {
+                                            FontWeight::NORMAL
+                                        })
+                                        .text_color(if is_modified {
+                                            hsla(45.0 / 360.0, 0.95, 0.55, 1.0) // 显眼黄色：已被修改
+                                        } else if is_selected {
+                                            hsla(0.0, 0.0, 1.0, 1.0)
+                                        } else if is_container {
+                                            hsla(240.0 / 360.0, 0.05, 0.90, 1.0)
+                                        } else {
+                                            hsla(240.0 / 360.0, 0.05, 0.75, 1.0)
+                                        })
+                                        .overflow_hidden()
+                                        .whitespace_nowrap()
+                                        .child(node.name.clone()),
+                                )
+                                .children(is_modified.then(|| {
+                                    div()
+                                        .text_size(px(8.0))
+                                        .text_color(hsla(45.0 / 360.0, 0.95, 0.55, 1.0))
+                                        .child("●")
+                                })),
                         ),
                 ),
         )
+
 
         // 渲染子节点列表
         .children((is_container && is_expanded).then(|| {

@@ -239,14 +239,6 @@ impl AppState {
     }
 
 
-
-    pub fn auto_layout(&mut self) {
-        self.update_node_sizes();
-        auto_layout_graph(&mut self.graph);
-        self.fit_view();
-        self.toast = Some(Toast::success(self.t("toast.auto_layout_done")));
-    }
-
     pub fn toggle_performance_mode(&mut self) {
         self.performance_mode = !self.performance_mode;
         if self.performance_mode {
@@ -314,18 +306,39 @@ impl AppState {
         }
     }
 
+    pub fn mark_current_tab_modified(&mut self) {
+        if let Some(active_id) = &self.active_tab_id {
+            if let Some(tab) = self.open_tabs.iter_mut().find(|t| &t.id == active_id) {
+                tab.is_modified = true;
+            }
+        }
+    }
+
+    pub fn is_file_modified(&self, path: &str) -> bool {
+        self.open_tabs.iter().any(|t| t.file_path == path && t.is_modified)
+    }
+
+    pub fn auto_layout(&mut self) {
+        self.update_node_sizes();
+        auto_layout_graph(&mut self.graph);
+        self.fit_view();
+        self.mark_current_tab_modified();
+        self.toast = Some(Toast::success(self.t("toast.auto_layout_done")));
+    }
+
     pub fn add_node_at(&mut self, kind: NodeKind, _fallback_title: impl Into<String>, pos: (f32, f32)) -> String {
         let (node_id, title) = self.graph.generate_unique_node_name(&kind);
         let node = NodeData::new(node_id.clone(), title, kind, pos);
         self.graph.add_node(node);
         self.selected_node_id = Some(node_id.clone());
+        self.mark_current_tab_modified();
         node_id
     }
-
 
     pub fn delete_selected_node(&mut self) {
         if let Some(id) = self.selected_node_id.take() {
             self.graph.remove_node(&id);
+            self.mark_current_tab_modified();
             self.toast = Some(Toast::info(self.t("toast.deleted_node")));
         }
     }
@@ -346,16 +359,19 @@ impl AppState {
 
     pub fn sever_edge(&mut self, src: &str, tgt: &str) {
         self.graph.sever_edge(src, tgt);
+        self.mark_current_tab_modified();
         self.toast = Some(Toast::info(self.t("toast.sever_edge")));
     }
 
     pub fn connect_ports(&mut self, s_node: &str, s_port: &str, t_node: &str, t_port: &str) {
         if s_node != t_node {
             self.graph.add_edge(Edge::new(s_node, s_port, t_node, t_port));
+            self.mark_current_tab_modified();
             self.toast = Some(Toast::success(self.t("toast.connect_edge")));
         }
     }
 }
+
 
 #[cfg(test)]
 mod tests {

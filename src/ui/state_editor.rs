@@ -268,8 +268,10 @@ impl AppState {
                 }
             }
 
+            self.mark_current_tab_modified();
             self.toast = Some(Toast::success(format!("✨ 已成功保存节点 {}", modal_title)));
         }
     }
 }
+
 

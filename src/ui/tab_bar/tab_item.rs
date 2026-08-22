@@ -78,8 +78,16 @@ pub fn render_tab_item(
                 })
                 .child(tab.title.clone()),
         )
+        // 被修改状态小圆点提示 (Dirty Indicator ●)
+        .children(tab.is_modified.then(|| {
+            div()
+                .size(px(6.5))
+                .rounded_full()
+                .bg(hsla(45.0 / 360.0, 0.95, 0.55, 1.0))
+        }))
         // 关闭按钮 ✕
         .child(
+
             div()
                 .px_1()
                 .py_0p5()
