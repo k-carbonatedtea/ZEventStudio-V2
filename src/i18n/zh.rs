@@ -22,9 +22,19 @@ pub fn get_zh(key: &str) -> &str {
 
         // ---------------- 底部工作区切换栏 (Bottom Tabs) ----------------
         "tab.flowchart" => "流程图 (Flowchart)",
+        "tab.code_editor" => "代码编辑 (Code Editor)",
         "tab.actors" => "角色管理 (Actors)",
         "tab.events" => "事件列表 (Events)",
         "tab.json" => "JSON 源码",
+
+        // ---------------- 代码编辑器 (Code Editor) ----------------
+        "code_editor.save" => "保存",
+        "code_editor.revert" => "重置修改",
+        "code_editor.copy_all" => "复制全部",
+        "code_editor.modified_label" => "未保存",
+        "code_editor.lines" => "行",
+        "code_editor.chars" => "字符",
+        "code_editor.empty_prompt" => "请在左侧文件树选择文件以在代码编辑器中查看与编辑",
 
         // ---------------- 角色管理主页面 (Actor Manager Page) ----------------
         "actors_view.add_actor_btn" => "+ 添加角色...",
@@ -230,6 +240,11 @@ pub fn get_zh(key: &str) -> &str {
         "toast.project_loaded" => "🗂️ 成功载入项目: ",
         "toast.file_loaded" => "📂 成功载入文件: ",
         "toast.file_load_error" => "❌ 读取文件失败: ",
+        "toast.save_success" => "💾 文件保存成功",
+        "toast.save_failed" => "❌ 保存文件失败",
+        "toast.compile_failed" => "❌ 格式编译失败",
+        "toast.no_active_file" => "⚠️ 当前没有打开的文件",
+        "toast.revert_success" => "🔄 已重置文件至初始状态",
 
         // ---------------- 角色分类与关键参数 (Actor Theme & Smart Params) ----------------
         "actor.system" => "系统逻辑",

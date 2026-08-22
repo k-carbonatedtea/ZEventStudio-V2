@@ -172,16 +172,29 @@ fn get_node_icon(node: &FileNode) -> &'static str {
         "📁"
     } else {
         let lower = node.name.to_lowercase();
-        if lower.ends_with(".bfevfl") {
-            "📄"
-        } else if lower.ends_with(".json") {
-            "📜"
-        } else if lower.ends_with(".msbt") {
+        if lower.ends_with(".bfevfl") || lower.ends_with(".evfl") {
+            "⚡"
+        } else if lower.ends_with(".msbt") || lower.ends_with(".smsbt") {
             "💬"
-        } else if lower.ends_with(".byml") || lower.ends_with(".aamp") {
+        } else if lower.ends_with(".byml")
+            || lower.ends_with(".bgyml")
+            || lower.ends_with(".sbyml")
+            || lower.ends_with(".aamp")
+            || lower.ends_with(".bxml")
+            || lower.ends_with(".baev")
+            || lower.ends_with(".baglbl")
+            || lower.ends_with(".bglcl")
+            || lower.ends_with(".bactparam")
+        {
             "⚙️"
+        } else if lower.ends_with(".json") {
+            "{}"
+        } else if lower.ends_with(".yaml") || lower.ends_with(".yml") {
+            "📜"
+        } else if lower.ends_with(".txt") || lower.ends_with(".log") {
+            "≡"
         } else {
-            "📎"
+            "📄"
         }
     }
 }

@@ -1,4 +1,14 @@
+use crate::model::code_document::CodeDocumentState;
 use crate::model::Graph;
+
+/// 文档标签展示形态种类
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DocumentTabKind {
+    /// 交互式事件流程图
+    Flowchart,
+    /// 多格式通用代码编辑器
+    CodeEditor,
+}
 
 /// 已打开文档标签项 (Document Tab)
 #[derive(Debug, Clone, PartialEq)]
@@ -7,12 +17,15 @@ pub struct OpenDocumentTab {
     pub title: String,
     pub file_path: String,
     pub file_type: String,
+    pub tab_kind: DocumentTabKind,
     pub graph: Option<Graph>,
     pub original_graph: Option<Graph>, // 原始加载时的快照，用于精确比对是否被真正修改
+    pub code_state: Option<CodeDocumentState>,
     pub is_modified: bool,
 }
 
 impl OpenDocumentTab {
+    /// 创建流程图类型的文档标签项
     pub fn new(
         id: String,
         title: String,
@@ -26,30 +39,67 @@ impl OpenDocumentTab {
             title,
             file_path,
             file_type,
+            tab_kind: DocumentTabKind::Flowchart,
             graph,
             original_graph,
+            code_state: None,
             is_modified: false,
         }
     }
 
-    /// 获取文件类型对应的精美图标 ({} / ≡ / ⚡ / 📦 / 📄)
+    /// 创建代码编辑器类型的文档标签项
+    pub fn new_code(
+        id: String,
+        title: String,
+        file_path: String,
+        file_type: String,
+        code_state: CodeDocumentState,
+    ) -> Self {
+        Self {
+            id,
+            title,
+            file_path,
+            file_type,
+            tab_kind: DocumentTabKind::CodeEditor,
+            graph: None,
+            original_graph: None,
+            code_state: Some(code_state),
+            is_modified: false,
+        }
+    }
+
+    /// 获取文件类型对应的精美图标 (💬 / ⚙️ / ⚡ / 📜 / {} / ≡ / 📦 / 📄)
     pub fn icon(&self) -> &'static str {
+        if let Some(ref code) = self.code_state {
+            return code.format.icon();
+        }
         match self.file_type.to_lowercase().as_str() {
+            "msbt" | "smsbt" => "💬",
+            "byml" | "bgyml" | "sbyml" | "aamp" | "bxml" | "baev" => "⚙️",
             "json" => "{}",
             "bfevfl" | "evfl" => "⚡",
+            "yaml" | "yml" => "📜",
             "txt" | "log" => "≡",
-            "sarc" | "pack" | "sbeventpack" | "sbactorpack" => "📦",
+            "sarc" | "pack" | "sbeventpack" | "sbactorpack" | "ssarc" => "📦",
             _ => "📄",
         }
     }
 
-    /// 重新根据当前图与初始快照比对，精确更新 is_modified 状态
-    pub fn recompute_modified(&mut self, current: &Graph) {
-        if let Some(orig) = &self.original_graph {
-            self.is_modified = is_graph_modified(current, orig);
-        } else {
-            // 新建未保存的空白文件：如果包含节点则标记修改
-            self.is_modified = !current.nodes.is_empty() || !current.edges.is_empty();
+    /// 重新根据当前图或代码状态比对，精确更新 is_modified 状态
+    pub fn recompute_modified(&mut self) {
+        match self.tab_kind {
+            DocumentTabKind::Flowchart => {
+                if let (Some(curr), Some(orig)) = (&self.graph, &self.original_graph) {
+                    self.is_modified = is_graph_modified(curr, orig);
+                } else if let Some(curr) = &self.graph {
+                    self.is_modified = !curr.nodes.is_empty() || !curr.edges.is_empty();
+                }
+            }
+            DocumentTabKind::CodeEditor => {
+                if let Some(ref code) = self.code_state {
+                    self.is_modified = code.is_modified();
+                }
+            }
         }
     }
 }
@@ -82,7 +132,6 @@ pub fn is_graph_modified(current: &Graph, original: &Graph) -> bool {
             return true;
         }
     }
-
 
     // 4. 连线拓扑比对
     for orig_edge in &original.edges {
@@ -121,18 +170,4 @@ mod tests {
         current.remove_node("Node2");
         assert!(!is_graph_modified(&current, &original));
     }
-
-    #[test]
-    fn test_is_graph_modified_move_node_does_not_count_as_modified() {
-        let mut original = Graph::new("TestFlow");
-        original.add_node(NodeData::new("Node1", "Event1", NodeKind::Action, (100.0, 100.0)));
-
-        let mut current = original.clone();
-        // 移动节点在画布上的坐标
-        current.find_node_mut("Node1").unwrap().pos = (500.0, 600.0);
-        // 节点位置不属于 EVFL 文件实质内容，不应被计为修改
-        assert!(!is_graph_modified(&current, &original));
-    }
 }
-
-

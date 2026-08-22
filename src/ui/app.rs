@@ -1,15 +1,17 @@
 use gpui::*;
+use gpui_component::input::{EditorState, InputEvent};
 use std::time::Instant;
 use crate::ui::canvas::{render_flow_canvas, render_node_editor_modal};
-use crate::ui::components::{handle_text_key_event, render_toast};
+use crate::ui::components::render_toast;
 use crate::ui::inspector::render_inspector;
+use crate::ui::key_handler::handle_global_key_event;
 use crate::ui::sidebar::render_sidebar;
 use crate::ui::state::{AppState, AppWorkspaceTab};
 use crate::ui::toolbar::render_toolbar;
 use crate::ui::views::{
-    render_actor_manager_view, render_bottom_tabs, render_event_manager_view, render_json_viewer_view,
+    render_actor_manager_view, render_bottom_tabs, render_code_editor_view,
+    render_event_manager_view, render_json_viewer_view, render_welcome_view,
 };
-
 
 pub struct AppView {
     pub model: Entity<AppState>,
@@ -18,6 +20,8 @@ pub struct AppView {
     pub fps: f32,
     pub frame_time_ms: f32,
     pub focus_handle: FocusHandle,
+    pub code_editor: Option<Entity<EditorState>>,
+    pub code_editor_tab_id: Option<String>,
 }
 
 impl AppView {
@@ -38,6 +42,8 @@ impl AppView {
             fps: 60.0,
             frame_time_ms: 1.0,
             focus_handle,
+            code_editor: None,
+            code_editor_tab_id: None,
         }
     }
 }
@@ -45,6 +51,56 @@ impl AppView {
 impl Render for AppView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_active = window.is_window_active();
+
+        // 1. 同步与管理高性能可编辑代码编辑器实例 (EditorState)
+        let active_tab_info = {
+            let state = self.model.read(cx);
+            let active_id = state.active_tab_id.clone();
+            active_id.and_then(|id| {
+                state.open_tabs.iter().find(|t| t.id == id).and_then(|tab| {
+                    tab.code_state.as_ref().map(|code| {
+                        (id, code.content.clone(), code.format.language_id())
+                    })
+                })
+            })
+        };
+
+        if let Some((current_id, code_content, lang)) = active_tab_info {
+            if self.code_editor_tab_id.as_ref() != Some(&current_id) {
+                let new_editor = cx.new(|cx| {
+                    EditorState::new(window, cx)
+                        .language(lang)
+                        .line_number(true)
+                        .default_value(code_content)
+                });
+
+                let model_sub = self.model.clone();
+                let target_tab_id = current_id.clone();
+                cx.subscribe_in(
+                    &new_editor,
+                    window,
+                    move |_this: &mut AppView, editor, event: &InputEvent, _window, cx| {
+                        if let InputEvent::Change = event {
+                            let new_val = editor.read(cx).value();
+                            let tid = target_tab_id.clone();
+                            model_sub.update(cx, |st, cx| {
+                                if let Some(tab) = st.open_tabs.iter_mut().find(|t| t.id == tid) {
+                                    if let Some(ref mut code) = tab.code_state {
+                                        code.content = new_val.to_string();
+                                    }
+                                    tab.recompute_modified();
+                                    cx.notify();
+                                }
+                            });
+                        }
+                    },
+                )
+                .detach();
+
+                self.code_editor = Some(new_editor);
+                self.code_editor_tab_id = Some(current_id);
+            }
+        }
 
         let state = self.model.read(cx);
         let is_perf = state.performance_mode;
@@ -61,7 +117,7 @@ impl Render for AppView {
             self.last_fps_update = now;
         }
 
-        // 极速性能模式调度：仅当显式开启性能模式且窗口激活时，才在每一帧请求下一帧刷新
+        // 极速性能模式调度
         if is_perf && is_active {
             cx.on_next_frame(window, |_, _, cx| {
                 cx.notify();
@@ -73,7 +129,7 @@ impl Render for AppView {
         let current_frame_time = self.frame_time_ms;
         let current_tab = state.current_tab;
 
-        // 3秒自动隐藏 Toast 提示气泡并触发平滑重绘
+        // 3秒自动隐藏 Toast 提示气泡
         let visible_toast = if let Some(ref t) = state.toast {
             let elapsed = t.created_at.elapsed().as_secs_f32();
             if elapsed >= t.duration_secs {
@@ -113,8 +169,6 @@ impl Render for AppView {
             None
         };
 
-
-
         let model_key = self.model.clone();
         let model_root_move = self.model.clone();
         let model_root_up = self.model.clone();
@@ -153,165 +207,17 @@ impl Render for AppView {
                     crate::ui::views::welcome::quick_tab::pick_and_load_file(&model_key, cx);
                     return;
                 }
-                if event.keystroke.modifiers.control && event.keystroke.key == "n" {
-                    model_key.update(cx, |st, cx| {
-                        st.new_blank_flow();
+
+                model_key.update(cx, |st, cx| {
+                    let should_notify = handle_global_key_event(event, st);
+                    if should_notify {
                         cx.notify();
-                    });
-                    return;
-                }
-
-                let mut modal_handled = false;
-                model_key.update(cx, |st, cx| {
-                    if let Some(ref mut modal) = st.active_node_editor_modal {
-                        modal_handled = true;
-                        let mut should_notify = false;
-                        match modal.active_field {
-                            crate::ui::canvas::node_editor::ActiveEditField::FlowchartName => {
-                                let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.res_flowchart_name, event);
-                                if is_esc { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::None; }
-                                if is_enter { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::EntryPointName; }
-                                should_notify = changed || is_enter || is_esc;
-                            }
-                            crate::ui::canvas::node_editor::ActiveEditField::EntryPointName => {
-                                let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.entry_point_name, event);
-                                if is_esc || is_enter { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::None; }
-                                should_notify = changed || is_enter || is_esc;
-                            }
-                            crate::ui::canvas::node_editor::ActiveEditField::BranchValue(idx) => {
-                                if idx < modal.branches.len() {
-                                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.branches[idx].value, event);
-                                    if is_esc || is_enter { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::None; }
-                                    should_notify = changed || is_enter || is_esc;
-                                }
-                            }
-                            crate::ui::canvas::node_editor::ActiveEditField::BranchTarget(idx) => {
-                                if idx < modal.branches.len() {
-                                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.branches[idx].target_id, event);
-                                    if is_esc || is_enter { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::None; }
-                                    should_notify = changed || is_enter || is_esc;
-                                }
-                            }
-                            crate::ui::canvas::node_editor::ActiveEditField::ParamKey(idx) => {
-                                if idx < modal.properties.len() {
-                                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.properties[idx].key, event);
-                                    if is_esc { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::None; }
-                                    if is_enter { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::ParamVal(idx); }
-                                    should_notify = changed || is_enter || is_esc;
-                                }
-                            }
-                            crate::ui::canvas::node_editor::ActiveEditField::ParamVal(idx) => {
-                                if idx < modal.properties.len() {
-                                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.properties[idx].val, event);
-                                    if is_esc || is_enter { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::None; }
-                                    should_notify = changed || is_enter || is_esc;
-                                }
-                            }
-                            crate::ui::canvas::node_editor::ActiveEditField::None => {
-                                if event.keystroke.key == "escape" {
-                                    st.active_node_editor_modal = None;
-                                    should_notify = true;
-                                } else if event.keystroke.key == "enter" {
-                                    st.save_node_editor();
-                                    should_notify = true;
-                                }
-                            }
-                        }
-                        if should_notify {
-                            cx.notify();
-                        }
-                    }
-                });
-
-                if modal_handled {
-                    return;
-                }
-
-
-
-                model_key.update(cx, |st, cx| {
-                    if st.is_adding_action {
-                        let (changed, is_enter, is_esc) = handle_text_key_event(&mut st.new_action_name, event);
-                        if is_enter {
-                            let act_name = if st.new_action_name.trim().is_empty() {
-                                "Demo_WaitFrame".to_string()
-                            } else {
-                                st.new_action_name.trim().to_string()
-                            };
-                            if let Some(act) = st.graph.actors.get_mut(st.selected_actor_idx) {
-                                if !act.actions.contains(&act_name) {
-                                    act.actions.push(act_name);
-                                }
-                            }
-                            st.is_adding_action = false;
-                        } else if is_esc {
-                            st.is_adding_action = false;
-                        }
-                        if changed || is_enter || is_esc {
-                            cx.notify();
-                        }
-                    } else if st.is_adding_query {
-                        let (changed, is_enter, is_esc) = handle_text_key_event(&mut st.new_query_name, event);
-                        if is_enter {
-                            let qry_name = if st.new_query_name.trim().is_empty() {
-                                "CheckFlag".to_string()
-                            } else {
-                                st.new_query_name.trim().to_string()
-                            };
-                            if let Some(act) = st.graph.actors.get_mut(st.selected_actor_idx) {
-                                if !act.queries.contains(&qry_name) {
-                                    act.queries.push(qry_name);
-                                }
-                            }
-                            st.is_adding_query = false;
-                        } else if is_esc {
-                            st.is_adding_query = false;
-                        }
-                        if changed || is_enter || is_esc {
-                            cx.notify();
-                        }
-                    } else if st.is_adding_actor {
-                        let (changed, is_enter, is_esc) = handle_text_key_event(&mut st.new_actor_name, event);
-                        if is_enter {
-                            let name = if st.new_actor_name.trim().is_empty() {
-                                format!("Actor_{}", st.graph.actors.len())
-                            } else {
-                                st.new_actor_name.trim().to_string()
-                            };
-                            let mut new_a = crate::model::actor::ActorData::new(name);
-                            new_a.load_default_params();
-                            st.graph.actors.push(new_a);
-                            st.selected_actor_idx = st.graph.actors.len() - 1;
-                            st.is_adding_actor = false;
-                        } else if is_esc {
-                            st.is_adding_actor = false;
-                        }
-                        if changed || is_enter || is_esc {
-                            cx.notify();
-                        }
-                    } else if st.is_adding_param {
-                        let (changed, is_enter, is_esc) = handle_text_key_event(&mut st.new_param_key, event);
-                        if is_enter {
-                            if let Some(act) = st.graph.actors.get_mut(st.selected_actor_idx) {
-                                act.params.push(crate::model::node::PropertyItem {
-                                    key: if st.new_param_key.trim().is_empty() { format!("Param_{}", act.params.len()) } else { st.new_param_key.trim().to_string() },
-                                    val: if st.new_param_val.trim().is_empty() { "0".to_string() } else { st.new_param_val.trim().to_string() },
-                                    val_type: st.new_param_type.clone(),
-                                });
-                            }
-                            st.is_adding_param = false;
-                        } else if is_esc {
-                            st.is_adding_param = false;
-                        }
-                        if changed || is_enter || is_esc {
-                            cx.notify();
-                        }
                     }
                 });
             })
             // 顶部工具栏 (Toolbar)
             .child(render_toolbar(state, current_fps, current_frame_time, &self.model))
-            // 全局主工作区主体 (根据底部 Tab 切换：启动页 / 流程图 / 角色管理 / 事件列表 / JSON 源码)
+            // 全局主工作区主体 (根据工作区状态切换)
             .child(
                 div()
                     .flex_1()
@@ -319,7 +225,7 @@ impl Render for AppView {
                     .overflow_hidden()
                     .child(match current_tab {
                         AppWorkspaceTab::Welcome => {
-                            crate::ui::views::render_welcome_view(state, &self.model).into_any_element()
+                            render_welcome_view(state, &self.model).into_any_element()
                         }
                         AppWorkspaceTab::Flowchart => div()
                             .flex()
@@ -348,7 +254,30 @@ impl Render for AppView {
                             )
                             .into_any_element(),
 
-
+                        AppWorkspaceTab::CodeEditor => div()
+                            .flex()
+                            .size_full()
+                            .overflow_hidden()
+                            .child(render_sidebar(state, &self.model))
+                            .child(crate::ui::sidebar::render_sidebar_resize_handle(state, &self.model))
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .flex()
+                                    .flex_col()
+                                    .size_full()
+                                    .overflow_hidden()
+                                    // 顶部多文档/多文件标签栏 (Document Tab Bar)
+                                    .child(crate::ui::render_document_tab_bar(state, &self.model))
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .size_full()
+                                            .overflow_hidden()
+                                            .child(render_code_editor_view(state, &self.model, self.code_editor.as_ref())),
+                                    ),
+                            )
+                            .into_any_element(),
 
                         AppWorkspaceTab::Actors => {
                             render_actor_manager_view(state, &self.model).into_any_element()
@@ -361,12 +290,11 @@ impl Render for AppView {
                         }
                     }),
             )
-
-            // 底部工作区选项卡栏 (仅在节点布局图/编辑器等视图中显示)
+            // 底部工作区选项卡栏
             .children((current_tab != AppWorkspaceTab::Welcome).then(|| {
                 render_bottom_tabs(state, &self.model)
             }))
-            // Floating Toast notification (自动3秒后消失)
+            // Floating Toast notification
             .children(visible_toast.map(|t| {
                 div()
                     .absolute()
@@ -374,12 +302,9 @@ impl Render for AppView {
                     .right_4()
                     .child(render_toast(&t))
             }))
-            // 节点属性与分支编辑模态框 (Node Editor Modal)
+            // 节点属性与分支编辑模态框
             .children((state.active_node_editor_modal.is_some()).then(|| {
                 render_node_editor_modal(state, &self.model)
             }))
-
-
     }
 }
-

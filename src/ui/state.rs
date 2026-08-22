@@ -28,6 +28,7 @@ pub enum AppWorkspaceTab {
     #[default]
     Welcome,
     Flowchart,
+    CodeEditor,
     Actors,
     Events,
     Json,
@@ -311,8 +312,10 @@ impl AppState {
     pub fn mark_current_tab_modified(&mut self) {
         if let Some(active_id) = &self.active_tab_id {
             if let Some(tab) = self.open_tabs.iter_mut().find(|t| &t.id == active_id) {
-                tab.graph = Some(self.graph.clone());
-                tab.recompute_modified(&self.graph);
+                if tab.tab_kind == crate::model::DocumentTabKind::Flowchart {
+                    tab.graph = Some(self.graph.clone());
+                }
+                tab.recompute_modified();
             }
         }
     }

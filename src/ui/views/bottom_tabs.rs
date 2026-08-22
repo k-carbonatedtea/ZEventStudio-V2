@@ -1,7 +1,7 @@
 use gpui::*;
 use crate::ui::state::{AppState, AppWorkspaceTab};
 
-/// 渲染底部全局工作区切换栏 (Flowchart / Actors / Events / JSON)
+/// 渲染底部全局工作区切换栏 (Flowchart / Code Editor / Actors / Events / JSON)
 pub fn render_bottom_tabs(
     state: &AppState,
     model: &Entity<AppState>,
@@ -23,8 +23,12 @@ pub fn render_bottom_tabs(
             AppWorkspaceTab::Flowchart,
             model,
         ))
-
-
+        .child(render_bottom_tab_item(
+            state.t("tab.code_editor"),
+            current_tab == AppWorkspaceTab::CodeEditor,
+            AppWorkspaceTab::CodeEditor,
+            model,
+        ))
         .child(render_bottom_tab_item(
             state.t("tab.actors"),
             current_tab == AppWorkspaceTab::Actors,

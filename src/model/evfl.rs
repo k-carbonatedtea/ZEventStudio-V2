@@ -20,6 +20,11 @@ pub fn load_bfevfl_from_bytes(bytes: &[u8]) -> Result<Graph, String> {
     }
 }
 
+/// 将 Graph 流程图结构序列化保存为 JSON / EVFL 字节流
+pub fn save_bfevfl_to_bytes(graph: &Graph) -> Result<Vec<u8>, String> {
+    serde_json::to_vec_pretty(graph).map_err(|e| format!("序列化 BFEVFL 数据失败: {}", e))
+}
+
 /// 将 Revfl 的 Flowchart 数据结构转换为可视化 Graph
 pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
     let mut graph = Graph::new(format!("🗡️ {} (BFEVFL)", file_name));

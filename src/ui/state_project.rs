@@ -1,5 +1,7 @@
+use crate::model::code_document::CodeDocumentState;
+use crate::model::file_converter::parse_file_to_code;
 use crate::model::file_tree::{read_file_from_path, scan_project_path};
-use crate::model::OpenDocumentTab;
+use crate::model::{DocumentTabKind, OpenDocumentTab};
 use crate::ui::components::Toast;
 use crate::ui::sidebar::SidebarTab;
 use crate::ui::state::{AppState, AppWorkspaceTab, RecentProjectItem};
@@ -28,7 +30,6 @@ impl AppState {
                     }
                 }
 
-                // 插入最近打开记录
                 self.add_recent_project(name.clone(), path.to_string(), "mod".to_string());
                 self.active_sidebar_tab = SidebarTab::Files;
                 self.toast = Some(Toast::success(format!("{} {}", self.t("toast.project_loaded"), name)));
@@ -47,7 +48,6 @@ impl AppState {
                 self.project_name = Some(name.clone());
                 self.file_tree = nodes;
 
-                // 展开封包内部顶层目录
                 self.expanded_tree_paths.clear();
                 for node in &self.file_tree {
                     if node.is_dir || node.is_sarc {
@@ -98,7 +98,9 @@ impl AppState {
         // 1. 先将当前活跃图拓扑缓存至旧标签项
         if let Some(cur_id) = &self.active_tab_id {
             if let Some(tab) = self.open_tabs.iter_mut().find(|t| &t.id == cur_id) {
-                tab.graph = Some(self.graph.clone());
+                if tab.tab_kind == DocumentTabKind::Flowchart {
+                    tab.graph = Some(self.graph.clone());
+                }
             }
         }
 
@@ -106,12 +108,20 @@ impl AppState {
         if let Some(target_tab) = self.open_tabs.iter().find(|t| t.id == tab_id).cloned() {
             self.active_tab_id = Some(target_tab.id);
             self.selected_file_path = Some(target_tab.file_path.clone());
-            if let Some(cached_graph) = target_tab.graph {
-                self.graph = cached_graph;
-                self.fit_view();
-                self.current_tab = AppWorkspaceTab::Flowchart;
-            } else {
-                self.load_file_by_path(&target_tab.file_path);
+
+            match target_tab.tab_kind {
+                DocumentTabKind::Flowchart => {
+                    if let Some(cached_graph) = target_tab.graph {
+                        self.graph = cached_graph;
+                        self.fit_view();
+                        self.current_tab = AppWorkspaceTab::Flowchart;
+                    } else {
+                        self.load_file_by_path(&target_tab.file_path);
+                    }
+                }
+                DocumentTabKind::CodeEditor => {
+                    self.current_tab = AppWorkspaceTab::CodeEditor;
+                }
             }
         }
     }
@@ -128,11 +138,22 @@ impl AppState {
                     .or_else(|| self.open_tabs.get(i.saturating_sub(1)))
                 {
                     let next_id = next_tab.id.clone();
+                    let next_kind = next_tab.tab_kind;
                     let next_graph = next_tab.graph.clone();
                     self.active_tab_id = Some(next_id);
-                    if let Some(g) = next_graph {
-                        self.graph = g;
-                        self.fit_view();
+                    self.selected_file_path = Some(next_tab.file_path.clone());
+
+                    match next_kind {
+                        DocumentTabKind::Flowchart => {
+                            if let Some(g) = next_graph {
+                                self.graph = g;
+                                self.fit_view();
+                            }
+                            self.current_tab = AppWorkspaceTab::Flowchart;
+                        }
+                        DocumentTabKind::CodeEditor => {
+                            self.current_tab = AppWorkspaceTab::CodeEditor;
+                        }
                     }
                 } else {
                     self.active_tab_id = None;
@@ -159,90 +180,88 @@ impl AppState {
             .to_string();
 
         let lower_name = raw_name.to_lowercase();
-        let file_type = if lower_name.ends_with(".bfevfl") {
-            "bfevfl"
-        } else if lower_name.ends_with(".json") {
-            "json"
-        } else if lower_name.ends_with(".txt") || lower_name.ends_with(".log") {
-            "txt"
-        } else {
-            "generic"
-        };
 
         // 缓存当前旧活跃标签图
         if let Some(active_id) = &self.active_tab_id {
             if let Some(tab) = self.open_tabs.iter_mut().find(|t| &t.id == active_id) {
-                tab.graph = Some(self.graph.clone());
+                if tab.tab_kind == DocumentTabKind::Flowchart {
+                    tab.graph = Some(self.graph.clone());
+                }
             }
         }
 
-        // 查找或新建标签页
-        let target_tab_id = if let Some(existing) = self.open_tabs.iter().find(|t| t.file_path == path) {
-            existing.id.clone()
-        } else {
-            let new_id = uuid::Uuid::new_v4().to_string();
-            let new_tab = OpenDocumentTab::new(
-                new_id.clone(),
-                raw_name.clone(),
-                path.to_string(),
-                file_type.to_string(),
-                None,
-                None,
-            );
-            self.open_tabs.push(new_tab);
-            new_id
+        // 如果该文件已存在打开标签页，直接切换
+        if let Some(existing) = self.open_tabs.iter().find(|t| t.file_path == path) {
+            let id = existing.id.clone();
+            self.switch_document_tab(&id);
+            return;
+        }
+
+        let bytes = match read_file_from_path(path) {
+            Ok(b) => b,
+            Err(e) => {
+                self.toast = Some(Toast::error(format!("{} {}", self.t("toast.file_load_error"), e)));
+                return;
+            }
         };
-        self.active_tab_id = Some(target_tab_id.clone());
 
-        match read_file_from_path(path) {
-            Ok(bytes) => {
-                if lower_name.ends_with(".bfevfl") || bytes.starts_with(b"BFEVFL") {
-                    match crate::model::evfl::load_bfevfl_from_bytes(&bytes) {
-                        Ok(mut loaded_graph) => {
-                            loaded_graph.name = raw_name.clone();
-                            loaded_graph.ensure_actors_populated();
-                            crate::model::layout::auto_layout_graph(&mut loaded_graph);
-                            self.graph = loaded_graph.clone();
+        // 1. 优先将 BFEVFL 打开为流程图模式
+        if lower_name.ends_with(".bfevfl") || bytes.starts_with(b"BFEVFL") {
+            match crate::model::evfl::load_bfevfl_from_bytes(&bytes) {
+                Ok(mut loaded_graph) => {
+                    loaded_graph.name = raw_name.clone();
+                    loaded_graph.ensure_actors_populated();
+                    crate::model::layout::auto_layout_graph(&mut loaded_graph);
+                    self.graph = loaded_graph.clone();
 
-                            if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == target_tab_id) {
-                                tab.graph = Some(loaded_graph.clone());
-                                tab.original_graph = Some(loaded_graph);
-                                tab.title = raw_name.clone();
-                                tab.is_modified = false;
-                            }
+                    let new_id = uuid::Uuid::new_v4().to_string();
+                    let new_tab = OpenDocumentTab::new(
+                        new_id.clone(),
+                        raw_name.clone(),
+                        path.to_string(),
+                        "bfevfl".to_string(),
+                        Some(loaded_graph.clone()),
+                        Some(loaded_graph),
+                    );
+                    self.open_tabs.push(new_tab);
+                    self.active_tab_id = Some(new_id);
 
-                            self.fit_view();
-                            self.current_tab = AppWorkspaceTab::Flowchart;
-                            self.toast = Some(Toast::success(format!("{} {}", self.t("toast.file_loaded"), raw_name)));
-                        }
-                        Err(err) => {
-                            self.toast = Some(Toast::error(format!("{} {}", self.t("toast.file_load_error"), err)));
-                        }
-                    }
-                } else if lower_name.ends_with(".json") {
-                    if let Ok(json_str) = String::from_utf8(bytes) {
-                        if let Ok(mut loaded_graph) = serde_json::from_str::<crate::model::Graph>(&json_str) {
-                            loaded_graph.ensure_actors_populated();
-                            crate::model::layout::auto_layout_graph(&mut loaded_graph);
-                            self.graph = loaded_graph.clone();
-
-                            if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == target_tab_id) {
-                                tab.graph = Some(loaded_graph.clone());
-                                tab.original_graph = Some(loaded_graph);
-                                tab.title = raw_name.clone();
-                                tab.is_modified = false;
-                            }
-
-                            self.fit_view();
-                            self.current_tab = AppWorkspaceTab::Flowchart;
-                            self.toast = Some(Toast::success(format!("{} {}", self.t("toast.file_loaded"), raw_name)));
-                        }
-                    }
-                } else {
-                    self.toast = Some(Toast::info(format!("📂 已选中文件: {}", raw_name)));
+                    self.fit_view();
+                    self.current_tab = AppWorkspaceTab::Flowchart;
+                    self.toast = Some(Toast::success(format!("{} {}", self.t("toast.file_loaded"), raw_name)));
+                    return;
+                }
+                Err(err) => {
+                    self.toast = Some(Toast::error(format!("{} {}", self.t("toast.file_load_error"), err)));
+                    return;
                 }
             }
+        }
 
+        // 2. 通用代码编辑器解析：支持 MSBT, BYML, AAMP, JSON, YAML, TXT 等任意可打开文件
+        match parse_file_to_code(&bytes, path) {
+            Ok((code_text, format, endian)) => {
+                let code_state = CodeDocumentState::new(
+                    code_text,
+                    format,
+                    endian,
+                    path.to_string(),
+                );
+                let new_id = uuid::Uuid::new_v4().to_string();
+                let file_type = format.language_id().to_string();
+                let new_tab = OpenDocumentTab::new_code(
+                    new_id.clone(),
+                    raw_name.clone(),
+                    path.to_string(),
+                    file_type,
+                    code_state,
+                );
+
+                self.open_tabs.push(new_tab);
+                self.active_tab_id = Some(new_id);
+                self.current_tab = AppWorkspaceTab::CodeEditor;
+                self.toast = Some(Toast::success(format!("{} {} [{}]", self.t("toast.file_loaded"), raw_name, format.display_name())));
+            }
             Err(e) => {
                 self.toast = Some(Toast::error(format!("{} {}", self.t("toast.file_load_error"), e)));
             }

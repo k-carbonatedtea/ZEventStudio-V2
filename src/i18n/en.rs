@@ -22,9 +22,19 @@ pub fn get_en(key: &str) -> &str {
 
         // ---------------- 底部工作区切换栏 (Bottom Tabs) ----------------
         "tab.flowchart" => "Flowchart",
+        "tab.code_editor" => "Code Editor",
         "tab.actors" => "Actors",
         "tab.events" => "Events",
         "tab.json" => "JSON",
+
+        // ---------------- 代码编辑器 (Code Editor) ----------------
+        "code_editor.save" => "Save",
+        "code_editor.revert" => "Revert Changes",
+        "code_editor.copy_all" => "Copy All",
+        "code_editor.modified_label" => "Unsaved",
+        "code_editor.lines" => "lines",
+        "code_editor.chars" => "chars",
+        "code_editor.empty_prompt" => "Select a file from the explorer to view and edit",
 
         // ---------------- 角色管理主页面 (Actor Manager Page) ----------------
         "actors_view.add_actor_btn" => "+ Add Actor...",
@@ -231,9 +241,14 @@ pub fn get_en(key: &str) -> &str {
         "toast.sever_edge" => "✂️ Severed edge connection",
         "toast.connect_edge" => "🔗 Connected edge successfully",
         "toast.added_actor" => "✨ Added new actor definition: ",
-        "toast.project_loaded" => "🗂️ Loaded project: ",
-        "toast.file_loaded" => "📂 Loaded file: ",
+        "toast.project_loaded" => "🗂️ Project loaded: ",
+        "toast.file_loaded" => "📂 File loaded: ",
         "toast.file_load_error" => "❌ Failed to read file: ",
+        "toast.save_success" => "💾 File saved successfully",
+        "toast.save_failed" => "❌ Failed to save file",
+        "toast.compile_failed" => "❌ Format compilation failed",
+        "toast.no_active_file" => "⚠️ No active file opened",
+        "toast.revert_success" => "🔄 File reverted to original state",
 
         // ---------------- 角色分类与关键参数 (Actor Theme & Smart Params) ----------------
         "actor.system" => "System Logic",

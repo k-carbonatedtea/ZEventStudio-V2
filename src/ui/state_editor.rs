@@ -1,4 +1,5 @@
 use crate::model::{Edge, NodeKind, Port, PropertyItem};
+use crate::model::{compile_code_to_bytes, write_file_to_target, DocumentTabKind};
 use crate::ui::canvas::node_editor::{ActiveEditField, BranchItem, NodeEditorModalState};
 use crate::ui::components::Toast;
 use crate::ui::state::AppState;
@@ -12,7 +13,7 @@ impl AppState {
             let subtitle = node.subtitle.clone().unwrap_or_default();
             let properties = node.properties.clone();
 
-            // 1. 精确提取 SubFlow 的流程图名称 (Flowchart / ResFlowchartName)
+            // 1. 精确提取 SubFlow 的流程图名称
             let mut res_flowchart_name = properties
                 .iter()
                 .find(|p| {
@@ -22,7 +23,7 @@ impl AppState {
                 .map(|p| p.val.clone())
                 .unwrap_or_default();
 
-            // 2. 精确提取 SubFlow 的入口点名称 (EntryPoint / EntryPointName)
+            // 2. 精确提取 SubFlow 的入口点名称
             let mut entry_point_name = properties
                 .iter()
                 .find(|p| {
@@ -32,7 +33,7 @@ impl AppState {
                 .map(|p| p.val.clone())
                 .unwrap_or_default();
 
-            // 3. 若属性未显式定义，从副标题 subtitle ("Flowchart :: EntryPoint") 中智能解析
+            // 3. 若属性未显式定义，从副标题中解析
             if res_flowchart_name.is_empty() && entry_point_name.is_empty() {
                 if let Some(ref sub) = node.subtitle {
                     if let Some((fc, ep)) = sub.split_once(" :: ") {
@@ -44,8 +45,7 @@ impl AppState {
                 }
             }
 
-            // 4. 对 SubFlow 节点，从通用参数列表中过滤 Flowchart 与 EntryPoint 伪属性，
-            // 避免在下方的“参数属性 (Parameters)”表格中重复列出
+            // 4. 对 SubFlow 过滤伪属性
             let mut clean_properties = properties;
             if node_kind == NodeKind::SubFlow {
                 clean_properties.retain(|p| {
@@ -56,10 +56,9 @@ impl AppState {
                 });
             }
 
-            // 5. 提取 Action / Query / Switch 的参与 Actor 与动作/查询方法名
+            // 5. 提取 Action / Query 的参与 Actor 与方法名
             let mut actor_name = String::new();
             let mut action_name = String::new();
-
             if node_kind != NodeKind::SubFlow {
                 if let Some(ref sub) = node.subtitle {
                     if let Some((act, act_or_q)) = sub.split_once(" :: ") {
@@ -70,8 +69,6 @@ impl AppState {
                     }
                 }
             }
-
-            // 提取 Switch 分支或 Fork 并行流的目标节点
 
             let mut branches = Vec::new();
             match node_kind {
@@ -128,7 +125,6 @@ impl AppState {
                 _ => {}
             }
 
-            // 查找 Fork 关联的 Join 目标汇合节点
             let join_node_id = self
                 .graph
                 .edges
@@ -159,11 +155,10 @@ impl AppState {
                 properties: clean_properties,
                 active_field: ActiveEditField::None,
                 is_adding_param: false,
-                new_param_type: "Int".to_string(),
+                new_param_type: "string".to_string(),
                 new_param_key: String::new(),
-                new_param_val: "0".to_string(),
+                new_param_val: String::new(),
             });
-            self.node_context_menu = None;
         }
     }
 
@@ -219,7 +214,6 @@ impl AppState {
                     };
                     node.subtitle = sub;
                 } else {
-
                     node.subtitle = if modal.subtitle.is_empty() {
                         None
                     } else {
@@ -228,9 +222,7 @@ impl AppState {
                 }
                 node.properties = props;
 
-
-
-                // 同步 Switch / Fork 的分支输出引脚与连线
+                // 同步 Switch / Fork 输出引脚
                 if matches!(modal.node_kind, NodeKind::Switch | NodeKind::Fork) {
                     node.outputs.clear();
                     for (idx, branch) in modal.branches.iter().enumerate() {
@@ -272,6 +264,105 @@ impl AppState {
             self.toast = Some(Toast::success(format!("✨ 已成功保存节点 {}", modal_title)));
         }
     }
+
+    /// 保存当前活跃文档（无论是流程图还是代码编辑器文件，自动写回磁盘或 SARC）
+    pub fn save_active_document(&mut self) {
+        let active_id = match self.active_tab_id.clone() {
+            Some(id) => id,
+            None => {
+                self.toast = Some(Toast::info(self.t("toast.no_active_file")));
+                return;
+            }
+        };
+
+        let (tab_kind, file_path, code_info) = {
+            let tab = match self.open_tabs.iter().find(|t| t.id == active_id) {
+                Some(t) => t,
+                None => return,
+            };
+            let code_info = tab.code_state.as_ref().map(|c| (c.content.clone(), c.format, c.endian));
+            (tab.tab_kind, tab.file_path.clone(), code_info)
+        };
+
+        match tab_kind {
+            DocumentTabKind::Flowchart => {
+                // 编译 BFEVFL 流程图并写回
+                match crate::model::evfl::save_bfevfl_to_bytes(&self.graph) {
+                    Ok(bytes) => {
+                        let final_bytes = if crate::model::should_compress_yaz0(&file_path) {
+                            roead::yaz0::compress(&bytes)
+                        } else {
+                            bytes
+                        };
+                        match write_file_to_target(&file_path, &final_bytes) {
+                            Ok(_) => {
+                                if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == active_id) {
+                                    tab.original_graph = Some(self.graph.clone());
+                                    tab.is_modified = false;
+                                }
+                                self.toast = Some(Toast::success(self.t("toast.save_success")));
+                            }
+                            Err(e) => {
+                                self.toast = Some(Toast::error(format!("{}: {}", self.t("toast.save_failed"), e)));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        self.toast = Some(Toast::error(format!("{}: {}", self.t("toast.compile_failed"), e)));
+                    }
+                }
+            }
+            DocumentTabKind::CodeEditor => {
+                if let Some((content, format, endian)) = code_info {
+                    match compile_code_to_bytes(&content, format, endian, &file_path) {
+                        Ok(bytes) => {
+                            match write_file_to_target(&file_path, &bytes) {
+                                Ok(_) => {
+                                    if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == active_id) {
+                                        if let Some(ref mut code) = tab.code_state {
+                                            code.mark_saved();
+                                        }
+                                        tab.is_modified = false;
+                                    }
+                                    self.toast = Some(Toast::success(self.t("toast.save_success")));
+                                }
+                                Err(e) => {
+                                    self.toast = Some(Toast::error(format!("{}: {}", self.t("toast.save_failed"), e)));
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            self.toast = Some(Toast::error(e));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// 更新当前活跃代码编辑器的文本内容
+    #[allow(dead_code)]
+    pub fn update_active_code_text(&mut self, text: &str) {
+        if let Some(active_id) = &self.active_tab_id {
+            if let Some(tab) = self.open_tabs.iter_mut().find(|t| &t.id == active_id) {
+                if let Some(ref mut code) = tab.code_state {
+                    code.content = text.to_string();
+                }
+                tab.recompute_modified();
+            }
+        }
+    }
+
+    /// 重置当前活跃代码编辑器的文本内容为初始快照
+    pub fn revert_active_code(&mut self) {
+        if let Some(active_id) = &self.active_tab_id {
+            if let Some(tab) = self.open_tabs.iter_mut().find(|t| &t.id == active_id) {
+                if let Some(ref mut code) = tab.code_state {
+                    code.revert();
+                }
+                tab.is_modified = false;
+                self.toast = Some(Toast::info(self.t("toast.revert_success")));
+            }
+        }
+    }
 }
-
-
