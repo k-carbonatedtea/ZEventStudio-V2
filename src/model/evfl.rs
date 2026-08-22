@@ -34,7 +34,19 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
     let events = &fc.events;
     let actors = &fc.actors;
 
+    // 0. 载入所有参与 Actor 角色完整定义
+    for a in actors {
+        let mut actor_data = crate::model::actor::ActorData::new(a.identifier.name.clone());
+        actor_data.sub_name = a.identifier.sub_name.clone();
+        actor_data.argument_name = a.argument_name.clone();
+        actor_data.actions = a.actions.iter().map(|act| act.0.clone()).collect();
+        actor_data.queries = a.queries.iter().map(|q| q.0.clone()).collect();
+        actor_data.load_default_params();
+        graph.actors.push(actor_data);
+    }
+
     // 1. 创建所有 EntryPoint 节点 (绿色胶囊)
+
     for ep in &fc.entry_points {
         let ep_id = format!("ep_{}", ep.name);
         let mut ep_node = NodeData::new(
@@ -59,54 +71,35 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
         let ev_id = ev.name.clone();
         match &ev.data {
             EventData::Action(a) => {
-                let actor_name = if a.actor.idx != 0xFFFF && (a.actor.idx as usize) < actors.len() {
-                    actors[a.actor.idx as usize].identifier.name.clone()
-                } else {
-                    "Actor".to_string()
-                };
-
-                let action_name = if a.actor.idx != 0xFFFF && (a.actor.idx as usize) < actors.len() {
+                let (actor_name, action_name) = if a.actor.idx != 0xFFFF && (a.actor.idx as usize) < actors.len() {
                     let act = &actors[a.actor.idx as usize];
-                    if a.actor_action.idx != 0xFFFF && (a.actor_action.idx as usize) < act.actions.len() {
+                    let act_name = if a.actor_action.idx != 0xFFFF && (a.actor_action.idx as usize) < act.actions.len() {
                         act.actions[a.actor_action.idx as usize].0.clone()
-                    } else {
-                        "Action".to_string()
-                    }
-                } else {
-                    "Action".to_string()
-                };
+                    } else { "Action".to_string() };
+                    (act.identifier.name.clone(), act_name)
+                } else { ("Actor".to_string(), "Action".to_string()) };
 
                 let mut node = NodeData::new(ev_id.clone(), ev_id.clone(), NodeKind::Action, (0.0, 0.0));
                 node.subtitle = Some(format!("{} :: {}", actor_name, action_name));
                 node.size = (240.0, 115.0);
-
                 if let Some(params) = &a.params {
                     add_container_properties(&mut node, params);
                 }
-
                 graph.add_node(node);
             }
 
             EventData::Switch(s) => {
-                let actor_name = if s.actor.idx != 0xFFFF && (s.actor.idx as usize) < actors.len() {
-                    actors[s.actor.idx as usize].identifier.name.clone()
-                } else {
-                    "Actor".to_string()
-                };
-
-                let query_name = if s.actor.idx != 0xFFFF && (s.actor.idx as usize) < actors.len() {
+                let (actor_name, query_name) = if s.actor.idx != 0xFFFF && (s.actor.idx as usize) < actors.len() {
                     let act = &actors[s.actor.idx as usize];
-                    if s.actor_query.idx != 0xFFFF && (s.actor_query.idx as usize) < act.queries.len() {
+                    let q_name = if s.actor_query.idx != 0xFFFF && (s.actor_query.idx as usize) < act.queries.len() {
                         act.queries[s.actor_query.idx as usize].0.clone()
-                    } else {
-                        "Query".to_string()
-                    }
-                } else {
-                    "Query".to_string()
-                };
+                    } else { "Query".to_string() };
+                    (act.identifier.name.clone(), q_name)
+                } else { ("Actor".to_string(), "Query".to_string()) };
 
                 let mut node = NodeData::new(ev_id.clone(), ev_id.clone(), NodeKind::Switch, (0.0, 0.0));
                 node.subtitle = Some(format!("{} :: {}", actor_name, query_name));
+
 
                 let mut out_ports = Vec::new();
                 for (&case_val, _) in &s.cases {

@@ -6,5 +6,7 @@ pub mod quick_add;
 pub mod sidebar;
 pub mod state;
 pub mod toolbar;
+pub mod views;
+
 
 pub use app::AppView;

@@ -28,12 +28,67 @@ pub struct ActorTheme {
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct KeyHighlight {
-
     pub label: String,
     pub value: String,
     pub icon: &'static str,
     pub color: Hsla,
 }
+
+use serde::{Deserialize, Serialize};
+use crate::model::node::PropertyItem;
+
+/// 角色模型完整定义 (Actor Definition)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ActorData {
+    pub name: String,
+    pub sub_name: String,
+    pub argument_name: String,
+    pub argument_entry_point: String,
+    pub actions: Vec<String>,
+    pub queries: Vec<String>,
+    pub params: Vec<PropertyItem>,
+}
+
+impl ActorData {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            sub_name: String::new(),
+            argument_name: String::new(),
+            argument_entry_point: String::new(),
+            actions: Vec::new(),
+            queries: Vec::new(),
+            params: Vec::new(),
+        }
+    }
+
+    /// 填充游戏内置标准默认参数 (CreateMode, IsGrounding, IsWorld, PosX, PosY, PosZ, RotX, RotY, RotZ)
+    pub fn load_default_params(&mut self) {
+        self.params = vec![
+            PropertyItem { key: "CreateMode".to_string(), val: "0".to_string(), val_type: "Int".to_string() },
+            PropertyItem { key: "IsGrounding".to_string(), val: "false".to_string(), val_type: "Bool".to_string() },
+            PropertyItem { key: "IsWorld".to_string(), val: "false".to_string(), val_type: "Bool".to_string() },
+            PropertyItem { key: "PosX".to_string(), val: "0.0".to_string(), val_type: "Float".to_string() },
+            PropertyItem { key: "PosY".to_string(), val: "0.0".to_string(), val_type: "Float".to_string() },
+            PropertyItem { key: "PosZ".to_string(), val: "0.0".to_string(), val_type: "Float".to_string() },
+            PropertyItem { key: "RotX".to_string(), val: "0.0".to_string(), val_type: "Float".to_string() },
+            PropertyItem { key: "RotY".to_string(), val: "0.0".to_string(), val_type: "Float".to_string() },
+            PropertyItem { key: "RotZ".to_string(), val: "0.0".to_string(), val_type: "Float".to_string() },
+        ];
+    }
+}
+
+/// 角色概览与统计信息 (Actor Definition & Stats)
+#[derive(Debug, Clone, PartialEq)]
+pub struct ActorInfo {
+    pub name: String,
+    pub sub_name: Option<String>,
+    pub actions: Vec<String>,
+    pub queries: Vec<String>,
+    pub event_ids: Vec<String>,
+}
+
+
 
 /// 依据 Actor 名称和节点类型识别专属角色色彩主题
 pub fn get_node_actor_theme(node: &NodeData) -> ActorTheme {

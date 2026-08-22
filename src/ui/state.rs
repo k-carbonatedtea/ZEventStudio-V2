@@ -23,6 +23,15 @@ pub enum DragState {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AppWorkspaceTab {
+    #[default]
+    Flowchart,
+    Actors,
+    Events,
+    Json,
+}
+
 #[allow(dead_code)]
 pub struct AppState {
     pub graph: Graph,
@@ -37,7 +46,27 @@ pub struct AppState {
     pub fps: f32,
     pub active_preset_id: String,
     pub active_sidebar_tab: SidebarTab,
+    pub current_tab: AppWorkspaceTab,
+    pub selected_actor_idx: usize,
+    pub is_adding_action: bool,
+
+    pub new_action_name: String,
+    pub show_action_dropdown: bool,
+    pub is_adding_query: bool,
+    pub new_query_name: String,
+    pub show_query_dropdown: bool,
+    pub is_adding_actor: bool,
+    pub new_actor_name: String,
+    pub new_actor_sub: String,
+    pub show_actor_dropdown: bool,
+    pub is_adding_param: bool,
+    pub new_param_type: String,
+    pub new_param_key: String,
+    pub new_param_val: String,
+    pub show_param_dropdown: bool,
     pub toast: Option<Toast>,
+
+
     pub quick_add_modal: Option<(f32, f32, Option<(String, String, PortDirection)>)>,
     pub node_context_menu: Option<(String, (f32, f32))>,
 
@@ -55,6 +84,7 @@ impl AppState {
     pub fn new() -> Self {
         // 项目打开时，加载 100enemy.bfevfl 真实 EVFL 事件流
         let mut graph = get_startup_preset();
+        graph.ensure_actors_populated();
         auto_layout_graph(&mut graph);
 
         let mut state = Self {
@@ -70,7 +100,26 @@ impl AppState {
             fps: 60.0,
             active_preset_id: "zelda_100enemy".to_string(),
             active_sidebar_tab: SidebarTab::EntryPoints,
+            current_tab: AppWorkspaceTab::Flowchart,
+            selected_actor_idx: 0,
+            is_adding_actor: false,
+            new_actor_name: String::new(),
+            new_actor_sub: String::new(),
+            show_actor_dropdown: false,
+            is_adding_action: false,
+            new_action_name: String::new(),
+            show_action_dropdown: false,
+            is_adding_query: false,
+            new_query_name: String::new(),
+            show_query_dropdown: false,
+            is_adding_param: false,
+            new_param_type: "Int".to_string(),
+            new_param_key: String::new(),
+            new_param_val: "0".to_string(),
+            show_param_dropdown: false,
             toast: Some(Toast::success(crate::i18n::t("toast.preset_loaded", crate::i18n::Language::Zh))),
+
+
             quick_add_modal: None,
             node_context_menu: None,
             inspector_open: true,
@@ -86,22 +135,26 @@ impl AppState {
         state
     }
 
+
     /// 获取当前语言环境下的本地化文本
     pub fn t<'a>(&self, key: &'a str) -> &'a str {
         crate::i18n::t(key, self.lang)
     }
 
     pub fn load_preset(&mut self, preset_id: &str) {
-        if let Some(g) = load_preset_by_id(preset_id) {
+        if let Some(mut g) = load_preset_by_id(preset_id) {
+            g.ensure_actors_populated();
             self.graph = g;
             self.active_preset_id = preset_id.to_string();
             self.selected_node_id = None;
+            self.selected_actor_idx = 0;
             self.update_node_sizes();
             auto_layout_graph(&mut self.graph);
             self.fit_view();
             self.toast = Some(Toast::success(format!("{}{}", self.t("toast.switch_preset"), self.graph.name)));
         }
     }
+
 
     pub fn auto_layout(&mut self) {
         self.update_node_sizes();
@@ -265,10 +318,11 @@ impl AppState {
     }
 
     pub fn get_canvas_origin(&self) -> (f32, f32) {
-        let left = if self.sidebar_open { 260.0 } else { 0.0 };
+        let left = if self.sidebar_open { 280.0 } else { 0.0 };
         let top = 44.0;
         (left, top)
     }
+
 
     pub fn screen_to_canvas(&self, screen_x: f32, screen_y: f32) -> (f32, f32) {
         let (orig_x, orig_y) = self.get_canvas_origin();

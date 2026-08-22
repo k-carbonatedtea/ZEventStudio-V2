@@ -1,4 +1,7 @@
+pub mod en;
 pub mod locales;
+pub mod zh;
+
 
 use serde::{Deserialize, Serialize};
 

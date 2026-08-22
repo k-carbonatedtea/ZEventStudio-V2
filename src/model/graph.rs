@@ -13,6 +13,8 @@ pub struct SubgraphGroup {
     pub color: gpui::Hsla,
 }
 
+use crate::model::actor::ActorData;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Graph {
@@ -20,6 +22,7 @@ pub struct Graph {
     pub description: String,
     pub nodes: Vec<NodeData>,
     pub edges: Vec<Edge>,
+    pub actors: Vec<ActorData>,
 }
 
 #[allow(dead_code)]
@@ -30,8 +33,10 @@ impl Graph {
             description: String::new(),
             nodes: Vec::new(),
             edges: Vec::new(),
+            actors: Vec::new(),
         }
     }
+
 
     /// 根据 EVFL 命名规范生成唯一的节点名称与 ID (如 Event0, Event1, Event59 ... 不与现有节点冲突)
     pub fn generate_unique_node_name(&self, kind: &NodeKind) -> (String, String) {
@@ -55,6 +60,63 @@ impl Graph {
     pub fn add_node(&mut self, node: NodeData) {
         self.nodes.push(node);
     }
+
+    /// 确保 actors 列表已初始化（若为空则依据 nodes 自动同步生成）
+    pub fn ensure_actors_populated(&mut self) {
+        if self.actors.is_empty() {
+            let summary = self.get_actors_summary();
+            for s in summary {
+                let mut a = ActorData::new(s.name);
+                a.actions = s.actions;
+                a.queries = s.queries;
+                a.load_default_params();
+                self.actors.push(a);
+            }
+        }
+    }
+
+
+    /// 提取并汇总图谱中所有引用的 Actor 角色及其动作、查询与关联节点
+    pub fn get_actors_summary(&self) -> Vec<super::actor::ActorInfo> {
+        let mut map: HashMap<String, (HashSet<String>, HashSet<String>, Vec<String>)> = HashMap::new();
+
+        for node in &self.nodes {
+            if let Some(sub) = &node.subtitle {
+                if let Some((actor, action_or_query)) = sub.split_once(" :: ") {
+                    let entry = map
+                        .entry(actor.trim().to_string())
+                        .or_insert_with(|| (HashSet::new(), HashSet::new(), Vec::new()));
+                    entry.2.push(node.id.clone());
+                    if node.kind == NodeKind::Query {
+                        entry.1.insert(action_or_query.trim().to_string());
+                    } else {
+                        entry.0.insert(action_or_query.trim().to_string());
+                    }
+                }
+            }
+        }
+
+        let mut list: Vec<super::actor::ActorInfo> = map
+            .into_iter()
+            .map(|(name, (actions, queries, event_ids))| {
+                let mut act_vec: Vec<String> = actions.into_iter().collect();
+                act_vec.sort();
+                let mut q_vec: Vec<String> = queries.into_iter().collect();
+                q_vec.sort();
+                super::actor::ActorInfo {
+                    name,
+                    sub_name: None,
+                    actions: act_vec,
+                    queries: q_vec,
+                    event_ids,
+                }
+            })
+            .collect();
+
+        list.sort_by(|a, b| b.event_ids.len().cmp(&a.event_ids.len()).then_with(|| a.name.cmp(&b.name)));
+        list
+    }
+
 
 
     pub fn remove_node(&mut self, node_id: &str) {
