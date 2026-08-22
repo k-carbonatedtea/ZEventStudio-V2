@@ -45,14 +45,11 @@ pub fn render_edges_layer(
     let is_tracing = active_node_id.is_some() && !active_edges.is_empty();
 
     let live_connection = if let DragState::Connecting { source_pos, current_mouse, direction, .. } = &state.drag_state {
-        let (canvas_mx, canvas_my) = state.screen_to_canvas(current_mouse.0, current_mouse.1);
-        match direction {
-            crate::model::PortDirection::Output => Some((*source_pos, (canvas_mx, canvas_my))),
-            crate::model::PortDirection::Input => Some(((canvas_mx, canvas_my), *source_pos)),
-        }
+        Some((*source_pos, *current_mouse, *direction))
     } else {
         None
     };
+
 
 
     let edge_items_clone = edge_items.clone();
@@ -218,18 +215,23 @@ pub fn render_edges_layer(
                         }
                     }
 
-                    // 实时拖拽连线
-                    if let Some((start_pt, end_pt)) = live_connection {
-                        let screen_sx = orig_x + pan.0 + start_pt.0 * zoom;
-                        let screen_sy = orig_y + pan.1 + start_pt.1 * zoom;
-                        let screen_ex = orig_x + pan.0 + end_pt.0 * zoom;
-                        let screen_ey = orig_y + pan.1 + end_pt.1 * zoom;
+                    // 实时拖拽连线 (精准吸附引脚中心至鼠标光标尖端)
+                    if let Some((source_pos, current_mouse, direction)) = live_connection {
+                        let src_sx = orig_x + pan.0 + source_pos.0 * zoom;
+                        let src_sy = orig_y + pan.1 + source_pos.1 * zoom;
+                        let mouse_sx = current_mouse.0;
+                        let mouse_sy = current_mouse.1;
+
+                        let (screen_sx, screen_sy, screen_ex, screen_ey) = match direction {
+                            crate::model::PortDirection::Output => (src_sx, src_sy, mouse_sx, mouse_sy),
+                            crate::model::PortDirection::Input => (mouse_sx, mouse_sy, src_sx, src_sy),
+                        };
 
                         let dy = (screen_ey - screen_sy).abs().max(36.0 * zoom);
                         let ctrl1 = (screen_sx, screen_sy + dy * 0.45);
                         let ctrl2 = (screen_ex, screen_ey - dy * 0.45);
 
-                        let mut live_builder = PathBuilder::stroke(px(stroke_w * 1.25));
+                        let mut live_builder = PathBuilder::stroke(px(stroke_w * 1.35));
                         live_builder.move_to(point(px(screen_sx), px(screen_sy)));
                         live_builder.cubic_bezier_to(
                             point(px(screen_ex), px(screen_ey)),
@@ -238,13 +240,31 @@ pub fn render_edges_layer(
                         );
 
                         if let Ok(p) = live_builder.build() {
-                            window.paint_path(p, hsla(45.0 / 360.0, 0.95, 0.60, 0.95));
+                            window.paint_path(p, hsla(45.0 / 360.0, 0.98, 0.60, 0.98));
+                        }
+
+                        // 鼠标光标处高亮跟随端点小圆球
+                        let (tip_x, tip_y) = if direction == crate::model::PortDirection::Output {
+                            (screen_ex, screen_ey)
+                        } else {
+                            (screen_sx, screen_sy)
+                        };
+                        let r = (4.5 * zoom).clamp(3.5, 7.0);
+                        let mut tip_builder = PathBuilder::fill();
+                        tip_builder.move_to(point(px(tip_x - r), px(tip_y)));
+                        tip_builder.line_to(point(px(tip_x), px(tip_y - r)));
+                        tip_builder.line_to(point(px(tip_x + r), px(tip_y)));
+                        tip_builder.line_to(point(px(tip_x), px(tip_y + r)));
+                        tip_builder.close();
+                        if let Ok(p) = tip_builder.build() {
+                            window.paint_path(p, hsla(45.0 / 360.0, 0.98, 0.65, 1.0));
                         }
                     }
                 },
             )
             .size_full(),
         )
+
 
         // 2. 连线交互徽章（切刀剪断触发器）
         .children(edge_items.into_iter().filter_map(move |(s_id, t_id, label, _, _, (sx, sy), (ex, ey), _)| {

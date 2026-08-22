@@ -221,17 +221,26 @@ impl AppState {
         }
     }
 
+    pub fn get_canvas_origin(&self) -> (f32, f32) {
+        let left = if self.sidebar_open { 260.0 } else { 0.0 };
+        let top = 44.0;
+        (left, top)
+    }
+
     pub fn screen_to_canvas(&self, screen_x: f32, screen_y: f32) -> (f32, f32) {
-        let local_x = screen_x - self.canvas_origin.0 - self.pan.0;
-        let local_y = screen_y - self.canvas_origin.1 - self.pan.1;
+        let (orig_x, orig_y) = self.get_canvas_origin();
+        let local_x = screen_x - orig_x - self.pan.0;
+        let local_y = screen_y - orig_y - self.pan.1;
         (local_x / self.zoom, local_y / self.zoom)
     }
 
     pub fn canvas_to_screen(&self, canvas_x: f32, canvas_y: f32) -> (f32, f32) {
-        let local_x = canvas_x * self.zoom + self.pan.0 + self.canvas_origin.0;
-        let local_y = canvas_y * self.zoom + self.pan.1 + self.canvas_origin.1;
+        let (orig_x, orig_y) = self.get_canvas_origin();
+        let local_x = canvas_x * self.zoom + self.pan.0 + orig_x;
+        let local_y = canvas_y * self.zoom + self.pan.1 + orig_y;
         (local_x, local_y)
     }
+
 
     pub fn sever_edge(&mut self, source_node: &str, target_node: &str) {
         self.graph.sever_edge(source_node, target_node);
