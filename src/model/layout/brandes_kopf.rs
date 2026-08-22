@@ -64,14 +64,36 @@ pub fn brandes_kopf_coordinates(
         }
     }
 
+    // 4. 入口点与顶层主干全局居中：确保 EntryPoint 节点与起始主干严格位于整图水平中轴线上
+    let mut all_min = f32::INFINITY;
+    let mut all_max = f32::NEG_INFINITY;
+    for (id, &x) in coords.iter() {
+        let w = nodes.get(id).map(|n| n.width).unwrap_or(240.0);
+        all_min = all_min.min(x - w / 2.0);
+        all_max = all_max.max(x + w / 2.0);
+    }
+    if all_min.is_finite() && all_max.is_finite() {
+        let comp_center_x = (all_min + all_max) / 2.0;
 
-    // 4. 最终层内间距强制保障
+        // 从 Rank 0 开始向下居中单节点主干 (如 EntryPoint -> Action -> Switch)
+        for layer in layers {
+            if layer.len() == 1 {
+                let single_id = &layer[0];
+                coords.insert(single_id.clone(), comp_center_x);
+            } else {
+                break;
+            }
+        }
+    }
+
+    // 5. 最终层内间距强制保障
     for layer in layers {
         enforce_layer_spacing(layer, nodes, &mut coords, node_spacing_x);
     }
 
     coords
 }
+
 
 /// 辅助函数：将节点对齐到其邻居节点群的平均 X 坐标
 fn align_with_neighbors(
