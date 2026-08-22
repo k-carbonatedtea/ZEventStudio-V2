@@ -62,16 +62,24 @@ pub fn render_event_card(
         .border_color(card_border)
         .opacity(card_opacity)
         .cursor_move()
-        // 点击卡片任何位置（左键或右键长按）均可拖动节点
+        // 点击卡片任何位置（左键或右键长按）均可拖动节点，双击直接打开节点属性编辑
         .on_mouse_down(MouseButton::Left, move |e, _, cx| {
             let id = node_id_left.clone();
             let mx: f32 = e.position.x.into();
             let my: f32 = e.position.y.into();
+            if e.click_count == 2 {
+                model_drag_left.update(cx, |state, cx| {
+                    state.open_node_editor(&id);
+                    cx.notify();
+                });
+                return;
+            }
             model_drag_left.update(cx, |state, cx| {
                 if matches!(state.drag_state, DragState::Connecting { .. }) {
                     return;
                 }
                 state.selected_node_id = Some(id.clone());
+
                 let init_positions = state
                     .graph
                     .nodes

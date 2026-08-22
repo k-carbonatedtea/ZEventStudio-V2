@@ -160,9 +160,41 @@ pub fn get_en(key: &str) -> &str {
 
         // ---------------- 节点右键操作菜单 (Node Context Menu) ----------------
         "context_menu.node_actions" => "Node Actions",
+        "context_menu.edit_node" => "✏️ Edit Node Properties...",
         "context_menu.add_above" => "⬆️ Insert Node Above",
         "context_menu.add_below" => "⬇️ Insert Node Below",
         "context_menu.delete_node" => "🗑️ Delete Node",
+
+        // ---------------- 节点编辑模态框 (Node Editor Modal) ----------------
+        "modal.cancel" => "Cancel",
+        "modal.save" => "Save",
+        "modal.edit_switch" => "Edit Switch Conditions",
+        "modal.edit_event" => "Edit Event",
+        "modal.edit_fork" => "Edit Fork Branches",
+        "modal.edit_subflow" => "Edit Event (SubFlow)",
+        "modal.case_value" => "Match Value",
+        "modal.target_event" => "Target Event ID",
+        "modal.select_target_event" => "- Select Target Event -",
+        "modal.add_branch" => "+ Add Branch",
+        "modal.add_parallel_branch" => "+ Add Parallel Branch",
+        "modal.join_node" => "Target Join Node",
+        "modal.no_join" => "- None -",
+        "modal.flowchart_name" => "Flowchart(F):",
+        "modal.flowchart_placeholder" => "Flowchart Name (Optional)",
+        "modal.entry_point_name" => "EntryPoint(E):",
+        "modal.entry_point_placeholder" => "Entry Point Name (Required)",
+        "modal.subflow_hint" => "Note: Defaults to current flowchart if unspecified.",
+        "modal.parameters" => "Parameters",
+        "modal.copy_json" => "Copy JSON",
+        "modal.paste_json" => "Paste JSON",
+        "modal.add_param" => "+ Add Parameter...",
+        "modal.no_params" => "No Parameters Defined",
+        "modal.no_fork_branches" => "No parallel branches, click below to add.",
+        "modal.type" => "Type",
+        "modal.key" => "Key",
+        "modal.val" => "Value",
+        "modal.action" => "Action",
+
 
         // 默认节点标题
         "default_node.action" => "New Action",

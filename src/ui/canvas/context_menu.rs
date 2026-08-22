@@ -11,6 +11,7 @@ pub fn render_node_context_menu(
     model: &Entity<AppState>,
 ) -> impl IntoElement {
     let model_close = model.clone();
+    let model_edit = model.clone();
     let model_above = model.clone();
     let model_below = model.clone();
     let model_delete = model.clone();
@@ -22,7 +23,7 @@ pub fn render_node_context_menu(
     );
 
     let menu_w = 205.0;
-    let menu_h = 160.0;
+    let menu_h = 200.0;
     let pos_x = (screen_x + 6.0).clamp(20.0, 2400.0 - menu_w);
     let pos_y = (screen_y + 6.0).clamp(20.0, 1400.0 - menu_h);
 
@@ -96,7 +97,34 @@ pub fn render_node_context_menu(
                                 .child(state.t("context_menu.node_actions")),
                         ),
                 )
+                // 0. 编辑节点属性与分支 (Edit Node Properties)
+                .child(
+                    div()
+                        .px_2p5()
+                        .py_1p5()
+                        .rounded_lg()
+                        .cursor_pointer()
+                        .hover(|s| s.bg(hsla(215.0 / 360.0, 0.45, 0.32, 1.0)))
+                        .on_mouse_down(MouseButton::Left, {
+                            let n_id = n_id.clone();
+                            move |_, _, cx| {
+                                cx.stop_propagation();
+                                model_edit.update(cx, |st, cx| {
+                                    st.open_node_editor(&n_id);
+                                    cx.notify();
+                                });
+                            }
+                        })
+                        .child(
+                            div()
+                                .text_size(px(12.0))
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(rgb(0xffffff))
+                                .child(state.t("context_menu.edit_node")),
+                        ),
+                )
                 // 1. 在上方插入前驱节点
+
                 .child(
                     div()
                         .px_2p5()

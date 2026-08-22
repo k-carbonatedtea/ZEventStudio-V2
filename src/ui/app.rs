@@ -1,6 +1,6 @@
 use gpui::*;
 use std::time::Instant;
-use crate::ui::canvas::render_flow_canvas;
+use crate::ui::canvas::{render_flow_canvas, render_node_editor_modal};
 use crate::ui::components::{handle_text_key_event, render_toast};
 use crate::ui::inspector::render_inspector;
 use crate::ui::sidebar::render_sidebar;
@@ -9,6 +9,7 @@ use crate::ui::toolbar::render_toolbar;
 use crate::ui::views::{
     render_actor_manager_view, render_bottom_tabs, render_event_manager_view, render_json_viewer_view,
 };
+
 
 pub struct AppView {
     pub model: Entity<AppState>,
@@ -288,6 +289,11 @@ impl Render for AppView {
                     .right_4()
                     .child(render_toast(&t))
             }))
+            // 节点属性与分支编辑模态框 (Node Editor Modal)
+            .children((state.active_node_editor_modal.is_some()).then(|| {
+                render_node_editor_modal(state, &self.model)
+            }))
+
 
     }
 }

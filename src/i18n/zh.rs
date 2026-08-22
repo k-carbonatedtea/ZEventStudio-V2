@@ -155,9 +155,41 @@ pub fn get_zh(key: &str) -> &str {
 
         // ---------------- 节点右键操作菜单 (Node Context Menu) ----------------
         "context_menu.node_actions" => "节点操作",
+        "context_menu.edit_node" => "✏️ 编辑节点属性...",
         "context_menu.add_above" => "⬆️ 在上方插入节点",
         "context_menu.add_below" => "⬇️ 在下方插入节点",
         "context_menu.delete_node" => "🗑️ 删除当前节点",
+
+        // ---------------- 节点编辑模态框 (Node Editor Modal) ----------------
+        "modal.cancel" => "取消",
+        "modal.save" => "保存",
+        "modal.edit_switch" => "编辑 Switch 条件分支",
+        "modal.edit_event" => "编辑事件",
+        "modal.edit_fork" => "编辑 Fork 并行分支",
+        "modal.edit_subflow" => "编辑事件 (SubFlow)",
+        "modal.case_value" => "分支匹配值 (Value)",
+        "modal.target_event" => "目标事件 ID",
+        "modal.select_target_event" => "- 选择目标事件 -",
+        "modal.add_branch" => "+ 添加分支",
+        "modal.add_parallel_branch" => "+ 添加并行分支",
+        "modal.join_node" => "目标汇合节点 (Join Node)",
+        "modal.no_join" => "- 无汇合目标 (None) -",
+        "modal.flowchart_name" => "流程图(F):",
+        "modal.flowchart_placeholder" => "流程图名称 (可选)",
+        "modal.entry_point_name" => "入口点(E):",
+        "modal.entry_point_placeholder" => "入口点 (必填)",
+        "modal.subflow_hint" => "说明: 若未指定流程图，将使用当前流程图。",
+        "modal.parameters" => "参数属性 (Parameters)",
+        "modal.copy_json" => "复制 JSON",
+        "modal.paste_json" => "粘贴 JSON",
+        "modal.add_param" => "+ 添加参数...",
+        "modal.no_params" => "暂无参数定义",
+        "modal.no_fork_branches" => "暂无并行分支，请点击下方添加。",
+        "modal.type" => "类型",
+        "modal.key" => "键",
+        "modal.val" => "值",
+        "modal.action" => "操作",
+
 
         // 默认节点标题
         "default_node.action" => "新动作 (Action)",

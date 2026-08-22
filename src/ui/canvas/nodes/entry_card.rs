@@ -68,11 +68,19 @@ pub fn render_entry_card(
             let id = node_id.clone();
             let mx: f32 = e.position.x.into();
             let my: f32 = e.position.y.into();
+            if e.click_count == 2 {
+                model_header_drag.update(cx, |state, cx| {
+                    state.open_node_editor(&id);
+                    cx.notify();
+                });
+                return;
+            }
             model_header_drag.update(cx, |state, cx| {
                 if matches!(state.drag_state, DragState::Connecting { .. }) {
                     return;
                 }
                 state.selected_node_id = Some(id.clone());
+
                 let init_positions = state
                     .graph
                     .nodes
