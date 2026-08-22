@@ -25,6 +25,9 @@ pub fn render_params_table_editor(
     let model_autofill = model.clone();
     let model_sort = model.clone();
 
+    let max_key_len = modal.properties.iter().map(|p| p.key.len()).max().unwrap_or(12);
+    let key_col_w = ((max_key_len as f32) * 8.0 + 36.0).clamp(210.0, 340.0);
+
     div()
         .flex()
         .flex_col()
@@ -172,14 +175,14 @@ pub fn render_params_table_editor(
                         .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
                         .items_center()
                         .px_3()
-                        .child(div().w(px(85.0)).text_size(px(11.5)).font_weight(FontWeight::BOLD).text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0)).child(state.t("modal.type")))
-                        .child(div().w(px(160.0)).text_size(px(11.5)).font_weight(FontWeight::BOLD).text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0)).child(state.t("modal.key")))
+                        .child(div().w(px(90.0)).text_size(px(11.5)).font_weight(FontWeight::BOLD).text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0)).child(state.t("modal.type")))
+                        .child(div().w(px(key_col_w)).text_size(px(11.5)).font_weight(FontWeight::BOLD).text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0)).child(state.t("modal.key")))
                         .child(div().flex_1().text_size(px(11.5)).font_weight(FontWeight::BOLD).text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0)).child(state.t("modal.val")))
-                        .child(div().w(px(36.0)).text_size(px(11.5)).font_weight(FontWeight::BOLD).text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0)).child(state.t("modal.action"))),
+                        .child(div().w(px(38.0)).text_size(px(11.5)).font_weight(FontWeight::BOLD).text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0)).child(state.t("modal.action"))),
                 )
                 .children(if has_params {
                     modal.properties.iter().enumerate().map(|(idx, prop)| {
-                        render_param_row(idx, prop, modal, model)
+                        render_param_row(idx, prop, key_col_w, modal, model)
                     }).collect()
                 } else {
                     vec![div()
@@ -192,4 +195,5 @@ pub fn render_params_table_editor(
                         .child(state.t("modal.no_params"))]
                 }),
         )
+
 }

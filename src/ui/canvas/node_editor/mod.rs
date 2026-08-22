@@ -114,8 +114,8 @@ pub fn render_node_editor_modal(
         })
         .child(
             div()
-                .w(px(580.0))
-                .max_h(px(640.0))
+                .w(px(760.0))
+                .max_h(px(720.0))
                 .bg(hsla(240.0 / 360.0, 0.06, 0.10, 0.98))
                 .border_1()
                 .border_color(hsla(240.0 / 360.0, 0.06, 0.22, 1.0))
@@ -124,6 +124,7 @@ pub fn render_node_editor_modal(
                 .flex()
                 .flex_col()
                 .overflow_hidden()
+
                 .on_scroll_wheel(|_, _, cx| {
                     cx.stop_propagation();
                 })

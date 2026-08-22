@@ -4,10 +4,11 @@ use crate::ui::canvas::node_editor::{ActiveEditField, NodeEditorModalState};
 use crate::ui::components::render_blinking_cursor;
 use crate::ui::state::AppState;
 
-/// 渲染单行参数编辑项 (类型切换、键编辑、值编辑与删除)
+/// 渲染单行参数编辑项 (类型切换、自适应键编辑、值编辑与删除)
 pub fn render_param_row(
     idx: usize,
     prop: &PropertyItem,
+    key_col_w: f32,
     modal: &NodeEditorModalState,
     model: &Entity<AppState>,
 ) -> Div {
@@ -38,7 +39,7 @@ pub fn render_param_row(
         })
         // 1. 类型切换徽章 (点击切换类型: string -> int -> float -> bool -> string)
         .child(
-            div().w(px(85.0)).pr_2().child(
+            div().w(px(90.0)).pr_2().child(
                 div()
                     .px_2()
                     .py_1()
@@ -90,11 +91,12 @@ pub fn render_param_row(
                     .child(div().text_size(px(9.0)).text_color(hsla(0.0, 0.0, 1.0, 0.6)).child("▾")),
             ),
         )
-        // 2. 键输入框 (Key Input)
+        // 2. 自适应键输入框 (Key Input)
         .child(
-            div().w(px(160.0)).pr_2().child(
+            div().w(px(key_col_w)).pr_2().child(
                 div()
                     .h(px(28.0))
+                    .w_full()
                     .px_2()
                     .rounded_md()
                     .bg(hsla(240.0 / 360.0, 0.06, 0.14, 1.0))
@@ -107,6 +109,7 @@ pub fn render_param_row(
                     .cursor_text()
                     .flex()
                     .items_center()
+                    .overflow_hidden()
                     .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                         cx.stop_propagation();
                         model_key.update(cx, |st, cx| {
@@ -190,6 +193,7 @@ pub fn render_param_row(
             } else {
                 div()
                     .h(px(28.0))
+                    .w_full()
                     .px_2()
                     .rounded_md()
                     .bg(hsla(240.0 / 360.0, 0.06, 0.14, 1.0))
@@ -202,6 +206,7 @@ pub fn render_param_row(
                     .cursor_text()
                     .flex()
                     .items_center()
+                    .overflow_hidden()
                     .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                         cx.stop_propagation();
                         model_val.update(cx, |st, cx| {
@@ -233,7 +238,7 @@ pub fn render_param_row(
         // 4. 删除按钮
         .child(
             div()
-                .w(px(36.0))
+                .w(px(38.0))
                 .flex()
                 .items_center()
                 .justify_center()
