@@ -1,7 +1,8 @@
 use crate::model::{auto_layout_graph, Edge, Graph, NodeData, NodeKind, PortDirection};
-use crate::presets::{get_startup_preset, load_preset_by_id};
+use crate::presets::load_preset_by_id;
 use crate::ui::components::Toast;
 use crate::ui::sidebar::SidebarTab;
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DragState {
@@ -104,15 +105,13 @@ pub struct AppState {
 #[allow(dead_code)]
 impl AppState {
     pub fn new() -> Self {
-        // 项目打开时，加载 100enemy.bfevfl 真实 EVFL 事件流
-        let mut graph = get_startup_preset();
+        let mut graph = Graph::new("EventFlow");
         graph.ensure_actors_populated();
-        auto_layout_graph(&mut graph);
 
         let mut state = Self {
             graph,
-            pan: (80.0, 60.0),
-            zoom: 0.85,
+            pan: (100.0, 100.0),
+            zoom: 1.0,
             selected_node_id: None,
             hovered_node_id: None,
             hovered_port: None,
@@ -120,10 +119,11 @@ impl AppState {
             knife_mode: false,
             canvas_origin: (0.0, 0.0),
             fps: 60.0,
-            active_preset_id: "zelda_100enemy".to_string(),
+            active_preset_id: String::new(),
             active_sidebar_tab: SidebarTab::EntryPoints,
             current_tab: AppWorkspaceTab::Welcome,
             welcome_tab: WelcomeTab::QuickStart,
+
 
             recent_projects: vec![
                 RecentProjectItem {
@@ -357,9 +357,9 @@ mod tests {
         assert!(!state.expand_all_params);
         state.toggle_expand_params();
         assert!(state.expand_all_params);
-        assert!(!state.graph.nodes.is_empty());
         state.toggle_expand_params();
         assert!(!state.expand_all_params);
     }
 }
+
 

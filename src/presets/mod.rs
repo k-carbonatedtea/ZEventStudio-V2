@@ -46,9 +46,11 @@ pub fn get_available_presets() -> Vec<PresetInfo> {
     ]
 }
 
+#[allow(dead_code)]
 pub fn get_startup_preset() -> Graph {
     create_zelda_100enemy_preset()
 }
+
 
 pub fn load_preset_by_id(id: &str) -> Option<Graph> {
     match id {

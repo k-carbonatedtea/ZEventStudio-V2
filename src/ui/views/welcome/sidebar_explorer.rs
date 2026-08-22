@@ -162,33 +162,5 @@ pub fn render_welcome_sidebar(
                         ),
                 ),
         )
-        // 底部折叠栏：大纲 / 时间线 / 角色依赖
-        .child(
-            div()
-                .flex()
-                .flex_col()
-                .border_t_1()
-                .border_color(hsla(220.0 / 360.0, 0.20, 0.14, 1.0))
-                .child(render_collapsed_section(state.t("welcome.outline")))
-                .child(render_collapsed_section(state.t("welcome.timeline")))
-                .child(render_collapsed_section(state.t("welcome.actor_deps"))),
-        )
 }
 
-fn render_collapsed_section(title: &'static str) -> impl IntoElement {
-    div()
-        .px_3()
-        .py_1p5()
-        .border_b_1()
-        .border_color(hsla(220.0 / 360.0, 0.20, 0.12, 1.0))
-        .flex()
-        .items_center()
-        .gap_1p5()
-        .hover(|s| s.bg(hsla(220.0 / 360.0, 0.25, 0.12, 1.0)))
-        .cursor_pointer()
-        .text_size(px(11.0))
-        .font_weight(FontWeight::BOLD)
-        .text_color(hsla(215.0 / 360.0, 0.20, 0.65, 1.0))
-        .child("›")
-        .child(title)
-}

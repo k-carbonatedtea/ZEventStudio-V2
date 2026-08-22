@@ -9,9 +9,6 @@ pub fn render_welcome_main_content(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
-    let show_on_start = state.show_welcome_on_startup;
-    let model_cb = model.clone();
-
     div()
         .flex_1()
         .h_full()
@@ -100,73 +97,10 @@ pub fn render_welcome_main_content(
                                 .gap_4()
                                 .child(render_walkthrough_section(state, model)),
                         ),
-                )
-                // 底部复选框与提示
-                .child(
-                    div()
-                        .pt_4()
-                        .flex()
-                        .items_center()
-                        .justify_between()
-                        .border_t_1()
-                        .border_color(hsla(220.0 / 360.0, 0.20, 0.14, 1.0))
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_2()
-                                .cursor_pointer()
-                                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                                    model_cb.update(cx, |st, cx| {
-                                        st.show_welcome_on_startup = !st.show_welcome_on_startup;
-                                        cx.notify();
-                                    });
-                                })
-                                .child(
-                                    div()
-                                        .w(px(14.0))
-                                        .h(px(14.0))
-                                        .rounded_xs()
-                                        .border_1()
-                                        .border_color(if show_on_start {
-                                            hsla(215.0 / 360.0, 0.80, 0.55, 1.0)
-                                        } else {
-                                            hsla(220.0 / 360.0, 0.25, 0.30, 1.0)
-                                        })
-                                        .bg(if show_on_start {
-                                            hsla(215.0 / 360.0, 0.70, 0.40, 1.0)
-                                        } else {
-                                            hsla(0.0, 0.0, 0.0, 0.0)
-                                        })
-                                        .flex()
-                                        .items_center()
-                                        .justify_center()
-                                        .text_size(px(10.0))
-                                        .text_color(hsla(0.0, 0.0, 1.0, 1.0))
-                                        .child(if show_on_start { "✓" } else { "" }),
-                                )
-                                .child(
-                                    div()
-                                        .text_size(px(11.5))
-                                        .text_color(hsla(215.0 / 360.0, 0.20, 0.70, 1.0))
-                                        .child(state.t("welcome.show_on_startup")),
-                                ),
-                        )
-                        .child(
-                            div()
-                                .px_3()
-                                .py_1()
-                                .rounded_md()
-                                .bg(hsla(220.0 / 360.0, 0.35, 0.12, 1.0))
-                                .border_1()
-                                .border_color(hsla(220.0 / 360.0, 0.25, 0.18, 1.0))
-                                .text_size(px(11.0))
-                                .text_color(hsla(145.0 / 360.0, 0.60, 0.65, 1.0))
-                                .child("🚀 BotW Modding & EventFlow 引擎已就绪"),
-                        ),
                 ),
         )
 }
+
 
 fn render_start_actions_section(
     state: &AppState,

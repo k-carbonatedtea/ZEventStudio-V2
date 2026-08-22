@@ -223,8 +223,10 @@ impl Render for AppView {
                     }),
             )
 
-            // 底部工作区全局选项卡栏 (Bottom Tabs Bar)
-            .child(render_bottom_tabs(state, &self.model))
+            // 底部工作区选项卡栏 (仅在节点布局图/编辑器等视图中显示)
+            .children((current_tab != AppWorkspaceTab::Welcome).then(|| {
+                render_bottom_tabs(state, &self.model)
+            }))
             // Floating Toast notification
             .children(toast.map(|t| {
                 div()
@@ -235,3 +237,4 @@ impl Render for AppView {
             }))
     }
 }
+
