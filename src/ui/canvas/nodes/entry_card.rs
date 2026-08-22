@@ -3,8 +3,9 @@ use super::socket::render_absolute_output_socket;
 use crate::model::{NodeData, PortDirection};
 use crate::ui::state::{AppState, DragState};
 
-/// 渲染 EntryPoint 节点 (翡翠绿胶囊 Pill 节点)
+/// 渲染 EntryPoint 节点 (翡翠绿胶囊 Pill 节点，支持 Flow Tracing)
 pub fn render_entry_card(
+    state: &AppState,
     node: &NodeData,
     screen_pos: (f32, f32),
     node_size: (f32, f32),
@@ -23,6 +24,30 @@ pub fn render_entry_card(
     let pad_x = (14.0 * z).clamp(2.0, 20.0);
     let pad_y = (6.0 * z).clamp(1.0, 12.0);
 
+    // 链路追踪 (Flow Tracing) 高亮判定
+    let active_node = state.selected_node_id.as_deref().or(state.hovered_node_id.as_deref());
+    let (is_on_active_path, is_unrelated) = if let Some(target) = active_node {
+        if target == node.id {
+            (true, false)
+        } else {
+            let (up, down) = state.graph.get_upstream_and_downstream(target);
+            let on_path = up.contains(&node.id) || down.contains(&node.id);
+            (on_path, !on_path)
+        }
+    } else {
+        (false, false)
+    };
+
+    let border_col = if is_selected {
+        hsla(45.0 / 360.0, 0.98, 0.60, 1.0)
+    } else if is_on_active_path {
+        hsla(45.0 / 360.0, 0.85, 0.50, 0.90)
+    } else {
+        hsla(160.0 / 360.0, 0.84, 0.28, 1.0) // #059669
+    };
+
+    let card_opacity = if is_unrelated { 0.45 } else { 1.0 };
+
     let mut entry_card = div()
         .id(SharedString::from(format!("node_{}", node.id)))
         .absolute()
@@ -33,12 +58,10 @@ pub fn render_entry_card(
         .rounded_full()
         .bg(hsla(160.0 / 360.0, 0.84, 0.39, 1.0)) // #10b981
         .border_2()
-        .border_color(if is_selected {
-            hsla(45.0 / 360.0, 0.95, 0.60, 1.0)
-        } else {
-            hsla(160.0 / 360.0, 0.84, 0.28, 1.0) // #059669
-        })
+        .border_color(border_col)
+        .opacity(card_opacity)
         .cursor_move();
+
 
     if z >= 0.45 {
         entry_card = entry_card.shadow_md();

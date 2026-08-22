@@ -143,14 +143,17 @@ impl AppState {
                 let width = 240.0f32.max(((max_text_len as f32) * 7.2 + 40.0).min(480.0));
                 node.size = (width, height);
             } else {
+                let highlights_count = node.extract_key_highlights().len();
+                let highlight_h = (highlights_count as f32) * 24.0;
+
                 let (base_w, base_h) = match node.kind {
-                    NodeKind::Action => (240.0, 115.0),
-                    NodeKind::Switch => (240.0, 115.0),
-                    NodeKind::Query => (230.0, 115.0),
-                    NodeKind::SubFlow => (220.0, 105.0),
+                    NodeKind::Action => (240.0, 85.0 + highlight_h),
+                    NodeKind::Switch => (240.0, 85.0 + highlight_h),
+                    NodeKind::Query => (230.0, 85.0 + highlight_h),
+                    NodeKind::SubFlow => (220.0, 85.0 + highlight_h),
                     NodeKind::Fork => (210.0, 95.0),
                     NodeKind::Join => (210.0, 95.0),
-                    NodeKind::Math => (200.0, 110.0),
+                    NodeKind::Math => (200.0, 100.0),
                     NodeKind::Comment => (240.0, 120.0),
                     NodeKind::EntryPoint => (180.0, 42.0),
                 };
@@ -158,6 +161,7 @@ impl AppState {
             }
         }
     }
+
 
     pub fn fit_view(&mut self) {
         if self.graph.nodes.is_empty() {

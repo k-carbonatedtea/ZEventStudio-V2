@@ -40,6 +40,10 @@ pub fn render_edges_layer(
         }
     }
 
+    let active_node_id = state.selected_node_id.as_deref().or(state.hovered_node_id.as_deref());
+    let active_edges = active_node_id.map(|id| state.graph.get_active_path_edges(id)).unwrap_or_default();
+    let is_tracing = active_node_id.is_some() && !active_edges.is_empty();
+
     let live_connection = if let DragState::Connecting { source_pos, current_mouse, .. } = &state.drag_state {
         let (canvas_mx, canvas_my) = state.screen_to_canvas(current_mouse.0, current_mouse.1);
         Some((*source_pos, (canvas_mx, canvas_my)))
@@ -52,7 +56,7 @@ pub fn render_edges_layer(
     div()
         .absolute()
         .inset_0()
-        // 1. GPU 原生硬件加速批处理 Canvas (单次渲染全部 90+ 贝塞尔曲线与箭头)
+        // 1. GPU 原生硬件加速批处理 Canvas (支持全图因果链路追踪高亮 Flow Tracing)
         .child(
             canvas(
                 |_bounds, _window, _cx| {},
@@ -63,19 +67,28 @@ pub fn render_edges_layer(
                     let view_h: f32 = bounds.size.height.into();
 
                     let stroke_w = (1.8 * zoom).clamp(1.2, 3.2);
+                    let active_stroke_w = (stroke_w * 1.6).clamp(2.2, 4.5);
 
                     let entry_color = hsla(160.0 / 360.0, 0.84, 0.39, 1.0); // #10b981
                     let normal_color = if knife_mode {
                         hsla(0.0, 0.85, 0.55, 0.95) // #ef4444
+                    } else if is_tracing {
+                        hsla(215.0 / 360.0, 0.20, 0.35, 0.30) // 弱化非活动连线
                     } else {
                         hsla(215.0 / 360.0, 0.25, 0.65, 0.90) // #94a3b8
                     };
+
+                    let active_color = hsla(45.0 / 360.0, 0.98, 0.58, 1.0); // 高亮金黄发光
+
+                    let mut batch_active = PathBuilder::stroke(px(active_stroke_w));
+                    let mut batch_active_arrows = PathBuilder::fill();
 
                     let mut batch_entry = PathBuilder::stroke(px(stroke_w * 1.15));
                     let mut batch_normal = PathBuilder::stroke(px(stroke_w));
                     let mut batch_dashed = PathBuilder::stroke(px(stroke_w)).dash_array(&[px(6.0), px(6.0)]);
                     let mut batch_arrows = PathBuilder::fill();
 
+                    let mut has_active = false;
                     let mut has_entry = false;
                     let mut has_normal = false;
                     let mut has_dashed = false;
@@ -83,8 +96,10 @@ pub fn render_edges_layer(
 
                     let arrow_w = (stroke_w * 3.5).clamp(4.5, 9.0);
                     let arrow_h = (stroke_w * 3.0).clamp(4.0, 8.0);
+                    let active_arrow_w = (active_stroke_w * 3.2).clamp(6.0, 11.0);
+                    let active_arrow_h = (active_stroke_w * 2.8).clamp(5.0, 10.0);
 
-                    for (_, _, _, is_entry_point, is_dashed, (sx, sy), (ex, ey)) in &edge_items_clone {
+                    for (s_id, t_id, _, is_entry_point, is_dashed, (sx, sy), (ex, ey)) in &edge_items_clone {
                         let screen_sx = orig_x + pan.0 + sx * zoom;
                         let screen_sy = orig_y + pan.1 + sy * zoom;
                         let screen_ex = orig_x + pan.0 + ex * zoom;
@@ -108,7 +123,22 @@ pub fn render_edges_layer(
                         let ctrl1 = (screen_sx, screen_sy + dy * 0.45);
                         let ctrl2 = (screen_ex, screen_ey - dy * 0.45);
 
-                        if *is_entry_point {
+                        let is_on_active_path = is_tracing && active_edges.contains(&(s_id.clone(), t_id.clone()));
+
+                        if is_on_active_path {
+                            has_active = true;
+                            batch_active.move_to(point(px(screen_sx), px(screen_sy)));
+                            batch_active.cubic_bezier_to(
+                                point(px(screen_ex), px(screen_ey)),
+                                point(px(ctrl1.0), px(ctrl1.1)),
+                                point(px(ctrl2.0), px(ctrl2.1)),
+                            );
+
+                            batch_active_arrows.move_to(point(px(screen_ex), px(screen_ey)));
+                            batch_active_arrows.line_to(point(px(screen_ex - active_arrow_w * 0.5), px(screen_ey - active_arrow_h)));
+                            batch_active_arrows.line_to(point(px(screen_ex + active_arrow_w * 0.5), px(screen_ey - active_arrow_h)));
+                            batch_active_arrows.close();
+                        } else if *is_entry_point {
                             has_entry = true;
                             batch_entry.move_to(point(px(screen_sx), px(screen_sy)));
                             batch_entry.cubic_bezier_to(
@@ -116,6 +146,12 @@ pub fn render_edges_layer(
                                 point(px(ctrl1.0), px(ctrl1.1)),
                                 point(px(ctrl2.0), px(ctrl2.1)),
                             );
+
+                            has_arrows = true;
+                            batch_arrows.move_to(point(px(screen_ex), px(screen_ey)));
+                            batch_arrows.line_to(point(px(screen_ex - arrow_w * 0.5), px(screen_ey - arrow_h)));
+                            batch_arrows.line_to(point(px(screen_ex + arrow_w * 0.5), px(screen_ey - arrow_h)));
+                            batch_arrows.close();
                         } else if *is_dashed {
                             has_dashed = true;
                             batch_dashed.move_to(point(px(screen_sx), px(screen_sy)));
@@ -124,6 +160,12 @@ pub fn render_edges_layer(
                                 point(px(ctrl1.0), px(ctrl1.1)),
                                 point(px(ctrl2.0), px(ctrl2.1)),
                             );
+
+                            has_arrows = true;
+                            batch_arrows.move_to(point(px(screen_ex), px(screen_ey)));
+                            batch_arrows.line_to(point(px(screen_ex - arrow_w * 0.5), px(screen_ey - arrow_h)));
+                            batch_arrows.line_to(point(px(screen_ex + arrow_w * 0.5), px(screen_ey - arrow_h)));
+                            batch_arrows.close();
                         } else {
                             has_normal = true;
                             batch_normal.move_to(point(px(screen_sx), px(screen_sy)));
@@ -132,14 +174,13 @@ pub fn render_edges_layer(
                                 point(px(ctrl1.0), px(ctrl1.1)),
                                 point(px(ctrl2.0), px(ctrl2.1)),
                             );
-                        }
 
-                        // 终点箭头
-                        has_arrows = true;
-                        batch_arrows.move_to(point(px(screen_ex), px(screen_ey)));
-                        batch_arrows.line_to(point(px(screen_ex - arrow_w * 0.5), px(screen_ey - arrow_h)));
-                        batch_arrows.line_to(point(px(screen_ex + arrow_w * 0.5), px(screen_ey - arrow_h)));
-                        batch_arrows.close();
+                            has_arrows = true;
+                            batch_arrows.move_to(point(px(screen_ex), px(screen_ey)));
+                            batch_arrows.line_to(point(px(screen_ex - arrow_w * 0.5), px(screen_ey - arrow_h)));
+                            batch_arrows.line_to(point(px(screen_ex + arrow_w * 0.5), px(screen_ey - arrow_h)));
+                            batch_arrows.close();
+                        }
                     }
 
                     // 单次提交 GPU 批量路径渲染
@@ -150,7 +191,8 @@ pub fn render_edges_layer(
                     }
                     if has_entry {
                         if let Ok(p) = batch_entry.build() {
-                            window.paint_path(p, entry_color);
+                            let c = if is_tracing { hsla(160.0 / 360.0, 0.84, 0.39, 0.35) } else { entry_color };
+                            window.paint_path(p, c);
                         }
                     }
                     if has_dashed {
@@ -163,6 +205,16 @@ pub fn render_edges_layer(
                             window.paint_path(p, normal_color);
                         }
                     }
+                    // 高亮活动链路置顶渲染
+                    if has_active {
+                        if let Ok(p) = batch_active.build() {
+                            window.paint_path(p, active_color);
+                        }
+                        if let Ok(p) = batch_active_arrows.build() {
+                            window.paint_path(p, active_color);
+                        }
+                    }
+
 
                     // 实时拖拽连线
                     if let Some((start_pt, end_pt)) = live_connection {

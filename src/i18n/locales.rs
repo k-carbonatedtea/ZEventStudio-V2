@@ -273,8 +273,66 @@ pub fn translate<'a>(key: &'a str, lang: Language) -> &'a str {
         ("toast.connect_edge", Language::Zh) => "🔗 已建立连线",
         ("toast.connect_edge", Language::En) => "🔗 Connected edge successfully",
 
+        // ---------------- 角色分类与关键参数 (Actor Theme & Smart Params) ----------------
+        ("actor.system", Language::Zh) => "系统逻辑",
+        ("actor.system", Language::En) => "System Logic",
+
+        ("actor.player", Language::Zh) => "玩家主角",
+        ("actor.player", Language::En) => "Player / Link",
+
+        ("actor.npc", Language::Zh) => "NPC 交互",
+        ("actor.npc", Language::En) => "NPC Dialogue",
+
+        ("actor.enemy", Language::Zh) => "敌人战斗",
+        ("actor.enemy", Language::En) => "Enemy / Combat",
+
+        ("actor.director", Language::Zh) => "演出导演",
+        ("actor.director", Language::En) => "Cinematic / Audio",
+
+        ("param.quest", Language::Zh) => "任务",
+        ("param.quest", Language::En) => "Quest",
+
+        ("param.step", Language::Zh) => "阶段",
+        ("param.step", Language::En) => "Step",
+
+        ("param.msg", Language::Zh) => "对白",
+        ("param.msg", Language::En) => "Dialogue",
+
+        ("param.anim", Language::Zh) => "动作",
+        ("param.anim", Language::En) => "Animation",
+
+        ("param.flag", Language::Zh) => "标志位",
+        ("param.flag", Language::En) => "Flag",
+
+        ("param.advance_quest", Language::Zh) => "推进任务",
+        ("param.advance_quest", Language::En) => "Advance Quest",
+
+        ("param.play_anim", Language::Zh) => "播放动作",
+        ("param.play_anim", Language::En) => "Play Anim",
+
+        ("param.show_msg", Language::Zh) => "显示对白",
+        ("param.show_msg", Language::En) => "Dialogue",
+
+        // ---------------- 语义分组容器 (Scope Group Frames) ----------------
+        ("group.subgraph", Language::Zh) => "剧情流程分区",
+        ("group.subgraph", Language::En) => "Event Flow Scope",
+
+        ("group.nodes_count", Language::Zh) => "节点",
+        ("group.nodes_count", Language::En) => "nodes",
+
+        // ---------------- 因果链路追踪 (Flow Tracing) ----------------
+        ("tracing.upstream", Language::Zh) => "上游前驱",
+        ("tracing.upstream", Language::En) => "Upstream",
+
+        ("tracing.downstream", Language::Zh) => "下游分支",
+        ("tracing.downstream", Language::En) => "Downstream",
+
+        ("tracing.active", Language::Zh) => "因果链路高亮追踪中",
+        ("tracing.active", Language::En) => "Tracing Active Flow Path",
+
         // 默认回退原字符串
         _ => key,
     }
 }
+
 

@@ -1,6 +1,7 @@
 use gpui::*;
 use crate::ui::canvas::edges::render_edges_layer;
 use crate::ui::canvas::grid::draw_canvas_grid;
+use crate::ui::canvas::groups::render_groups_layer;
 use crate::ui::canvas::nodes::render_nodes_layer;
 use crate::ui::quick_add::render_quick_add_modal;
 use crate::ui::state::{AppState, DragState};
@@ -134,7 +135,7 @@ pub fn render_flow_canvas(
                 cx.notify();
             });
         })
-        // Background Grid
+        // 1. Background Grid
         .child(
             canvas(
                 |_bounds, _window, _cx| {},
@@ -144,13 +145,16 @@ pub fn render_flow_canvas(
             )
             .size_full(),
         )
-        // Edges layer
+        // 2. Semantic Groups Backdrop Layer
+        .child(render_groups_layer(state))
+        // 3. Edges Layer
         .child(render_edges_layer(state, model))
-        // Nodes layer
+        // 4. Nodes Layer
         .child(render_nodes_layer(state, model))
-        // Quick Add modal overlay if active
+        // 5. Quick Add modal overlay if active
         .children(quick_add.map(|(cx, cy, src)| {
             render_quick_add_modal(state, (cx, cy), src, model)
         }))
 }
+
 

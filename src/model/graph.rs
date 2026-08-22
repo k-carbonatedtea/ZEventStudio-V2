@@ -1,6 +1,17 @@
 use super::edge::Edge;
-use super::node::NodeData;
+use super::node::{NodeData, NodeKind};
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet, VecDeque};
+
+/// 语义剧情分区/分组框定义
+#[derive(Debug, Clone, PartialEq)]
+pub struct SubgraphGroup {
+    pub id: String,
+    pub title: String,
+    pub bounds: (f32, f32, f32, f32), // (min_x, min_y, max_x, max_y)
+    pub node_count: usize,
+    pub color: gpui::Hsla,
+}
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -40,7 +51,6 @@ impl Graph {
     }
 
     pub fn add_edge(&mut self, edge: Edge) {
-        // Prevent duplicate edges
         if !self.edges.iter().any(|e| {
             e.source_node_id == edge.source_node_id
                 && e.source_port_id == edge.source_port_id
@@ -105,6 +115,142 @@ impl Graph {
         ((min_x, min_y), (max_x, max_y))
     }
 
+    /// 计算指定节点的所有上游祖先与下游后继节点 (Flow Tracing)
+    pub fn get_upstream_and_downstream(&self, target_id: &str) -> (HashSet<String>, HashSet<String>) {
+        let mut upstream = HashSet::new();
+        let mut downstream = HashSet::new();
+
+        // 1. 向上反向追踪 (Upstream Ancestors)
+        let mut queue = VecDeque::new();
+        queue.push_back(target_id.to_string());
+        while let Some(curr) = queue.pop_front() {
+            for edge in &self.edges {
+                if edge.target_node_id == curr && !upstream.contains(&edge.source_node_id) {
+                    upstream.insert(edge.source_node_id.clone());
+                    queue.push_back(edge.source_node_id.clone());
+                }
+            }
+        }
+
+        // 2. 向下正向追踪 (Downstream Descendants)
+        queue.push_back(target_id.to_string());
+        while let Some(curr) = queue.pop_front() {
+            for edge in &self.edges {
+                if edge.source_node_id == curr && !downstream.contains(&edge.target_node_id) {
+                    downstream.insert(edge.target_node_id.clone());
+                    queue.push_back(edge.target_node_id.clone());
+                }
+            }
+        }
+
+        (upstream, downstream)
+    }
+
+    /// 获取处于因果链路上的所有高亮连线集合
+    pub fn get_active_path_edges(&self, target_id: &str) -> HashSet<(String, String)> {
+        let (upstream, downstream) = self.get_upstream_and_downstream(target_id);
+        let mut active_edges = HashSet::new();
+
+        for edge in &self.edges {
+            let s = &edge.source_node_id;
+            let t = &edge.target_node_id;
+
+            // 属于上游链路的连线
+            if (upstream.contains(s) || s == target_id) && (upstream.contains(t) || t == target_id) {
+                active_edges.insert((s.clone(), t.clone()));
+            }
+            // 属于下游链路的连线
+            if (downstream.contains(s) || s == target_id) && (downstream.contains(t) || t == target_id) {
+                active_edges.insert((s.clone(), t.clone()));
+            }
+        }
+
+        active_edges
+    }
+
+    /// 提取图谱中的连通分区并计算每个分区的语义包围盒
+    pub fn get_subgraph_groups(&self) -> Vec<SubgraphGroup> {
+        let mut undirected_adj: HashMap<String, HashSet<String>> = HashMap::new();
+        let node_map: HashMap<String, &NodeData> = self.nodes.iter().map(|n| (n.id.clone(), n)).collect();
+
+        for n in &self.nodes {
+            undirected_adj.insert(n.id.clone(), HashSet::new());
+        }
+
+        for edge in &self.edges {
+            if undirected_adj.contains_key(&edge.source_node_id) && undirected_adj.contains_key(&edge.target_node_id) {
+                undirected_adj.get_mut(&edge.source_node_id).map(|s| s.insert(edge.target_node_id.clone()));
+                undirected_adj.get_mut(&edge.target_node_id).map(|s| s.insert(edge.source_node_id.clone()));
+            }
+        }
+
+        let mut visited = HashSet::new();
+        let mut groups = Vec::new();
+
+        for node in &self.nodes {
+            if visited.contains(&node.id) {
+                continue;
+            }
+
+            let mut comp = Vec::new();
+            let mut q = VecDeque::new();
+            visited.insert(node.id.clone());
+            q.push_back(node.id.clone());
+
+            while let Some(curr) = q.pop_front() {
+                comp.push(curr.clone());
+                if let Some(neighbors) = undirected_adj.get(&curr) {
+                    for nxt in neighbors {
+                        if !visited.contains(nxt) {
+                            visited.insert(nxt.clone());
+                            q.push_back(nxt.clone());
+                        }
+                    }
+                }
+            }
+
+            // 计算该分区的包围盒 (留出 24px 内边距与 36px 顶部标题栏)
+            let mut min_x = f32::MAX;
+            let mut min_y = f32::MAX;
+            let mut max_x = f32::MIN;
+            let mut max_y = f32::MIN;
+            let mut group_title = String::new();
+            let mut group_color = gpui::hsla(215.0 / 360.0, 0.40, 0.50, 1.0);
+
+            for id in &comp {
+                if let Some(n) = node_map.get(id) {
+                    min_x = min_x.min(n.pos.0);
+                    min_y = min_y.min(n.pos.1);
+                    max_x = max_x.max(n.pos.0 + n.size.0);
+                    max_y = max_y.max(n.pos.1 + n.size.1);
+
+                    if n.kind == NodeKind::EntryPoint || n.id.starts_with("ep_") {
+                        group_title = format!("🚩 {}", n.title);
+                        group_color = gpui::hsla(160.0 / 360.0, 0.84, 0.39, 1.0);
+                    }
+                }
+            }
+
+            if group_title.is_empty() {
+                group_title = format!("📦 分支流 ({})", comp.first().unwrap_or(&"Scope".to_string()));
+            }
+
+            let pad = 24.0;
+            let top_pad = 42.0;
+            let bounds = (min_x - pad, min_y - top_pad, max_x + pad, max_y + pad);
+
+            groups.push(SubgraphGroup {
+                id: format!("group_{}", comp.first().unwrap_or(&"0".to_string())),
+                title: group_title,
+                bounds,
+                node_count: comp.len(),
+                color: group_color,
+            });
+        }
+
+        groups
+    }
+
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(self)
     }
@@ -113,3 +259,4 @@ impl Graph {
         serde_json::from_str(json_str)
     }
 }
+

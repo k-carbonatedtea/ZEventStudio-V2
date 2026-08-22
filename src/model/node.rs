@@ -1,4 +1,6 @@
+use super::actor::{ActorTheme, KeyHighlight};
 use super::port::{Port, PortDirection};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -13,6 +15,7 @@ pub enum NodeKind {
     Math,
     Comment,
 }
+
 
 impl NodeKind {
     pub fn display_name(&self) -> &'static str {
@@ -59,7 +62,7 @@ impl NodeKind {
 
     pub fn border_color(&self) -> gpui::Hsla {
         match self {
-            NodeKind::EntryPoint => gpui::hsla(160.0 / 360.0, 0.84, 0.28, 1.0), // #059669
+            NodeKind::EntryPoint => gpui::hsla(160.0 / 360.0, 0.84, 0.28, 1.0),
             NodeKind::Action => gpui::hsla(200.0 / 360.0, 0.98, 0.39, 0.45),
             NodeKind::Switch => gpui::hsla(38.0 / 360.0, 0.92, 0.45, 0.45),
             NodeKind::Query => gpui::hsla(210.0 / 360.0, 0.80, 0.50, 0.45),
@@ -72,7 +75,6 @@ impl NodeKind {
     }
 
     pub fn header_color(&self) -> (f32, f32, f32) {
-        // (Hue, Saturation, Lightness)
         match self {
             NodeKind::EntryPoint => (160.0 / 360.0, 0.84, 0.39),
             NodeKind::Action => (200.0 / 360.0, 0.98, 0.39),
@@ -109,6 +111,7 @@ pub struct NodeData {
     pub selected: bool,
     pub collapsed: bool,
 }
+
 
 #[allow(dead_code)]
 impl NodeData {
@@ -251,4 +254,16 @@ impl NodeData {
     pub fn get_port_offset_y(&self, port_id: &str, dir: PortDirection) -> f32 {
         self.get_port_offset(port_id, dir).1
     }
+
+    /// 依据 Actor 名称识别专属角色色彩主题
+    pub fn actor_theme(&self) -> ActorTheme {
+        super::actor::get_node_actor_theme(self)
+    }
+
+    /// 提炼核心高频业务参数，过滤底层冗余参数
+    pub fn extract_key_highlights(&self) -> Vec<KeyHighlight> {
+        super::actor::extract_node_highlights(self)
+    }
 }
+
+
