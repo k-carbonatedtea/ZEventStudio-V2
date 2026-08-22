@@ -2,8 +2,10 @@ use gpui::*;
 use crate::ui::components::Toast;
 use crate::ui::state::{AppState, AppWorkspaceTab, RecentProjectItem};
 
+#[allow(dead_code)]
 /// 渲染欢迎启动页的「最近打开的文件与模组」列表面板
 pub fn render_recent_projects_tab(
+
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {

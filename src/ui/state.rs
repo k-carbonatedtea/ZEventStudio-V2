@@ -96,8 +96,10 @@ pub struct AppState {
     pub expand_all_params: bool,
     pub performance_mode: bool,
     pub frame_time_ms: f32,
+    pub show_welcome_on_startup: bool,
     pub lang: crate::i18n::Language,
 }
+
 
 #[allow(dead_code)]
 impl AppState {
@@ -178,8 +180,10 @@ impl AppState {
             expand_all_params: false,
             performance_mode: false,
             frame_time_ms: 1.0,
+            show_welcome_on_startup: true,
             lang: crate::i18n::Language::Zh,
         };
+
         state.fit_view();
         state
     }

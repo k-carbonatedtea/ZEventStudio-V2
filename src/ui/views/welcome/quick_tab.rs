@@ -2,8 +2,10 @@ use gpui::*;
 use crate::ui::components::Toast;
 use crate::ui::state::{AppState, AppWorkspaceTab, RecentProjectItem};
 
+#[allow(dead_code)]
 /// 渲染欢迎启动页的「快速开始」功能面板
 pub fn render_quick_start_tab(
+
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
