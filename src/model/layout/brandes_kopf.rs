@@ -50,15 +50,20 @@ pub fn brandes_kopf_coordinates(
         }
     }
 
-    // 3. 对称居中微调：确保分叉与汇合点完美处于子节点群的几何中心
+    // 3. 对称居中微调：确保分叉与汇合点完美处于父/子节点群的几何中心
     for layer in layers {
         for id in layer {
             let has_fork = succs.get(id).map(|s| s.len() > 1).unwrap_or(false);
             if has_fork {
                 center_fork_node(id, succs, &mut coords);
             }
+            let has_join = preds.get(id).map(|p| p.len() > 1).unwrap_or(false);
+            if has_join {
+                center_join_node(id, preds, &mut coords);
+            }
         }
     }
+
 
     // 4. 最终层内间距强制保障
     for layer in layers {
@@ -101,6 +106,26 @@ fn center_fork_node(
         }
     }
 }
+
+/// 辅助函数：将多入度汇聚节点对称居中于其父节点包围盒中心
+fn center_join_node(
+    id: &str,
+    preds: &HashMap<String, Vec<String>>,
+    coords: &mut HashMap<String, f32>,
+) {
+    if let Some(parents) = preds.get(id) {
+        let parent_xs: Vec<f32> = parents
+            .iter()
+            .filter_map(|p| coords.get(p).copied())
+            .collect();
+        if !parent_xs.is_empty() {
+            let min_p = parent_xs.iter().copied().fold(f32::INFINITY, f32::min);
+            let max_p = parent_xs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+            coords.insert(id.to_string(), (min_p + max_p) / 2.0);
+        }
+    }
+}
+
 
 /// 强制同层节点从左向右保持最小间距，并在中心发生偏移时进行对称平移
 pub fn enforce_layer_spacing(

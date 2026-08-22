@@ -23,8 +23,8 @@ pub fn layout_component(
     // 2. 拓扑分层 (Rank Assignment)
     let ranks = assign_ranks(comp, graph, node_indices, &comp_edges, &in_degrees);
 
-    // 3. 插入虚拟节点 (Dummy Nodes) 消除跨层长边
-    let (augmented_nodes, augmented_edges, layers, max_rank) =
+    // 3. 插入虚拟节点 (Dummy Nodes) 消除跨层长边并获取航点映射
+    let (augmented_nodes, augmented_edges, layers, max_rank, edge_dummy_map) =
         insert_dummy_nodes(&comp_nodes, &comp_edges, &ranks, node_indices);
 
     // 4. 提取各连线所对应的引脚物理偏移分量 (Port-Aware Biases)
@@ -41,7 +41,7 @@ pub fn layout_component(
     let optimized_layers =
         reduce_crossings(layers, max_rank, &aug_pred, &aug_succ, &out_biases, &in_biases);
 
-    // 6. 坐标分配 (Brandes-Köpf 启发式水平对齐)
+    // 6. 坐标分配 (Brandes-Köpf 启发式水平对齐与汇聚节点居中)
     let x_coords = brandes_kopf_coordinates(
         &optimized_layers,
         &augmented_nodes,
@@ -50,7 +50,7 @@ pub fn layout_component(
         config.node_spacing_x,
     );
 
-    // 7. 计算 Y 坐标与包围盒应用
+    // 7. 计算 Y 坐标与包围盒应用，并将航点注入跨层连线 (Waypoint Corridor Routing)
     apply_coordinates(
         graph,
         &x_coords,
@@ -60,8 +60,10 @@ pub fn layout_component(
         node_indices,
         comp_start_x,
         config,
+        &edge_dummy_map,
     )
 }
+
 
 /// 提取子图节点与有向边数据
 fn extract_component_graph(
@@ -124,6 +126,7 @@ fn apply_coordinates(
     node_indices: &HashMap<String, usize>,
     comp_start_x: f32,
     config: &LayoutConfig,
+    edge_dummy_map: &HashMap<(String, String), Vec<String>>,
 ) -> f32 {
     let mut layer_y: Vec<f32> = vec![0.0; max_rank + 1];
     let mut current_y = config.start_y;
@@ -170,6 +173,23 @@ fn apply_coordinates(
         }
     }
 
+    // 将虚拟节点航点注入跨层连线 (Waypoint Corridor Routing)
+    for edge in &mut graph.edges {
+        let key = (edge.source_node_id.clone(), edge.target_node_id.clone());
+        if let Some(dummies) = edge_dummy_map.get(&key) {
+            let mut pts = Vec::new();
+            for dummy_id in dummies {
+                if let (Some(&cx), Some(d_node)) = (x_coords.get(dummy_id), augmented_nodes.get(dummy_id)) {
+                    let wx = cx + shift_x;
+                    let wy = layer_y[d_node.rank] + 40.0;
+                    pts.push((wx, wy));
+                }
+            }
+            edge.waypoints = pts;
+        }
+    }
+
     (max_x - min_x).max(240.0)
 }
+
 

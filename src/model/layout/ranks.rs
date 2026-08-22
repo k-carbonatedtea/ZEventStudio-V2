@@ -71,10 +71,38 @@ pub fn assign_ranks(
         ranks.entry(id.clone()).or_insert(0);
     }
 
+    // 紧凑分层优化 (Edge-Length Minimization / ALAP 紧缩):
+    // 避免单分支节点过早悬空，将其紧贴下游消费者下沉，大幅缩短跨层连线
+    for _ in 0..3 {
+        for id in comp {
+            if let Some(&idx) = node_indices.get(id) {
+                if graph.nodes[idx].kind == NodeKind::EntryPoint || id.starts_with("ep_") {
+                    continue;
+                }
+            }
+            if let Some(targets) = local_adj.get(id) {
+                if !targets.is_empty() {
+                    let min_target_rank = targets
+                        .iter()
+                        .map(|t| *ranks.get(t).unwrap_or(&0))
+                        .min()
+                        .unwrap_or(0);
+                    if min_target_rank > 1 {
+                        let current_rank = *ranks.get(id).unwrap_or(&0);
+                        let candidate_rank = min_target_rank - 1;
+                        if candidate_rank > current_rank {
+                            ranks.insert(id.clone(), candidate_rank);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     ranks
 }
 
-/// 插入虚拟过渡节点 (Dummy Nodes) 消除跨层连线
+/// 插入虚拟过渡节点 (Dummy Nodes) 消除跨层连线并记录航点映射
 pub fn insert_dummy_nodes(
     comp_nodes: &HashMap<String, LayoutNode>,
     comp_edges: &[(String, String)],
@@ -85,9 +113,11 @@ pub fn insert_dummy_nodes(
     Vec<(String, String)>,
     Vec<Vec<String>>,
     usize,
+    HashMap<(String, String), Vec<String>>,
 ) {
     let mut augmented_nodes = comp_nodes.clone();
     let mut augmented_edges: Vec<(String, String)> = Vec::new();
+    let mut edge_dummy_map: HashMap<(String, String), Vec<String>> = HashMap::new();
     let mut dummy_count = 0;
 
     for (id, node) in augmented_nodes.iter_mut() {
@@ -102,6 +132,7 @@ pub fn insert_dummy_nodes(
 
         if rank_v > rank_u + 1 {
             let mut prev = u.clone();
+            let mut dummies = Vec::new();
             for r in (rank_u + 1)..rank_v {
                 dummy_count += 1;
                 let dummy_id = format!("__dummy_{}_{}_{}", dummy_count, r, v);
@@ -116,9 +147,11 @@ pub fn insert_dummy_nodes(
                     },
                 );
                 augmented_edges.push((prev, dummy_id.clone()));
+                dummies.push(dummy_id.clone());
                 prev = dummy_id;
             }
             augmented_edges.push((prev, v.clone()));
+            edge_dummy_map.insert((u.clone(), v.clone()), dummies);
         } else if rank_v > rank_u {
             augmented_edges.push((u.clone(), v.clone()));
         }
@@ -141,5 +174,6 @@ pub fn insert_dummy_nodes(
         });
     }
 
-    (augmented_nodes, augmented_edges, layers, max_rank)
+    (augmented_nodes, augmented_edges, layers, max_rank, edge_dummy_map)
 }
+

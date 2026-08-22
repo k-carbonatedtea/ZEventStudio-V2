@@ -11,6 +11,8 @@ pub struct Edge {
     pub color_override: Option<String>,
     pub is_dashed: bool,
     pub selected: bool,
+    #[serde(default)]
+    pub waypoints: Vec<(f32, f32)>,
 }
 
 impl Edge {
@@ -36,8 +38,17 @@ impl Edge {
             color_override: None,
             is_dashed: false,
             selected: false,
+            waypoints: Vec::new(),
         }
     }
+
+    #[allow(dead_code)]
+    pub fn with_waypoints(mut self, waypoints: Vec<(f32, f32)>) -> Self {
+        self.waypoints = waypoints;
+        self
+    }
+
+
 
     pub fn with_label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());

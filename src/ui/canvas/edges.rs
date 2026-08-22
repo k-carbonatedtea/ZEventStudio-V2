@@ -35,6 +35,7 @@ pub fn render_edges_layer(
                 is_dashed,
                 (sx, sy),
                 (ex, ey),
+                edge.waypoints.clone(),
             ));
         }
     }
@@ -55,7 +56,7 @@ pub fn render_edges_layer(
     div()
         .absolute()
         .inset_0()
-        // 1. GPU 原生硬件加速批处理 Canvas (按节点类型分组渲染专属颜色连线 + 链路追踪)
+        // 1. GPU 原生硬件加速批处理 Canvas (支持航点走廊路由 Waypoint Corridor Routing)
         .child(
             canvas(
                 |_bounds, _window, _cx| {},
@@ -96,17 +97,30 @@ pub fn render_edges_layer(
                     let active_arrow_w = (active_stroke_w * 3.2).clamp(6.0, 11.0);
                     let active_arrow_h = (active_stroke_w * 2.8).clamp(5.0, 10.0);
 
-                    for (s_id, t_id, _, s_kind, is_dashed, (sx, sy), (ex, ey)) in &edge_items_clone {
+                    for (s_id, t_id, _, s_kind, is_dashed, (sx, sy), (ex, ey), waypoints) in &edge_items_clone {
                         let screen_sx = orig_x + pan.0 + sx * zoom;
                         let screen_sy = orig_y + pan.1 + sy * zoom;
                         let screen_ex = orig_x + pan.0 + ex * zoom;
                         let screen_ey = orig_y + pan.1 + ey * zoom;
 
                         // 快速边界框视口裁剪 (BBox Culling)
-                        let min_x = screen_sx.min(screen_ex);
-                        let max_x = screen_sx.max(screen_ex);
-                        let min_y = screen_sy.min(screen_ey);
-                        let max_y = screen_sy.max(screen_ey);
+                        let mut min_x = screen_sx.min(screen_ex);
+                        let mut max_x = screen_sx.max(screen_ex);
+                        let mut min_y = screen_sy.min(screen_ey);
+                        let mut max_y = screen_sy.max(screen_ey);
+
+                        let mut screen_pts = Vec::with_capacity(waypoints.len() + 2);
+                        screen_pts.push((screen_sx, screen_sy));
+                        for (wx, wy) in waypoints {
+                            let swx = orig_x + pan.0 + wx * zoom;
+                            let swy = orig_y + pan.1 + wy * zoom;
+                            min_x = min_x.min(swx);
+                            max_x = max_x.max(swx);
+                            min_y = min_y.min(swy);
+                            max_y = max_y.max(swy);
+                            screen_pts.push((swx, swy));
+                        }
+                        screen_pts.push((screen_ex, screen_ey));
 
                         if max_x < orig_x - 60.0
                             || min_x > orig_x + view_w + 60.0
@@ -116,20 +130,11 @@ pub fn render_edges_layer(
                             continue;
                         }
 
-                        let dy = (screen_ey - screen_sy).abs().max(36.0 * zoom);
-                        let ctrl1 = (screen_sx, screen_sy + dy * 0.45);
-                        let ctrl2 = (screen_ex, screen_ey - dy * 0.45);
-
                         let is_on_active_path = is_tracing && active_edges.contains(&(s_id.clone(), t_id.clone()));
 
                         if is_on_active_path {
                             has_active = true;
-                            batch_active.move_to(point(px(screen_sx), px(screen_sy)));
-                            batch_active.cubic_bezier_to(
-                                point(px(screen_ex), px(screen_ey)),
-                                point(px(ctrl1.0), px(ctrl1.1)),
-                                point(px(ctrl2.0), px(ctrl2.1)),
-                            );
+                            draw_routed_curve(&mut batch_active, &screen_pts, zoom);
 
                             batch_active_arrows.move_to(point(px(screen_ex), px(screen_ey)));
                             batch_active_arrows.line_to(point(px(screen_ex - active_arrow_w * 0.5), px(screen_ey - active_arrow_h)));
@@ -137,12 +142,7 @@ pub fn render_edges_layer(
                             batch_active_arrows.close();
                         } else if *is_dashed {
                             has_dashed = true;
-                            batch_dashed.move_to(point(px(screen_sx), px(screen_sy)));
-                            batch_dashed.cubic_bezier_to(
-                                point(px(screen_ex), px(screen_ey)),
-                                point(px(ctrl1.0), px(ctrl1.1)),
-                                point(px(ctrl2.0), px(ctrl2.1)),
-                            );
+                            draw_routed_curve(&mut batch_dashed, &screen_pts, zoom);
 
                             batch_dashed_arrows.move_to(point(px(screen_ex), px(screen_ey)));
                             batch_dashed_arrows.line_to(point(px(screen_ex - arrow_w * 0.5), px(screen_ey - arrow_h)));
@@ -150,12 +150,7 @@ pub fn render_edges_layer(
                             batch_dashed_arrows.close();
                         } else if let Some((_, stroke_builder, arrow_builder, has_items)) = kind_paths.iter_mut().find(|(k, _, _, _)| k == s_kind) {
                             *has_items = true;
-                            stroke_builder.move_to(point(px(screen_sx), px(screen_sy)));
-                            stroke_builder.cubic_bezier_to(
-                                point(px(screen_ex), px(screen_ey)),
-                                point(px(ctrl1.0), px(ctrl1.1)),
-                                point(px(ctrl2.0), px(ctrl2.1)),
-                            );
+                            draw_routed_curve(stroke_builder, &screen_pts, zoom);
 
                             arrow_builder.move_to(point(px(screen_ex), px(screen_ey)));
                             arrow_builder.line_to(point(px(screen_ex - arrow_w * 0.5), px(screen_ey - arrow_h)));
@@ -163,6 +158,7 @@ pub fn render_edges_layer(
                             arrow_builder.close();
                         }
                     }
+
 
                     // 单次提交 GPU 批量路径渲染：按不同节点类型专属颜色渲染
                     for (kind, stroke_builder, arrow_builder, has_items) in kind_paths {
@@ -247,7 +243,7 @@ pub fn render_edges_layer(
         )
 
         // 2. 连线交互徽章（切刀剪断触发器）
-        .children(edge_items.into_iter().filter_map(move |(s_id, t_id, label, _, _, (sx, sy), (ex, ey))| {
+        .children(edge_items.into_iter().filter_map(move |(s_id, t_id, label, _, _, (sx, sy), (ex, ey), _)| {
             if !knife_mode {
                 return None;
             }
@@ -290,4 +286,34 @@ pub fn render_edges_layer(
             )
         }))
 }
+
+/// 绘制支持多航点平滑弯曲的走廊连线 (Waypoint Routed Smooth Curve)
+fn draw_routed_curve(builder: &mut PathBuilder, pts: &[(f32, f32)], zoom: f32) {
+    if pts.is_empty() {
+        return;
+    }
+    builder.move_to(point(px(pts[0].0), px(pts[0].1)));
+    if pts.len() == 2 {
+        let (sx, sy) = pts[0];
+        let (ex, ey) = pts[1];
+        let dy = (ey - sy).abs().max(36.0 * zoom);
+        builder.cubic_bezier_to(
+            point(px(ex), px(ey)),
+            point(px(sx), px(sy + dy * 0.45)),
+            point(px(ex), px(ey - dy * 0.45)),
+        );
+    } else {
+        for i in 0..pts.len() - 1 {
+            let (x1, y1) = pts[i];
+            let (x2, y2) = pts[i + 1];
+            let dy = (y2 - y1).abs().max(24.0 * zoom);
+            builder.cubic_bezier_to(
+                point(px(x2), px(y2)),
+                point(px(x1), px(y1 + dy * 0.45)),
+                point(px(x2), px(y2 - dy * 0.45)),
+            );
+        }
+    }
+}
+
 
