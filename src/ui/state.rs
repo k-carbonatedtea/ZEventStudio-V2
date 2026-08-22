@@ -221,8 +221,10 @@ impl AppState {
             tab_name,
             "bfevfl".to_string(),
             Some(graph.clone()),
+            Some(graph.clone()),
         );
         self.open_tabs.push(new_tab);
+
         self.active_tab_id = Some(new_id);
         self.graph = graph;
         self.fit_view();
@@ -309,10 +311,12 @@ impl AppState {
     pub fn mark_current_tab_modified(&mut self) {
         if let Some(active_id) = &self.active_tab_id {
             if let Some(tab) = self.open_tabs.iter_mut().find(|t| &t.id == active_id) {
-                tab.is_modified = true;
+                tab.graph = Some(self.graph.clone());
+                tab.recompute_modified(&self.graph);
             }
         }
     }
+
 
     pub fn is_file_modified(&self, path: &str) -> bool {
         self.open_tabs.iter().any(|t| t.file_path == path && t.is_modified)

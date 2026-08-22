@@ -187,6 +187,7 @@ impl AppState {
                 path.to_string(),
                 file_type.to_string(),
                 None,
+                None,
             );
             self.open_tabs.push(new_tab);
             new_id
@@ -204,8 +205,10 @@ impl AppState {
                             self.graph = loaded_graph.clone();
 
                             if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == target_tab_id) {
-                                tab.graph = Some(loaded_graph);
+                                tab.graph = Some(loaded_graph.clone());
+                                tab.original_graph = Some(loaded_graph);
                                 tab.title = raw_name.clone();
+                                tab.is_modified = false;
                             }
 
                             self.fit_view();
@@ -224,8 +227,10 @@ impl AppState {
                             self.graph = loaded_graph.clone();
 
                             if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == target_tab_id) {
-                                tab.graph = Some(loaded_graph);
+                                tab.graph = Some(loaded_graph.clone());
+                                tab.original_graph = Some(loaded_graph);
                                 tab.title = raw_name.clone();
+                                tab.is_modified = false;
                             }
 
                             self.fit_view();
@@ -237,6 +242,7 @@ impl AppState {
                     self.toast = Some(Toast::info(format!("📂 已选中文件: {}", raw_name)));
                 }
             }
+
             Err(e) => {
                 self.toast = Some(Toast::error(format!("{} {}", self.t("toast.file_load_error"), e)));
             }

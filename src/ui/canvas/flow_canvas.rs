@@ -182,8 +182,10 @@ pub fn render_flow_canvas(
                     cx.notify();
                     return;
                 }
+                if matches!(st.drag_state, DragState::DragNodes { .. }) {
+                    st.mark_current_tab_modified();
+                }
                 if let DragState::Connecting { source_node_id, source_port_id, direction, .. } = &st.drag_state.clone() {
-
                     // 松开连线在空白画布上时，弹出快速新建节点浮层
                     let (canvas_x, canvas_y) = st.screen_to_canvas(mx, my);
                     st.quick_add_modal = Some(QuickAddModalState {
@@ -199,6 +201,7 @@ pub fn render_flow_canvas(
                 cx.notify();
             });
         })
+
 
         // Scroll wheel to zoom
         .on_scroll_wheel(move |e, _, cx| {
