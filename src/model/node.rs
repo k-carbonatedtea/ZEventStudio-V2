@@ -60,6 +60,22 @@ impl NodeKind {
         }
     }
 
+    /// 依据源节点类型返回专属高辨识度的连线与箭头色彩 (Thematic Edge Color)
+    pub fn edge_color(&self) -> gpui::Hsla {
+        match self {
+            NodeKind::EntryPoint => gpui::hsla(160.0 / 360.0, 0.84, 0.46, 0.95), // 清新翡翠绿 🏁
+            NodeKind::Action => gpui::hsla(200.0 / 360.0, 0.92, 0.52, 0.95),     // 明朗天蓝 ⚡
+            NodeKind::Switch => gpui::hsla(38.0 / 360.0, 0.95, 0.52, 0.95),      // 分支琥珀金橙 🔀
+            NodeKind::Query => gpui::hsla(185.0 / 360.0, 0.85, 0.48, 0.95),      // 条件青绿 🔍
+            NodeKind::SubFlow => gpui::hsla(271.0 / 360.0, 0.85, 0.62, 0.95),    // 子流程紫 📦
+            NodeKind::Fork => gpui::hsla(142.0 / 360.0, 0.78, 0.48, 0.95),       // 并发分流绿 🔱
+            NodeKind::Join => gpui::hsla(160.0 / 360.0, 0.72, 0.50, 0.90),       // 并发汇合青 🔗
+            NodeKind::Math => gpui::hsla(230.0 / 360.0, 0.80, 0.65, 0.95),       // 运算靛蓝 🧮
+            NodeKind::Comment => gpui::hsla(215.0 / 360.0, 0.25, 0.55, 0.80),    // 备注板岩灰 📝
+        }
+    }
+
+
     pub fn border_color(&self) -> gpui::Hsla {
         match self {
             NodeKind::EntryPoint => gpui::hsla(160.0 / 360.0, 0.84, 0.28, 1.0),
