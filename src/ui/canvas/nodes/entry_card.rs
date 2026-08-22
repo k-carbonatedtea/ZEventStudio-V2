@@ -29,16 +29,24 @@ pub fn render_entry_card(
         (false, false)
     };
 
-    let border_col = if ctx.is_selected {
-
-        hsla(45.0 / 360.0, 0.98, 0.60, 1.0)
+    let (border_col, card_bg) = if ctx.is_selected {
+        (
+            hsla(199.0 / 360.0, 0.98, 0.58, 1.0), // 选中极光亮青蓝 #38bdf8
+            hsla(170.0 / 360.0, 0.84, 0.35, 1.0),
+        )
     } else if is_on_active_path {
-        hsla(45.0 / 360.0, 0.85, 0.50, 0.90)
+        (
+            hsla(45.0 / 360.0, 0.70, 0.42, 0.75), // 路径温和柔金
+            hsla(160.0 / 360.0, 0.84, 0.39, 1.0),
+        )
     } else {
-        hsla(160.0 / 360.0, 0.84, 0.28, 1.0) // #059669
+        (
+            hsla(160.0 / 360.0, 0.84, 0.28, 1.0), // #059669
+            hsla(160.0 / 360.0, 0.84, 0.39, 1.0),
+        )
     };
 
-    let card_opacity = if is_unrelated { 0.45 } else { 1.0 };
+    let card_opacity = if is_unrelated { 0.38 } else { 1.0 };
 
     let mut entry_card = div()
         .id(SharedString::from(format!("node_{}", node.id)))
@@ -48,16 +56,18 @@ pub fn render_entry_card(
         .w(px(node_w))
         .h(px(node_h))
         .rounded_full()
-        .bg(hsla(160.0 / 360.0, 0.84, 0.39, 1.0)) // #10b981
+        .bg(card_bg)
         .border_2()
         .border_color(border_col)
         .opacity(card_opacity)
         .cursor_move();
 
-
-    if z >= 0.45 {
+    if ctx.is_selected {
+        entry_card = entry_card.shadow_2xl();
+    } else if z >= 0.45 {
         entry_card = entry_card.shadow_md();
     }
+
 
     let node_id_right = node.id.clone();
     let model_header_drag_right = ctx.model.clone();

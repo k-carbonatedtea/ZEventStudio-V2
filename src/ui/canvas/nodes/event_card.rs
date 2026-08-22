@@ -34,15 +34,27 @@ pub fn render_event_card(
         (false, false)
     };
 
-    let card_border = if ctx.is_selected {
-        hsla(45.0 / 360.0, 0.98, 0.60, 1.0) // 选中金黄色发光 #fbbf24
+    let (card_bg, card_border, is_border_thick) = if ctx.is_selected {
+        (
+            hsla(215.0 / 360.0, 0.45, 0.13, 0.98), // 选中态：深蓝宝石流光底色
+            hsla(199.0 / 360.0, 0.98, 0.58, 1.0),  // 选中态：极光亮青蓝 2px 醒目边框 #38bdf8
+            true,
+        )
     } else if is_on_active_path {
-        hsla(45.0 / 360.0, 0.85, 0.50, 0.90) // 链路上游/下游节点
+        (
+            hsla(240.0 / 360.0, 0.06, 0.10, 0.98), // 链路节点：标准深色背景
+            hsla(45.0 / 360.0, 0.70, 0.42, 0.75),  // 链路节点：柔和细金线
+            false,
+        )
     } else {
-        theme.border_color
+        (
+            hsla(240.0 / 360.0, 0.06, 0.10, 0.98),
+            theme.border_color,
+            false,
+        )
     };
 
-    let card_opacity = if is_unrelated { 0.45 } else { 1.0 };
+    let card_opacity = if is_unrelated { 0.38 } else { 1.0 };
 
     let node_id_left = node.id.clone();
     let node_id_right = node.id.clone();
@@ -57,11 +69,18 @@ pub fn render_event_card(
         .w(px(node_w))
         .h(px(node_h))
         .rounded(px(corner_radius))
-        .bg(hsla(240.0 / 360.0, 0.06, 0.10, 0.98)) // #18181b
-        .border_1()
+        .bg(card_bg)
         .border_color(card_border)
         .opacity(card_opacity)
-        .cursor_move()
+        .cursor_move();
+
+    if is_border_thick {
+        card = card.border_2().shadow_2xl();
+    } else {
+        card = card.border_1();
+    }
+
+    card = card
         // 点击卡片任何位置（左键或右键长按）均可拖动节点，双击直接打开节点属性编辑
         .on_mouse_down(MouseButton::Left, move |e, _, cx| {
             let id = node_id_left.clone();
@@ -74,6 +93,7 @@ pub fn render_event_card(
                 });
                 return;
             }
+
             model_drag_left.update(cx, |state, cx| {
                 if matches!(state.drag_state, DragState::Connecting { .. }) {
                     return;
