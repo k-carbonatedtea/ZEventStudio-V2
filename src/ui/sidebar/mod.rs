@@ -1,6 +1,7 @@
 pub mod actors_manager;
 pub mod entry_points;
 pub mod events_list;
+pub mod files_manager;
 pub mod node_palette;
 pub mod preset_list;
 
@@ -8,12 +9,14 @@ use gpui::*;
 use crate::ui::sidebar::actors_manager::render_actors_manager;
 use crate::ui::sidebar::entry_points::render_entry_point_list;
 use crate::ui::sidebar::events_list::render_events_list;
+use crate::ui::sidebar::files_manager::render_files_manager;
 use crate::ui::sidebar::node_palette::render_node_palette;
 use crate::ui::sidebar::preset_list::render_preset_list;
 use crate::ui::state::AppState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SidebarTab {
+    Files,
     EntryPoints,
     Events,
     Actors,
@@ -21,7 +24,7 @@ pub enum SidebarTab {
     Presets,
 }
 
-/// 渲染左侧导航侧边栏 (支持流程入口/事件列表/角色管理/组件库/预设案例)
+/// 渲染左侧导航侧边栏 (支持资源文件/流程入口/事件列表/角色管理/组件库/预设案例)
 pub fn render_sidebar(
     state: &AppState,
     model: &Entity<AppState>,
@@ -29,6 +32,7 @@ pub fn render_sidebar(
     let active_tab = state.active_sidebar_tab;
     let search_val = state.search_query.clone();
 
+    let model_tab_fl = model.clone();
     let model_tab_ep = model.clone();
     let model_tab_ev = model.clone();
     let model_tab_act = model.clone();
@@ -51,6 +55,13 @@ pub fn render_sidebar(
                 .border_color(hsla(220.0 / 360.0, 0.25, 0.20, 1.0))
                 .p_1()
                 .gap_1()
+                // 0. 资源
+                .child(render_tab_btn(
+                    state.t("sidebar.tab_files"),
+                    active_tab == SidebarTab::Files,
+                    SidebarTab::Files,
+                    &model_tab_fl,
+                ))
                 // 1. 入口
                 .child(render_tab_btn(
                     state.t("sidebar.tab_entry_points"),
@@ -87,7 +98,7 @@ pub fn render_sidebar(
                     &model_tab_pre,
                 )),
         )
-        // 搜索过滤栏
+        // 搜索过滤栏 (在事件/角色/组件 Tab 下展示)
         .children(
             if matches!(active_tab, SidebarTab::Events | SidebarTab::Actors | SidebarTab::Palette) {
                 let placeholder = match active_tab {
@@ -140,6 +151,7 @@ pub fn render_sidebar(
                 .flex_1()
                 .overflow_y_scroll()
                 .child(match active_tab {
+                    SidebarTab::Files => render_files_manager(state, model).into_any_element(),
                     SidebarTab::EntryPoints => render_entry_point_list(state, model).into_any_element(),
                     SidebarTab::Events => render_events_list(state, model).into_any_element(),
                     SidebarTab::Actors => render_actors_manager(state, model).into_any_element(),

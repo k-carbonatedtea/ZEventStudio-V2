@@ -5,6 +5,7 @@ pub mod inspector;
 pub mod quick_add;
 pub mod sidebar;
 pub mod state;
+pub mod state_project;
 pub mod toolbar;
 pub mod views;
 

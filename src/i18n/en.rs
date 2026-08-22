@@ -88,11 +88,22 @@ pub fn get_en<'a>(key: &'a str) -> &'a str {
         "inspector.tip_quick_add" => "• Right click or drag wire on canvas to open Quick Add",
 
         // ---------------- 侧边栏与预设 (Sidebar & Presets) ----------------
+        "sidebar.tab_files" => "📁 Files",
         "sidebar.tab_entry_points" => "🏁 Entry",
         "sidebar.tab_events" => "⚡ Events",
         "sidebar.tab_actors" => "🎭 Actors",
         "sidebar.tab_palette" => "📦 Nodes",
         "sidebar.tab_presets" => "🎮 Presets",
+
+        "explorer.title" => "Explorer",
+        "explorer.no_project" => "No Project Loaded",
+        "explorer.open_mod" => "Open Mod Directory",
+        "explorer.open_pack" => "Open SARC Archive",
+        "explorer.new_bfevfl" => "New BFEVFL",
+        "explorer.refresh" => "Refresh Explorer",
+        "explorer.refresh_done" => "✨ File tree refreshed",
+        "explorer.collapse_all" => "Collapse All",
+        "explorer.search_placeholder" => "Search files or packs...",
 
         "sidebar.search_placeholder" => "Search node type...",
         "sidebar.entry_points_title" => "🚩 Entry Points",
@@ -172,6 +183,9 @@ pub fn get_en<'a>(key: &'a str) -> &'a str {
         "toast.sever_edge" => "✂️ Severed edge connection",
         "toast.connect_edge" => "🔗 Connected edge successfully",
         "toast.added_actor" => "✨ Added new actor definition: ",
+        "toast.project_loaded" => "🗂️ Loaded project: ",
+        "toast.file_loaded" => "📂 Loaded file: ",
+        "toast.file_load_error" => "❌ Failed to read file: ",
 
         // ---------------- 角色分类与关键参数 (Actor Theme & Smart Params) ----------------
         "actor.system" => "System Logic",

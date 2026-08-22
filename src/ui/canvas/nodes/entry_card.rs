@@ -5,13 +5,14 @@ use crate::ui::state::{AppState, DragState};
 
 /// 渲染 EntryPoint 节点 (翡翠绿胶囊 Pill 节点，支持 Flow Tracing)
 pub fn render_entry_card(
-    state: &AppState,
+    _state: &AppState,
     node: &NodeData,
     screen_pos: (f32, f32),
     node_size: (f32, f32),
     zoom: f32,
     is_selected: bool,
     connecting_state: &DragState,
+    active_path_nodes: Option<&std::collections::HashSet<String>>,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
 
@@ -26,16 +27,10 @@ pub fn render_entry_card(
     let pad_x = (14.0 * z).clamp(2.0, 20.0);
     let pad_y = (6.0 * z).clamp(1.0, 12.0);
 
-    // 链路追踪 (Flow Tracing) 高亮判定
-    let active_node = state.selected_node_id.as_deref().or(state.hovered_node_id.as_deref());
-    let (is_on_active_path, is_unrelated) = if let Some(target) = active_node {
-        if target == node.id {
-            (true, false)
-        } else {
-            let (up, down) = state.graph.get_upstream_and_downstream(target);
-            let on_path = up.contains(&node.id) || down.contains(&node.id);
-            (on_path, !on_path)
-        }
+    // 链路追踪 (Flow Tracing) O(1) 快速判定
+    let (is_on_active_path, is_unrelated) = if let Some(path_set) = active_path_nodes {
+        let on_path = path_set.contains(&node.id);
+        (on_path, !on_path)
     } else {
         (false, false)
     };

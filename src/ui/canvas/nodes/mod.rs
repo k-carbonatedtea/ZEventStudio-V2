@@ -8,7 +8,7 @@ use event_card::render_event_card;
 use crate::model::{NodeData, NodeKind};
 use crate::ui::state::{AppState, DragState};
 
-/// 渲染画布节点图层 (带视口边界裁剪 Viewport Culling)
+/// 渲染画布节点图层 (带视口边界裁剪 Viewport Culling 与链路追踪全局缓存)
 pub fn render_nodes_layer(
     state: &AppState,
     model: &Entity<AppState>,
@@ -19,7 +19,17 @@ pub fn render_nodes_layer(
     let connecting_state = state.drag_state.clone();
     let expand_all = state.expand_all_params;
 
-    // 视口边界裁剪 (Viewport Culling): 剔除屏幕外的节点，大幅减轻缩放与拖拽时的渲染压力
+    // 链路追踪 (Flow Tracing) 单帧一次性计算，避免每个节点重复做 O(N) 图遍历
+    let active_node = state.selected_node_id.as_deref().or(state.hovered_node_id.as_deref());
+    let active_path_nodes: Option<std::collections::HashSet<String>> = active_node.map(|target| {
+        let (up, down) = state.graph.get_upstream_and_downstream(target);
+        let mut set = up;
+        set.extend(down);
+        set.insert(target.to_string());
+        set
+    });
+
+    // 视口边界裁剪 (Viewport Culling): 剔除屏幕外的节点
     let view_min_x = -150.0;
     let view_min_y = -150.0;
     let view_max_x = 2600.0;
@@ -50,6 +60,7 @@ pub fn render_nodes_layer(
                 zoom,
                 &selected_id,
                 &connecting_state,
+                active_path_nodes.as_ref(),
                 expand_all,
                 model,
             ))
@@ -64,16 +75,25 @@ fn render_single_node(
     zoom: f32,
     selected_id: &Option<String>,
     connecting_state: &DragState,
+    active_path_nodes: Option<&std::collections::HashSet<String>>,
     expand_all: bool,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
     let is_selected = selected_id.as_deref() == Some(&node.id);
 
     if node.kind == NodeKind::EntryPoint {
-        render_entry_card(state, node, screen_pos, node_size, zoom, is_selected, connecting_state, model)
-            .into_any_element()
-
-
+        render_entry_card(
+            state,
+            node,
+            screen_pos,
+            node_size,
+            zoom,
+            is_selected,
+            connecting_state,
+            active_path_nodes,
+            model,
+        )
+        .into_any_element()
     } else {
         render_event_card(
             state,
@@ -83,6 +103,7 @@ fn render_single_node(
             zoom,
             is_selected,
             connecting_state,
+            active_path_nodes,
             expand_all,
             model,
         )

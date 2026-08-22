@@ -152,10 +152,10 @@ where
 pub fn pick_and_load_file(model: &Entity<AppState>, cx: &mut App) {
     let dialog = rfd::FileDialog::new()
         .add_filter(
-            "EventFlow & Zelda Packages (*.bfevfl, *.sbeventpack, *.pack, *.msbt, *.aamp, *.byml)",
-            &["bfevfl", "sbeventpack", "pack", "msbt", "aamp", "byml", "json"],
+            "EventFlow & Zelda Packages (*.bfevfl, *.sbeventpack, *.sbactorpack, *.pack, *.msbt, *.json)",
+            &["bfevfl", "sbeventpack", "sbactorpack", "pack", "sarc", "ssarc", "spack", "msbt", "aamp", "byml", "json"],
         )
-        .set_title("选择 BotW 游戏事件流或文本文件");
+        .set_title("选择 BotW 游戏事件流或封包文件");
 
     if let Some(path) = dialog.pick_file() {
         let path_str = path.to_string_lossy().to_string();
@@ -163,6 +163,15 @@ pub fn pick_and_load_file(model: &Entity<AppState>, cx: &mut App) {
             .file_name()
             .map(|f| f.to_string_lossy().to_string())
             .unwrap_or_else(|| "Unknown.bfevfl".to_string());
+
+        if crate::model::is_sarc_extension(&file_name) {
+            model.update(cx, |st, cx| {
+                st.open_pack_file(&path_str);
+                cx.notify();
+            });
+            return;
+        }
+
         let ext = path
             .extension()
             .and_then(|e| e.to_str())
@@ -216,6 +225,24 @@ pub fn pick_and_load_file(model: &Entity<AppState>, cx: &mut App) {
     }
 }
 
+/// 弹出原生封包选择器 (.sbeventpack, .sbactorpack, .pack, .sarc, .ssarc, .spack)
+pub fn pick_and_load_pack_file(model: &Entity<AppState>, cx: &mut App) {
+    let dialog = rfd::FileDialog::new()
+        .add_filter(
+            "Nintendo SARC Archives (*.sbeventpack, *.sbactorpack, *.pack, *.sarc, *.ssarc, *.spack)",
+            &["sbeventpack", "sbactorpack", "pack", "sarc", "ssarc", "spack", "bactorpack"],
+        )
+        .set_title("选择 BotW SARC 封包文件");
+
+    if let Some(path) = dialog.pick_file() {
+        let path_str = path.to_string_lossy().to_string();
+        model.update(cx, |st, cx| {
+            st.open_pack_file(&path_str);
+            cx.notify();
+        });
+    }
+}
+
 /// 弹出原生目录选择器
 pub fn pick_and_load_mod_folder(model: &Entity<AppState>, cx: &mut App) {
     let dialog = rfd::FileDialog::new()
@@ -223,24 +250,8 @@ pub fn pick_and_load_mod_folder(model: &Entity<AppState>, cx: &mut App) {
 
     if let Some(path) = dialog.pick_folder() {
         let path_str = path.to_string_lossy().to_string();
-        let folder_name = path
-            .file_name()
-            .map(|f| f.to_string_lossy().to_string())
-            .unwrap_or_else(|| "ModFolder".to_string());
-
         model.update(cx, |st, cx| {
-            st.current_tab = AppWorkspaceTab::Flowchart;
-            st.toast = Some(Toast::success(format!("🗂️ 成功加载 Mod 目录: {}", folder_name)));
-            st.recent_projects.insert(
-                0,
-                RecentProjectItem {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    name: folder_name,
-                    path: path_str,
-                    project_type: "mod".to_string(),
-                    preset_id: None,
-                },
-            );
+            st.open_project_directory(&path_str);
             cx.notify();
         });
     }

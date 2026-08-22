@@ -88,11 +88,22 @@ pub fn get_zh<'a>(key: &'a str) -> &'a str {
         "inspector.tip_quick_add" => "• 双击或右键画布空白处可快速唤出新建节点面板",
 
         // ---------------- 侧边栏与预设 (Sidebar & Presets) ----------------
+        "sidebar.tab_files" => "📁 资源",
         "sidebar.tab_entry_points" => "🏁 入口",
         "sidebar.tab_events" => "⚡ 事件",
         "sidebar.tab_actors" => "🎭 角色",
         "sidebar.tab_palette" => "📦 组件",
         "sidebar.tab_presets" => "🎮 案例",
+
+        "explorer.title" => "资源管理器",
+        "explorer.no_project" => "未打开项目或封包",
+        "explorer.open_mod" => "打开 Mod 目录",
+        "explorer.open_pack" => "打开 SARC 封包",
+        "explorer.new_bfevfl" => "新建 BFEVFL",
+        "explorer.refresh" => "刷新资源树",
+        "explorer.refresh_done" => "✨ 已刷新文件树与封包资源",
+        "explorer.collapse_all" => "全部折叠",
+        "explorer.search_placeholder" => "搜索文件或封包...",
 
         "sidebar.search_placeholder" => "搜索节点类型...",
         "sidebar.entry_points_title" => "🚩 流程入口列表",
@@ -172,6 +183,9 @@ pub fn get_zh<'a>(key: &'a str) -> &'a str {
         "toast.sever_edge" => "✂️ 已剪断连线",
         "toast.connect_edge" => "🔗 已建立连线",
         "toast.added_actor" => "✨ 已添加新角色定义: ",
+        "toast.project_loaded" => "🗂️ 成功载入项目: ",
+        "toast.file_loaded" => "📂 成功载入文件: ",
+        "toast.file_load_error" => "❌ 读取文件失败: ",
 
         // ---------------- 角色分类与关键参数 (Actor Theme & Smart Params) ----------------
         "actor.system" => "系统逻辑",

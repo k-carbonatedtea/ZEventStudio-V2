@@ -35,6 +35,7 @@ pub enum AppWorkspaceTab {
 }
 
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum WelcomeTab {
     #[default]
@@ -99,6 +100,14 @@ pub struct AppState {
     pub frame_time_ms: f32,
     pub show_welcome_on_startup: bool,
     pub lang: crate::i18n::Language,
+
+    // 资源管理器与项目目录/封包状态
+    pub project_path: Option<String>,
+    pub project_name: Option<String>,
+    pub file_tree: Vec<crate::model::FileNode>,
+    pub expanded_tree_paths: std::collections::HashSet<String>,
+    pub selected_file_path: Option<String>,
+    pub file_search_query: String,
 }
 
 
@@ -182,6 +191,12 @@ impl AppState {
             frame_time_ms: 1.0,
             show_welcome_on_startup: true,
             lang: crate::i18n::Language::Zh,
+            project_path: None,
+            project_name: None,
+            file_tree: Vec::new(),
+            expanded_tree_paths: std::collections::HashSet::new(),
+            selected_file_path: None,
+            file_search_query: String::new(),
         };
 
         state.fit_view();

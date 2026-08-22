@@ -11,5 +11,14 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1.10", features = ["v4", "fast-rng", "serde"] }
 revfl = { git = "https://github.com/k-carbonatedtea/Revfl" }
+roead = { version = "1.0.0", features = ["yaml"] }
+rayon = "1.10"
 smol = "2.0"
 rfd = "0.17.2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

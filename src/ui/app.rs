@@ -1,5 +1,5 @@
 use gpui::*;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use crate::ui::canvas::render_flow_canvas;
 use crate::ui::components::{handle_text_key_event, render_toast};
 use crate::ui::inspector::render_inspector;
@@ -23,6 +23,13 @@ impl AppView {
     pub fn new(cx: &mut Context<Self>) -> Self {
         let model = cx.new(|_| AppState::new());
         let focus_handle = cx.focus_handle();
+
+        // 观察 AppState 数据变化，响应式精准触发视图重绘
+        cx.observe(&model, |_, _, cx| {
+            cx.notify();
+        })
+        .detach();
+
         Self {
             model,
             frame_count: 0,
@@ -53,30 +60,11 @@ impl Render for AppView {
             self.last_fps_update = now;
         }
 
-        // 动态帧率控制与性能模式调度
+        // 极速性能模式调度：仅当显式开启性能模式且窗口激活时，才在每一帧请求下一帧刷新
         if is_perf && is_active {
             cx.on_next_frame(window, |_, _, cx| {
                 cx.notify();
             });
-            cx.spawn_in(window, async move |view, cx| {
-                let _ = cx.update(|_window, cx| {
-                    let _ = view.update(cx, |_, cx| {
-                        cx.notify();
-                    });
-                });
-            })
-            .detach();
-        } else {
-            let sleep_ms = if is_active { 7 } else { 33 };
-            cx.spawn_in(window, async move |view, cx| {
-                smol::Timer::after(Duration::from_millis(sleep_ms)).await;
-                let _ = cx.update(|_window, cx| {
-                    let _ = view.update(cx, |_, cx| {
-                        cx.notify();
-                    });
-                });
-            })
-            .detach();
         }
 
         let state = self.model.read(cx);
