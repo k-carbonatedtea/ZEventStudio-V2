@@ -39,6 +39,7 @@ pub struct AppState {
     pub active_sidebar_tab: SidebarTab,
     pub toast: Option<Toast>,
     pub quick_add_modal: Option<(f32, f32, Option<(String, String, PortDirection)>)>,
+    pub node_context_menu: Option<(String, (f32, f32))>,
 
     pub inspector_open: bool,
     pub sidebar_open: bool,
@@ -71,8 +72,10 @@ impl AppState {
             active_sidebar_tab: SidebarTab::EntryPoints,
             toast: Some(Toast::success(crate::i18n::t("toast.preset_loaded", crate::i18n::Language::Zh))),
             quick_add_modal: None,
+            node_context_menu: None,
             inspector_open: true,
             sidebar_open: true,
+
             search_query: String::new(),
             expand_all_params: false,
             performance_mode: false,

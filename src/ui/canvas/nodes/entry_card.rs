@@ -95,6 +95,7 @@ pub fn render_entry_card(
                 cx.notify();
             });
         })
+        // 鼠标右键点击节点卡片任何位置，呼出操作面板 (上方添加/下方添加/删除节点)
         .on_mouse_down(MouseButton::Right, move |e, _, cx| {
             let id = node_id_right.clone();
             let mx: f32 = e.position.x.into();
@@ -104,19 +105,14 @@ pub fn render_entry_card(
                     return;
                 }
                 state.selected_node_id = Some(id.clone());
-                let init_positions = state
-                    .graph
-                    .nodes
-                    .iter()
-                    .map(|n| (n.id.clone(), n.pos))
-                    .collect();
-                state.drag_state = DragState::DragNodes {
-                    start_mouse: (mx, my),
-                    initial_positions: init_positions,
-                };
+                let (canvas_x, canvas_y) = state.screen_to_canvas(mx, my);
+                state.node_context_menu = Some((id, (canvas_x, canvas_y)));
+                state.quick_add_modal = None;
+                state.drag_state = DragState::None;
                 cx.notify();
             });
         })
+
 
 
         // Entry Title Center

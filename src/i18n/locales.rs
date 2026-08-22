@@ -220,6 +220,20 @@ pub fn translate<'a>(key: &'a str, lang: Language) -> &'a str {
         ("quick_add.created_node", Language::Zh) => "✨ 已创建并自动连接新节点",
         ("quick_add.created_node", Language::En) => "✨ Created & Connected New Node",
 
+        // ---------------- 节点右键操作菜单 (Node Context Menu) ----------------
+        ("context_menu.node_actions", Language::Zh) => "节点操作",
+        ("context_menu.node_actions", Language::En) => "Node Actions",
+
+        ("context_menu.add_above", Language::Zh) => "⬆️ 在上方插入节点",
+        ("context_menu.add_above", Language::En) => "⬆️ Insert Node Above",
+
+        ("context_menu.add_below", Language::Zh) => "⬇️ 在下方插入节点",
+        ("context_menu.add_below", Language::En) => "⬇️ Insert Node Below",
+
+        ("context_menu.delete_node", Language::Zh) => "🗑️ 删除当前节点",
+        ("context_menu.delete_node", Language::En) => "🗑️ Delete Node",
+
+
 
         // 默认节点标题
         ("default_node.action", Language::Zh) => "新动作 (Action)",

@@ -103,7 +103,12 @@ pub fn render_quick_add_modal(
                 .flex()
                 .flex_col()
                 .gap_3()
-                .on_mouse_down(MouseButton::Left, |_, _, _| {}) // 阻止向底层画布冒泡
+                .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_down(MouseButton::Right, |_, _, cx| {
+                    cx.stop_propagation();
+                })
                 // 顶部标题
                 .child(
                     div()
@@ -156,9 +161,11 @@ pub fn render_quick_add_modal(
                                 })
                                 .cursor_pointer()
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                                    cx.stop_propagation();
                                     let node_k = k.clone();
                                     let src = src_conn.clone();
                                     let node_title = dt.clone();
+
                                     model_add.update(cx, |st, cx| {
                                         let new_id = st.add_node_at(node_k, node_title, canvas_pos);
 

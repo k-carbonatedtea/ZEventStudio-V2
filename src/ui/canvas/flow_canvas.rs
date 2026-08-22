@@ -1,4 +1,5 @@
 use gpui::*;
+use crate::ui::canvas::context_menu::render_node_context_menu;
 use crate::ui::canvas::edges::render_edges_layer;
 use crate::ui::canvas::grid::draw_canvas_grid;
 use crate::ui::canvas::groups::render_groups_layer;
@@ -14,6 +15,7 @@ pub fn render_flow_canvas(
     let zoom = state.zoom;
     let drag_state = state.drag_state.clone();
     let quick_add = state.quick_add_modal.clone();
+    let node_context = state.node_context_menu.clone();
 
     let model_mouse_down = model.clone();
     let model_mouse_move = model.clone();
@@ -32,18 +34,23 @@ pub fn render_flow_canvas(
             DragState::Connecting { .. } => CursorStyle::Crosshair,
             _ => CursorStyle::Arrow,
         })
-        // Mouse down on empty canvas (Ctrl + Left Click 或中键拖动画布)
+
+        // 视口平移机制：支持 Ctrl + 鼠标左键拖动画布，或中键直接拖拽平移
         .on_mouse_down(MouseButton::Left, move |e, _, cx| {
+            let is_ctrl = e.modifiers.control;
             let mx: f32 = e.position.x.into();
             let my: f32 = e.position.y.into();
-            let is_ctrl = e.modifiers.control;
             model_mouse_down.update(cx, |st, cx| {
                 // 如果子组件（如引脚已激活 Connecting，或节点标头已激活 DragNodes），则不重置状态
                 if matches!(st.drag_state, DragState::Connecting { .. } | DragState::DragNodes { .. }) {
                     return;
                 }
+                if st.node_context_menu.is_some() || st.quick_add_modal.is_some() {
+                    return;
+                }
                 st.selected_node_id = None;
                 st.quick_add_modal = None;
+                st.node_context_menu = None;
                 if is_ctrl {
                     st.drag_state = DragState::PanCanvas {
                         start_mouse: (mx, my),
@@ -54,6 +61,7 @@ pub fn render_flow_canvas(
                 }
                 cx.notify();
             });
+
         })
 
         // 中键鼠标按下直接平移画布
@@ -65,6 +73,7 @@ pub fn render_flow_canvas(
                 model_middle.update(cx, |st, cx| {
                     st.selected_node_id = None;
                     st.quick_add_modal = None;
+                    st.node_context_menu = None;
                     st.drag_state = DragState::PanCanvas {
                         start_mouse: (mx, my),
                         start_pan: st.pan,
@@ -91,7 +100,7 @@ pub fn render_flow_canvas(
                 let mx: f32 = e.position.x.into();
                 let my: f32 = e.position.y.into();
                 model_right.update(cx, |st, cx| {
-                    if matches!(st.drag_state, DragState::DragNodes { .. }) {
+                    if st.node_context_menu.is_some() || matches!(st.drag_state, DragState::DragNodes { .. }) {
                         return;
                     }
                     let (canvas_x, canvas_y) = st.screen_to_canvas(mx, my);
@@ -211,6 +220,11 @@ pub fn render_flow_canvas(
         .children(quick_add.map(|(cx, cy, src)| {
             render_quick_add_modal(state, (cx, cy), src, model)
         }))
+        // 6. Node Context Menu overlay if active
+        .children(node_context.map(|(nid, cpos)| {
+            render_node_context_menu(state, &nid, cpos, model)
+        }))
 }
+
 
 
