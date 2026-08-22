@@ -56,7 +56,23 @@ impl AppState {
                 });
             }
 
+            // 5. 提取 Action / Query / Switch 的参与 Actor 与动作/查询方法名
+            let mut actor_name = String::new();
+            let mut action_name = String::new();
+
+            if node_kind != NodeKind::SubFlow {
+                if let Some(ref sub) = node.subtitle {
+                    if let Some((act, act_or_q)) = sub.split_once(" :: ") {
+                        actor_name = act.trim().to_string();
+                        action_name = act_or_q.trim().to_string();
+                    } else if !sub.is_empty() {
+                        actor_name = sub.trim().to_string();
+                    }
+                }
+            }
+
             // 提取 Switch 分支或 Fork 并行流的目标节点
+
             let mut branches = Vec::new();
             match node_kind {
                 NodeKind::Switch => {
@@ -132,6 +148,10 @@ impl AppState {
                 node_kind,
                 title,
                 subtitle,
+                actor_name,
+                action_name,
+                show_actor_dropdown: false,
+                show_action_dropdown: false,
                 res_flowchart_name,
                 entry_point_name,
                 join_node_id,
@@ -189,7 +209,17 @@ impl AppState {
                         format!("{} :: {}", modal.res_flowchart_name, modal.entry_point_name)
                     };
                     node.subtitle = Some(sub);
+                } else if modal.node_kind == NodeKind::Action || modal.node_kind == NodeKind::Query {
+                    let sub = if modal.actor_name.is_empty() {
+                        None
+                    } else if modal.action_name.is_empty() {
+                        Some(modal.actor_name.clone())
+                    } else {
+                        Some(format!("{} :: {}", modal.actor_name, modal.action_name))
+                    };
+                    node.subtitle = sub;
                 } else {
+
                     node.subtitle = if modal.subtitle.is_empty() {
                         None
                     } else {
@@ -197,6 +227,7 @@ impl AppState {
                     };
                 }
                 node.properties = props;
+
 
 
                 // 同步 Switch / Fork 的分支输出引脚与连线

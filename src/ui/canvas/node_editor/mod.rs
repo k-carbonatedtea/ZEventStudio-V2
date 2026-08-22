@@ -2,6 +2,7 @@ use gpui::*;
 use crate::model::{NodeKind, PropertyItem};
 use crate::ui::state::AppState;
 
+pub mod actor_action_selectors;
 pub mod fork_editor;
 pub mod params_editor;
 pub mod subflow_editor;
@@ -11,6 +12,8 @@ pub use fork_editor::render_fork_editor;
 pub use params_editor::render_params_table_editor;
 pub use subflow_editor::render_subflow_editor;
 pub use switch_editor::render_switch_editor;
+
+
 
 /// 分支项目（用于 Switch 分支或 Fork 并行流）
 #[derive(Debug, Clone, PartialEq)]
@@ -40,6 +43,10 @@ pub struct NodeEditorModalState {
     pub node_kind: NodeKind,
     pub title: String,
     pub subtitle: String,
+    pub actor_name: String,
+    pub action_name: String,
+    pub show_actor_dropdown: bool,
+    pub show_action_dropdown: bool,
     pub res_flowchart_name: String,
     pub entry_point_name: String,
     pub join_node_id: Option<String>,
@@ -51,6 +58,7 @@ pub struct NodeEditorModalState {
     pub new_param_key: String,
     pub new_param_val: String,
 }
+
 
 
 /// 渲染节点属性与分支编辑模态框 (Node Editor Modal)

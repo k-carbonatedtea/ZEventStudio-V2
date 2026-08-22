@@ -185,10 +185,17 @@ pub fn get_zh(key: &str) -> &str {
         "modal.add_param" => "+ 添加参数...",
         "modal.no_params" => "暂无参数定义",
         "modal.no_fork_branches" => "暂无并行分支，请点击下方添加。",
+        "modal.select_actor" => "-- 请选择角色 --",
+        "modal.select_action" => "-- 请选择动作/条件 --",
+        "modal.autofill" => "自动填充",
+        "modal.sort_params" => "排序参数",
+        "modal.autofill_success" => "✨ 已自动填充标准动作参数",
+        "modal.sort_success" => "↓↑ 已按键名升序排列参数",
         "modal.type" => "类型",
         "modal.key" => "键",
         "modal.val" => "值",
         "modal.action" => "操作",
+
 
 
         // 默认节点标题

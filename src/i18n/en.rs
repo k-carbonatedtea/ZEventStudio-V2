@@ -190,10 +190,17 @@ pub fn get_en(key: &str) -> &str {
         "modal.add_param" => "+ Add Parameter...",
         "modal.no_params" => "No Parameters Defined",
         "modal.no_fork_branches" => "No parallel branches, click below to add.",
+        "modal.select_actor" => "-- Select Actor --",
+        "modal.select_action" => "-- Select Action/Query --",
+        "modal.autofill" => "Auto Fill",
+        "modal.sort_params" => "Sort Params",
+        "modal.autofill_success" => "✨ Auto-filled action parameters",
+        "modal.sort_success" => "↓↑ Sorted parameters by key",
         "modal.type" => "Type",
         "modal.key" => "Key",
         "modal.val" => "Value",
         "modal.action" => "Action",
+
 
 
         // 默认节点标题

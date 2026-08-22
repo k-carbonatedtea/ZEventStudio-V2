@@ -288,24 +288,12 @@ impl AppState {
 
     pub fn add_node_at(&mut self, kind: NodeKind, _fallback_title: impl Into<String>, pos: (f32, f32)) -> String {
         let (node_id, title) = self.graph.generate_unique_node_name(&kind);
-        let mut node = NodeData::new(node_id.clone(), title, kind.clone(), pos);
-        match kind {
-            NodeKind::Action => {
-                let def_actor = self.graph.nodes.iter().find_map(|n| n.subtitle.as_ref().and_then(|s| s.split(" :: ").next().map(|a| a.to_string()))).unwrap_or_else(|| "EventSystemActor".to_string());
-                node.subtitle = Some(format!("{} :: Demo_FlagOFF", def_actor));
-            }
-            NodeKind::Query => {
-                let def_actor = self.graph.nodes.iter().find_map(|n| n.subtitle.as_ref().and_then(|s| s.split(" :: ").next().map(|a| a.to_string()))).unwrap_or_else(|| "EventSystemActor".to_string());
-                node.subtitle = Some(format!("{} :: GeneralQuery", def_actor));
-            }
-            NodeKind::Switch => { node.subtitle = Some("EventFlags".to_string()); }
-            NodeKind::SubFlow => { node.subtitle = Some("CommonSubFlow".to_string()); }
-            _ => {}
-        }
+        let node = NodeData::new(node_id.clone(), title, kind, pos);
         self.graph.add_node(node);
         self.selected_node_id = Some(node_id.clone());
         node_id
     }
+
 
     pub fn delete_selected_node(&mut self) {
         if let Some(id) = self.selected_node_id.take() {
