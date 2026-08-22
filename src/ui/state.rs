@@ -1,4 +1,4 @@
-use crate::model::{auto_layout_graph, Edge, Graph, NodeData, NodeKind};
+use crate::model::{auto_layout_graph, Edge, Graph, NodeData, NodeKind, PortDirection};
 use crate::presets::{get_startup_preset, load_preset_by_id};
 use crate::ui::components::Toast;
 use crate::ui::sidebar::SidebarTab;
@@ -17,6 +17,7 @@ pub enum DragState {
     Connecting {
         source_node_id: String,
         source_port_id: String,
+        direction: PortDirection,
         source_pos: (f32, f32),
         current_mouse: (f32, f32),
     },
@@ -37,7 +38,8 @@ pub struct AppState {
     pub active_preset_id: String,
     pub active_sidebar_tab: SidebarTab,
     pub toast: Option<Toast>,
-    pub quick_add_modal: Option<(f32, f32, Option<(String, String)>)>,
+    pub quick_add_modal: Option<(f32, f32, Option<(String, String, PortDirection)>)>,
+
     pub inspector_open: bool,
     pub sidebar_open: bool,
     pub search_query: String,

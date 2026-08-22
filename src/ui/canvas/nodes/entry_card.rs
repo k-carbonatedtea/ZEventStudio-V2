@@ -11,8 +11,10 @@ pub fn render_entry_card(
     node_size: (f32, f32),
     zoom: f32,
     is_selected: bool,
+    connecting_state: &DragState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+
     let (screen_x, screen_y) = screen_pos;
     let (node_w, node_h) = node_size;
     let node_id = node.id.clone();
@@ -73,6 +75,9 @@ pub fn render_entry_card(
             let mx: f32 = e.position.x.into();
             let my: f32 = e.position.y.into();
             model_header_drag.update(cx, |state, cx| {
+                if matches!(state.drag_state, DragState::Connecting { .. }) {
+                    return;
+                }
                 state.selected_node_id = Some(id.clone());
                 let init_positions = state
                     .graph
@@ -87,6 +92,7 @@ pub fn render_entry_card(
                 cx.notify();
             });
         })
+
         // Entry Title Center
         .child(
             div()
@@ -110,10 +116,11 @@ pub fn render_entry_card(
                 .iter()
                 .map(|p| {
                     let offset = node.get_port_offset(&p.id, PortDirection::Output);
-                    render_absolute_output_socket(p, node, offset, z, socket_size, model)
+                    render_absolute_output_socket(p, node, offset, z, socket_size, connecting_state, model)
                 })
                 .collect::<Vec<_>>()
         } else {
             vec![]
         })
+
 }

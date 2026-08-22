@@ -1,13 +1,14 @@
 use gpui::*;
 use gpui::StatefulInteractiveElement;
-use crate::model::NodeKind;
+use crate::model::{NodeKind, PortDirection};
+use crate::ui::components::Toast;
 use crate::ui::state::AppState;
 
 /// 渲染双击/连线拉出时的快速新建节点浮层
 pub fn render_quick_add_modal(
     state: &AppState,
     canvas_pos: (f32, f32),
-    source_connection: Option<(String, String)>,
+    source_connection: Option<(String, String, PortDirection)>,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
     let node_types = vec![
@@ -62,19 +63,25 @@ pub fn render_quick_add_modal(
     ];
 
     let model_close = model.clone();
-    let status_hint = if source_connection.is_some() {
-        state.t("quick_add.auto_connect")
-    } else {
-        state.t("quick_add.click_create")
+    let status_hint = match &source_connection {
+        Some((_, _, PortDirection::Output)) => state.t("quick_add.auto_connect_in"),
+        Some((_, _, PortDirection::Input)) => state.t("quick_add.auto_connect_out"),
+        None => state.t("quick_add.click_create"),
     };
+
+    let (screen_mx, screen_my) = (
+        state.pan.0 + canvas_pos.0 * state.zoom,
+        state.pan.1 + canvas_pos.1 * state.zoom,
+    );
+    let modal_w = 340.0;
+    let modal_h = 380.0;
+    let pos_x = (screen_mx - 20.0).clamp(20.0, 2400.0 - modal_w);
+    let pos_y = (screen_my - 20.0).clamp(20.0, 1400.0 - modal_h);
 
     div()
         .absolute()
         .inset_0()
-        .bg(hsla(0.0, 0.0, 0.0, 0.45))
-        .flex()
-        .items_center()
-        .justify_center()
+        .bg(hsla(0.0, 0.0, 0.0, 0.35))
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             model_close.update(cx, |st, cx| {
                 st.quick_add_modal = None;
@@ -83,7 +90,10 @@ pub fn render_quick_add_modal(
         })
         .child(
             div()
-                .w(px(340.0))
+                .absolute()
+                .left(px(pos_x))
+                .top(px(pos_y))
+                .w(px(modal_w))
                 .rounded_xl()
                 .bg(hsla(220.0 / 360.0, 0.35, 0.14, 0.98))
                 .border_1()
@@ -113,7 +123,8 @@ pub fn render_quick_add_modal(
                         .child(
                             div()
                                 .text_size(px(11.0))
-                                .text_color(hsla(215.0 / 360.0, 0.3, 0.65, 1.0))
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(hsla(45.0 / 360.0, 0.95, 0.65, 1.0))
                                 .child(status_hint),
                         ),
                 )
@@ -151,17 +162,32 @@ pub fn render_quick_add_modal(
                                     model_add.update(cx, |st, cx| {
                                         let new_id = st.add_node_at(node_k, node_title, canvas_pos);
 
-                                        // 若由拉线触发，则自动连接到新节点第一个输入引脚
-                                        if let Some((s_node, s_port)) = src {
-                                            if let Some(target_n) = st.graph.find_node(&new_id) {
-                                                if let Some(first_in) = target_n.inputs.first() {
-                                                    let t_port = first_in.id.clone();
-                                                    st.connect_ports(&s_node, &s_port, &new_id, &t_port);
+                                        // 若由引脚长按拽出触发，根据方向自动建立连线
+                                        if let Some((s_node, s_port, dir)) = src {
+                                            match dir {
+                                                PortDirection::Output => {
+                                                    // 输出引脚拽出 -> 连接到新节点的第一个输入引脚
+                                                    if let Some(target_n) = st.graph.find_node(&new_id) {
+                                                        if let Some(first_in) = target_n.inputs.first() {
+                                                            let t_port = first_in.id.clone();
+                                                            st.connect_ports(&s_node, &s_port, &new_id, &t_port);
+                                                        }
+                                                    }
+                                                }
+                                                PortDirection::Input => {
+                                                    // 输入引脚拽出 -> 新节点的第一个输出引脚连接回原输入引脚
+                                                    if let Some(source_n) = st.graph.find_node(&new_id) {
+                                                        if let Some(first_out) = source_n.outputs.first() {
+                                                            let out_port = first_out.id.clone();
+                                                            st.connect_ports(&new_id, &out_port, &s_node, &s_port);
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
 
                                         st.quick_add_modal = None;
+                                        st.toast = Some(Toast::success(st.t("quick_add.created_node")));
                                         cx.notify();
                                     });
                                 })
@@ -182,4 +208,5 @@ pub fn render_quick_add_modal(
                 ),
         )
 }
+
 

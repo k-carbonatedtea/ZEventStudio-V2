@@ -44,12 +44,16 @@ pub fn render_edges_layer(
     let active_edges = active_node_id.map(|id| state.graph.get_active_path_edges(id)).unwrap_or_default();
     let is_tracing = active_node_id.is_some() && !active_edges.is_empty();
 
-    let live_connection = if let DragState::Connecting { source_pos, current_mouse, .. } = &state.drag_state {
+    let live_connection = if let DragState::Connecting { source_pos, current_mouse, direction, .. } = &state.drag_state {
         let (canvas_mx, canvas_my) = state.screen_to_canvas(current_mouse.0, current_mouse.1);
-        Some((*source_pos, (canvas_mx, canvas_my)))
+        match direction {
+            crate::model::PortDirection::Output => Some((*source_pos, (canvas_mx, canvas_my))),
+            crate::model::PortDirection::Input => Some(((canvas_mx, canvas_my), *source_pos)),
+        }
     } else {
         None
     };
+
 
     let edge_items_clone = edge_items.clone();
 

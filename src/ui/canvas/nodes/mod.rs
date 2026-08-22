@@ -70,8 +70,9 @@ fn render_single_node(
     let is_selected = selected_id.as_deref() == Some(&node.id);
 
     if node.kind == NodeKind::EntryPoint {
-        render_entry_card(state, node, screen_pos, node_size, zoom, is_selected, model)
+        render_entry_card(state, node, screen_pos, node_size, zoom, is_selected, connecting_state, model)
             .into_any_element()
+
 
     } else {
         render_event_card(

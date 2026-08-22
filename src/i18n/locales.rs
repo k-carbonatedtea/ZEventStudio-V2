@@ -208,8 +208,18 @@ pub fn translate<'a>(key: &'a str, lang: Language) -> &'a str {
         ("quick_add.auto_connect", Language::Zh) => "🔗 自动连接到新节点",
         ("quick_add.auto_connect", Language::En) => "🔗 Auto-connect to new node",
 
-        ("quick_add.click_create", Language::Zh) => "点击立即生成",
-        ("quick_add.click_create", Language::En) => "Click to create node",
+        ("quick_add.auto_connect_in", Language::Zh) => "🔗 自动接入输入端",
+        ("quick_add.auto_connect_in", Language::En) => "🔗 Auto-Connect Input",
+
+        ("quick_add.auto_connect_out", Language::Zh) => "🔗 自动引出输出端",
+        ("quick_add.auto_connect_out", Language::En) => "🔗 Auto-Connect Output",
+
+        ("quick_add.click_create", Language::Zh) => "点击类型快速创建",
+        ("quick_add.click_create", Language::En) => "Click to Create Node",
+
+        ("quick_add.created_node", Language::Zh) => "✨ 已创建并自动连接新节点",
+        ("quick_add.created_node", Language::En) => "✨ Created & Connected New Node",
+
 
         // 默认节点标题
         ("default_node.action", Language::Zh) => "新动作 (Action)",
@@ -334,5 +344,7 @@ pub fn translate<'a>(key: &'a str, lang: Language) -> &'a str {
         _ => key,
     }
 }
+
+
 
 

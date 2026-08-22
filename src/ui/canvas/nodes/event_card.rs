@@ -167,7 +167,7 @@ pub fn render_event_card(
                 .iter()
                 .map(|p| {
                     let offset = node.get_port_offset(&p.id, PortDirection::Input);
-                    render_absolute_input_socket(p, &node.id, offset, z, socket_size, connecting_state, model)
+                    render_absolute_input_socket(p, node, offset, z, socket_size, connecting_state, model)
                 })
                 .collect::<Vec<_>>()
         } else {
@@ -179,13 +179,14 @@ pub fn render_event_card(
                 .iter()
                 .map(|p| {
                     let offset = node.get_port_offset(&p.id, PortDirection::Output);
-                    render_absolute_output_socket(p, node, offset, z, socket_size, model)
+                    render_absolute_output_socket(p, node, offset, z, socket_size, connecting_state, model)
                 })
                 .collect::<Vec<_>>()
         } else {
             vec![]
         })
 }
+
 
 /// 渲染智能提炼的关键高频业务参数胶囊药丸 (Smart Parameter Highlights)
 fn render_smart_highlights(

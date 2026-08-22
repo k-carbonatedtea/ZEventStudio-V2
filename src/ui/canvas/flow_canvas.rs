@@ -32,19 +32,57 @@ pub fn render_flow_canvas(
             DragState::Connecting { .. } => CursorStyle::Crosshair,
             _ => CursorStyle::Arrow,
         })
-        // Mouse down on empty canvas
+        // Mouse down on empty canvas (Ctrl + Left Click 或中键拖动画布)
         .on_mouse_down(MouseButton::Left, move |e, _, cx| {
             let mx: f32 = e.position.x.into();
             let my: f32 = e.position.y.into();
+            let is_ctrl = e.modifiers.control;
             model_mouse_down.update(cx, |st, cx| {
+                // 如果子组件（如引脚已激活 Connecting，或节点标头已激活 DragNodes），则不重置状态
+                if matches!(st.drag_state, DragState::Connecting { .. } | DragState::DragNodes { .. }) {
+                    return;
+                }
                 st.selected_node_id = None;
                 st.quick_add_modal = None;
-                st.drag_state = DragState::PanCanvas {
-                    start_mouse: (mx, my),
-                    start_pan: st.pan,
-                };
+                if is_ctrl {
+                    st.drag_state = DragState::PanCanvas {
+                        start_mouse: (mx, my),
+                        start_pan: st.pan,
+                    };
+                } else {
+                    st.drag_state = DragState::None;
+                }
                 cx.notify();
             });
+        })
+
+        // 中键鼠标按下直接平移画布
+        .on_mouse_down(MouseButton::Middle, {
+            let model_middle = model.clone();
+            move |e, _, cx| {
+                let mx: f32 = e.position.x.into();
+                let my: f32 = e.position.y.into();
+                model_middle.update(cx, |st, cx| {
+                    st.selected_node_id = None;
+                    st.quick_add_modal = None;
+                    st.drag_state = DragState::PanCanvas {
+                        start_mouse: (mx, my),
+                        start_pan: st.pan,
+                    };
+                    cx.notify();
+                });
+            }
+        })
+        .on_mouse_up(MouseButton::Middle, {
+            let model_mid_up = model.clone();
+            move |_, _, cx| {
+                model_mid_up.update(cx, |st, cx| {
+                    if matches!(st.drag_state, DragState::PanCanvas { .. }) {
+                        st.drag_state = DragState::None;
+                        cx.notify();
+                    }
+                });
+            }
         })
         // Right click to open Quick Add modal at cursor
         .on_mouse_down(MouseButton::Right, {
@@ -59,6 +97,7 @@ pub fn render_flow_canvas(
                 });
             }
         })
+
         // Mouse move
         .on_mouse_move(move |e, _, cx| {
             let mx: f32 = e.position.x.into();
@@ -85,10 +124,11 @@ pub fn render_flow_canvas(
                         }
                         cx.notify();
                     }
-                    DragState::Connecting { source_node_id, source_port_id, source_pos, .. } => {
+                    DragState::Connecting { source_node_id, source_port_id, direction, source_pos, .. } => {
                         st.drag_state = DragState::Connecting {
                             source_node_id: source_node_id.clone(),
                             source_port_id: source_port_id.clone(),
+                            direction: *direction,
                             source_pos: *source_pos,
                             current_mouse: (mx, my),
                         };
@@ -98,20 +138,21 @@ pub fn render_flow_canvas(
                 }
             });
         })
-        // Mouse up
+        // Mouse up on empty canvas
         .on_mouse_up(MouseButton::Left, move |e, _, cx| {
             let mx: f32 = e.position.x.into();
             let my: f32 = e.position.y.into();
             model_mouse_up.update(cx, |st, cx| {
-                if let DragState::Connecting { source_node_id, source_port_id, .. } = &st.drag_state.clone() {
-                    // Releasing connecting wire on empty canvas pops up Quick Add
+                if let DragState::Connecting { source_node_id, source_port_id, direction, .. } = &st.drag_state.clone() {
+                    // 松开连线在空白画布上时，弹出快速新建节点浮层
                     let (canvas_x, canvas_y) = st.screen_to_canvas(mx, my);
-                    st.quick_add_modal = Some((canvas_x, canvas_y, Some((source_node_id.clone(), source_port_id.clone()))));
+                    st.quick_add_modal = Some((canvas_x, canvas_y, Some((source_node_id.clone(), source_port_id.clone(), *direction))));
                 }
                 st.drag_state = DragState::None;
                 cx.notify();
             });
         })
+
         // Scroll wheel to zoom
         .on_scroll_wheel(move |e, _, cx| {
             let dy: f32 = match e.delta {
