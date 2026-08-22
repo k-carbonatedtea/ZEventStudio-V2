@@ -1,5 +1,4 @@
 use crate::model::{auto_layout_graph, Edge, Graph, NodeData, NodeKind, PortDirection};
-use crate::presets::load_preset_by_id;
 use crate::ui::components::Toast;
 use crate::ui::sidebar::SidebarTab;
 
@@ -49,7 +48,21 @@ pub struct RecentProjectItem {
     pub name: String,
     pub path: String,
     pub project_type: String,
-    pub preset_id: Option<String>,
+}
+
+/// 快速新建节点时的源连接端口信息
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QuickAddConnectionSource {
+    pub node_id: String,
+    pub port_id: String,
+    pub direction: PortDirection,
+}
+
+/// 快速新建节点浮层的激活状态与位置
+#[derive(Debug, Clone, PartialEq)]
+pub struct QuickAddModalState {
+    pub position: (f32, f32),
+    pub source: Option<QuickAddConnectionSource>,
 }
 
 #[allow(dead_code)]
@@ -64,7 +77,6 @@ pub struct AppState {
     pub knife_mode: bool,
     pub canvas_origin: (f32, f32),
     pub fps: f32,
-    pub active_preset_id: String,
     pub active_sidebar_tab: SidebarTab,
     pub current_tab: AppWorkspaceTab,
     pub welcome_tab: WelcomeTab,
@@ -87,10 +99,9 @@ pub struct AppState {
     pub show_param_dropdown: bool,
     pub toast: Option<Toast>,
 
-
-
-    pub quick_add_modal: Option<(f32, f32, Option<(String, String, PortDirection)>)>,
+    pub quick_add_modal: Option<QuickAddModalState>,
     pub node_context_menu: Option<(String, (f32, f32))>,
+
 
     pub inspector_open: bool,
     pub sidebar_open: bool,
@@ -128,42 +139,12 @@ impl AppState {
             knife_mode: false,
             canvas_origin: (0.0, 0.0),
             fps: 60.0,
-            active_preset_id: String::new(),
             active_sidebar_tab: SidebarTab::EntryPoints,
             current_tab: AppWorkspaceTab::Welcome,
             welcome_tab: WelcomeTab::QuickStart,
 
 
-            recent_projects: vec![
-                RecentProjectItem {
-                    id: "rec_1".to_string(),
-                    name: "100enemy.bfevfl".to_string(),
-                    path: "romfs/Event/EventFlow/100enemy.bfevfl".to_string(),
-                    project_type: "bfevfl".to_string(),
-                    preset_id: Some("zelda_100enemy".to_string()),
-                },
-                RecentProjectItem {
-                    id: "rec_2".to_string(),
-                    name: "Quest_Dialogue.bfevfl".to_string(),
-                    path: "romfs/Event/EventFlow/Quest_Dialogue.bfevfl".to_string(),
-                    project_type: "bfevfl".to_string(),
-                    preset_id: Some("quest_dialogue".to_string()),
-                },
-                RecentProjectItem {
-                    id: "rec_3".to_string(),
-                    name: "Combat_AI.bfevfl".to_string(),
-                    path: "romfs/Event/EventFlow/Combat_AI.bfevfl".to_string(),
-                    project_type: "bfevfl".to_string(),
-                    preset_id: Some("combat_ai".to_string()),
-                },
-                RecentProjectItem {
-                    id: "rec_4".to_string(),
-                    name: "Signal_Math.bfevfl".to_string(),
-                    path: "romfs/Event/EventFlow/Signal_Math.bfevfl".to_string(),
-                    project_type: "bfevfl".to_string(),
-                    preset_id: Some("signal_math".to_string()),
-                },
-            ],
+            recent_projects: Vec::new(),
             selected_actor_idx: 0,
             is_adding_actor: false,
             new_actor_name: String::new(),
@@ -180,7 +161,7 @@ impl AppState {
             new_param_key: String::new(),
             new_param_val: "0".to_string(),
             show_param_dropdown: false,
-            toast: Some(Toast::success(crate::i18n::t("toast.preset_loaded", crate::i18n::Language::Zh))),
+            toast: None,
             quick_add_modal: None,
             node_context_menu: None,
             inspector_open: true,
@@ -206,7 +187,6 @@ impl AppState {
     pub fn new_blank_flow(&mut self) {
         self.graph = Graph::new("NewEventFlow");
         self.graph.ensure_actors_populated();
-        self.active_preset_id = "blank".to_string();
         self.current_tab = AppWorkspaceTab::Flowchart;
         self.toast = Some(Toast::success("✨ 已创建全新空白 EventFlow 流程图"));
     }
@@ -218,19 +198,6 @@ impl AppState {
         crate::i18n::t(key, self.lang)
     }
 
-    pub fn load_preset(&mut self, preset_id: &str) {
-        if let Some(mut g) = load_preset_by_id(preset_id) {
-            g.ensure_actors_populated();
-            self.graph = g;
-            self.active_preset_id = preset_id.to_string();
-            self.selected_node_id = None;
-            self.selected_actor_idx = 0;
-            self.update_node_sizes();
-            auto_layout_graph(&mut self.graph);
-            self.fit_view();
-            self.toast = Some(Toast::success(format!("{}{}", self.t("toast.switch_preset"), self.graph.name)));
-        }
-    }
 
 
     pub fn auto_layout(&mut self) {

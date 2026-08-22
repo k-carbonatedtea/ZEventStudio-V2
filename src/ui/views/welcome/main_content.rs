@@ -109,8 +109,6 @@ fn render_start_actions_section(
     let model_new = model.clone();
     let model_file = model.clone();
     let model_folder = model.clone();
-    let model_100 = model.clone();
-    let model_quest = model.clone();
 
     div()
         .flex()
@@ -135,29 +133,8 @@ fn render_start_actions_section(
         .child(render_link_action("🗂️", state.t("empty.openMod"), None, move |cx| {
             pick_and_load_mod_folder(&model_folder, cx);
         }))
-        .child(render_link_action("🗡️", "加载 100enemy 剑之试炼预设...", None, move |cx| {
-            load_preset_to_flowchart(&model_100, "zelda_100enemy", "📂 已加载 100enemy.bfevfl 官方二进制", cx);
-        }))
-        .child(render_link_action("🎮", "加载任务与对话事件流...", None, move |cx| {
-            load_preset_to_flowchart(&model_quest, "quest_dialogue", "📂 已加载任务与对话事件流", cx);
-        }))
 }
 
-fn load_preset_to_flowchart(model: &Entity<AppState>, preset_id: &str, toast_msg: &'static str, cx: &mut App) {
-    let pid = preset_id.to_string();
-    model.update(cx, |st, cx| {
-        if let Some(mut loaded) = crate::presets::load_preset_by_id(&pid) {
-            loaded.ensure_actors_populated();
-            crate::model::layout::auto_layout_graph(&mut loaded);
-            st.graph = loaded;
-            st.active_preset_id = pid;
-        }
-        st.fit_view();
-        st.current_tab = AppWorkspaceTab::Flowchart;
-        st.toast = Some(Toast::success(toast_msg));
-        cx.notify();
-    });
-}
 
 
 fn render_link_action<F>(
@@ -279,13 +256,8 @@ fn render_vs_recent_row(
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             let idata = item_clone.clone();
             model_open.update(cx, |st, cx| {
-                if let Some(ref pid) = idata.preset_id {
-                    if let Some(mut loaded) = crate::presets::load_preset_by_id(pid) {
-                        loaded.ensure_actors_populated();
-                        crate::model::layout::auto_layout_graph(&mut loaded);
-                        st.graph = loaded;
-                        st.active_preset_id = pid.clone();
-                    }
+                if !idata.path.is_empty() {
+                    st.load_file_by_path(&idata.path);
                 }
                 st.fit_view();
                 st.current_tab = AppWorkspaceTab::Flowchart;
@@ -293,6 +265,7 @@ fn render_vs_recent_row(
                 cx.notify();
             });
         })
+
         .child(
             div()
                 .flex()

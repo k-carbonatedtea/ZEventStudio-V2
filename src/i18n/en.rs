@@ -1,5 +1,5 @@
-/// English 本地化词典
-pub fn get_en<'a>(key: &'a str) -> &'a str {
+/// 英文 (English) 本地化词典
+pub fn get_en(key: &str) -> &str {
     match key {
         // ---------------- 顶部工具栏 (Toolbar) ----------------
         "toolbar.auto_layout" => "Auto Layout",
@@ -13,8 +13,9 @@ pub fn get_en<'a>(key: &'a str) -> &'a str {
         "toolbar.zoom_in" => "Zoom In",
         "toolbar.zoom_out" => "Zoom Out",
         "toolbar.reset_zoom" => "Reset Zoom",
-        "toolbar.sidebar" => "Presets Panel",
+        "toolbar.sidebar" => "Sidebar",
         "toolbar.inspector" => "Inspector",
+
         "toolbar.lang_btn" => "EN / 中",
         "toolbar.nodes_label" => "Nodes",
         "toolbar.edges_label" => "Edges",
@@ -77,23 +78,27 @@ pub fn get_en<'a>(key: &'a str) -> &'a str {
         "inspector.no_parameters" => "No custom parameters",
         "inspector.delete_node" => "🗑️ Delete Node",
         "inspector.topology_stats" => "📊 Graph Topology Stats",
-        "inspector.total_nodes" => "📦 Total Nodes",
-        "inspector.total_edges" => "🔗 Total Edges",
-        "inspector.stat_entry_points" => "🚩 Entry Points",
+        "inspector.total_nodes" => "Total Nodes:",
+        "inspector.total_edges" => "Total Edges:",
+        "inspector.total_actors" => "Referenced Actors:",
+        "inspector.total_events" => "Total Events:",
+        "inspector.entry_points" => "Entry Points:",
+        "inspector.graph_depth" => "Graph Depth (Ranks):",
+        "inspector.cyclic_edges" => "Cyclic Edges (Feedback):",
+        "inspector.max_layer_width" => "Max Layer Width:",
         "inspector.stat_actions" => "⚡ Actions",
         "inspector.stat_switches" => "🔀 Switches",
-        "inspector.tips_title" => "💡 Interaction Tips",
+        "inspector.tips_title" => "Interaction Hints",
         "inspector.tip_entry_jump" => "• Click 'Entry Points' on left sidebar to jump to flow",
-        "inspector.tip_pan_zoom" => "• Drag canvas to pan, wheel to zoom, drag nodes to move",
-        "inspector.tip_quick_add" => "• Right click or drag wire on canvas to open Quick Add",
+        "inspector.tip_pan_zoom" => "• Drag canvas to pan, scroll wheel to zoom, drag node to move",
+        "inspector.tip_quick_add" => "• Double-click or right-click canvas to open Quick Add modal",
 
-        // ---------------- 侧边栏与预设 (Sidebar & Presets) ----------------
+        // ---------------- 侧边栏 (Sidebar) ----------------
         "sidebar.tab_files" => "📁 Files",
         "sidebar.tab_entry_points" => "🏁 Entry",
         "sidebar.tab_events" => "⚡ Events",
         "sidebar.tab_actors" => "🎭 Actors",
         "sidebar.tab_palette" => "📦 Nodes",
-        "sidebar.tab_presets" => "🎮 Presets",
 
         "explorer.title" => "Explorer",
         "explorer.no_project" => "No Project Loaded",
@@ -171,8 +176,6 @@ pub fn get_en<'a>(key: &'a str) -> &'a str {
         "default_node.comment" => "Note (Comment)",
 
         // ---------------- Toast 提示信息 (Toast Notifications) ----------------
-        "toast.preset_loaded" => "⚡ Loaded 100enemy.bfevfl official EVFL graph",
-        "toast.switch_preset" => "Switched to preset: ",
         "toast.auto_layout_done" => "✨ DAG hierarchical layout completed",
         "toast.perf_on" => "🔥 Extreme Perf Mode Enabled (Uncapped GPU Rendering)",
         "toast.perf_off" => "🌿 Standard Mode Restored (Dynamic Power Saving)",

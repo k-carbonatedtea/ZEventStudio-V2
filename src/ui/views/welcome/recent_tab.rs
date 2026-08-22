@@ -128,13 +128,8 @@ fn render_recent_item_row(
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             let item_data = item_clone.clone();
             model_open.update(cx, |st, cx| {
-                if let Some(ref preset_id) = item_data.preset_id {
-                    if let Some(mut loaded) = crate::presets::load_preset_by_id(preset_id) {
-                        loaded.ensure_actors_populated();
-                        crate::model::layout::auto_layout_graph(&mut loaded);
-                        st.graph = loaded;
-                        st.active_preset_id = preset_id.clone();
-                    }
+                if !item_data.path.is_empty() {
+                    st.load_file_by_path(&item_data.path);
                 }
                 st.fit_view();
                 st.current_tab = AppWorkspaceTab::Flowchart;
@@ -142,6 +137,7 @@ fn render_recent_item_row(
                 cx.notify();
             });
         })
+
         .child(
             div()
                 .flex()

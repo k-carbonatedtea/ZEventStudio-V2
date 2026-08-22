@@ -8,6 +8,18 @@ use event_card::render_event_card;
 use crate::model::{NodeData, NodeKind};
 use crate::ui::state::{AppState, DragState};
 
+/// 节点卡片渲染参数上下文
+pub struct NodeRenderContext<'a> {
+    pub screen_pos: (f32, f32),
+    pub node_size: (f32, f32),
+    pub zoom: f32,
+    pub is_selected: bool,
+    pub connecting_state: &'a DragState,
+    pub active_path_nodes: Option<&'a std::collections::HashSet<String>>,
+    pub expand_all: bool,
+    pub model: &'a Entity<AppState>,
+}
+
 /// 渲染画布节点图层 (带视口边界裁剪 Viewport Culling 与链路追踪全局缓存)
 pub fn render_nodes_layer(
     state: &AppState,
@@ -52,61 +64,31 @@ pub fn render_nodes_layer(
                 return None;
             }
 
-            Some(render_single_node(
-                state,
-                node,
-                (screen_x, screen_y),
-                (node_w, node_h),
+            let is_selected = selected_id.as_deref() == Some(&node.id);
+            let ctx = NodeRenderContext {
+                screen_pos: (screen_x, screen_y),
+                node_size: (node_w, node_h),
                 zoom,
-                &selected_id,
-                &connecting_state,
-                active_path_nodes.as_ref(),
+                is_selected,
+                connecting_state: &connecting_state,
+                active_path_nodes: active_path_nodes.as_ref(),
                 expand_all,
                 model,
-            ))
+            };
+
+            Some(render_single_node(state, node, &ctx))
         }))
 }
 
 fn render_single_node(
     state: &AppState,
     node: &NodeData,
-    screen_pos: (f32, f32),
-    node_size: (f32, f32),
-    zoom: f32,
-    selected_id: &Option<String>,
-    connecting_state: &DragState,
-    active_path_nodes: Option<&std::collections::HashSet<String>>,
-    expand_all: bool,
-    model: &Entity<AppState>,
+    ctx: &NodeRenderContext,
 ) -> impl IntoElement {
-    let is_selected = selected_id.as_deref() == Some(&node.id);
-
     if node.kind == NodeKind::EntryPoint {
-        render_entry_card(
-            state,
-            node,
-            screen_pos,
-            node_size,
-            zoom,
-            is_selected,
-            connecting_state,
-            active_path_nodes,
-            model,
-        )
-        .into_any_element()
+        render_entry_card(state, node, ctx).into_any_element()
     } else {
-        render_event_card(
-            state,
-            node,
-            screen_pos,
-            node_size,
-            zoom,
-            is_selected,
-            connecting_state,
-            active_path_nodes,
-            expand_all,
-            model,
-        )
-        .into_any_element()
+        render_event_card(state, node, ctx).into_any_element()
     }
 }
+

@@ -3,7 +3,6 @@ pub mod entry_points;
 pub mod events_list;
 pub mod files_manager;
 pub mod node_palette;
-pub mod preset_list;
 
 use gpui::*;
 use crate::ui::sidebar::actors_manager::render_actors_manager;
@@ -11,7 +10,6 @@ use crate::ui::sidebar::entry_points::render_entry_point_list;
 use crate::ui::sidebar::events_list::render_events_list;
 use crate::ui::sidebar::files_manager::render_files_manager;
 use crate::ui::sidebar::node_palette::render_node_palette;
-use crate::ui::sidebar::preset_list::render_preset_list;
 use crate::ui::state::AppState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -21,10 +19,9 @@ pub enum SidebarTab {
     Events,
     Actors,
     Palette,
-    Presets,
 }
 
-/// 渲染左侧导航侧边栏 (支持资源文件/流程入口/事件列表/角色管理/组件库/预设案例)
+/// 渲染左侧导航侧边栏 (支持资源文件/流程入口/事件列表/角色管理/组件库)
 pub fn render_sidebar(
     state: &AppState,
     model: &Entity<AppState>,
@@ -37,7 +34,6 @@ pub fn render_sidebar(
     let model_tab_ev = model.clone();
     let model_tab_act = model.clone();
     let model_tab_pal = model.clone();
-    let model_tab_pre = model.clone();
 
     div()
         .w(px(280.0))
@@ -89,13 +85,6 @@ pub fn render_sidebar(
                     active_tab == SidebarTab::Palette,
                     SidebarTab::Palette,
                     &model_tab_pal,
-                ))
-                // 5. 案例
-                .child(render_tab_btn(
-                    state.t("sidebar.tab_presets"),
-                    active_tab == SidebarTab::Presets,
-                    SidebarTab::Presets,
-                    &model_tab_pre,
                 )),
         )
         // 搜索过滤栏 (在事件/角色/组件 Tab 下展示)
@@ -156,12 +145,12 @@ pub fn render_sidebar(
                     SidebarTab::Events => render_events_list(state, model).into_any_element(),
                     SidebarTab::Actors => render_actors_manager(state, model).into_any_element(),
                     SidebarTab::Palette => render_node_palette(state, model).into_any_element(),
-                    SidebarTab::Presets => render_preset_list(state, model).into_any_element(),
                 }),
         )
 }
 
 fn render_tab_btn(
+
     title: &'static str,
     is_active: bool,
     target_tab: SidebarTab,

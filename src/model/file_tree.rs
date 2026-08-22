@@ -199,18 +199,19 @@ pub fn read_file_from_path(path: &str) -> Result<Vec<u8>, String> {
         }
         let mut data = fs::read(parts[0]).map_err(|e| e.to_string())?;
 
-        for i in 1..parts.len() {
+        for inner_name in parts.iter().skip(1) {
             let decompressed = roead::yaz0::decompress(&data).unwrap_or_else(|_| data.clone());
             let sarc = Sarc::new(&decompressed).map_err(|e| e.to_string())?;
-            let inner_name = parts[i];
             let inner_norm = inner_name.replace('\\', "/");
+
 
             data = sarc
                 .files()
                 .find(|f| {
                     if let Some(name) = f.name() {
-                        name == inner_name || name.replace('\\', "/") == inner_norm
+                        name == *inner_name || name.replace('\\', "/") == inner_norm
                     } else {
+
                         false
                     }
                 })

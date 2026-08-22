@@ -30,6 +30,7 @@ impl Language {
 
 /// 统一国际化文本获取函数
 #[inline]
-pub fn t<'a>(key: &'a str, lang: Language) -> &'a str {
+pub fn t(key: &str, lang: Language) -> &str {
     locales::translate(key, lang)
 }
+

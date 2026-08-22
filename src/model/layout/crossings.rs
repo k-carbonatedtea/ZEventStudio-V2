@@ -1,11 +1,14 @@
 use crate::model::graph::Graph;
 use std::collections::HashMap;
 
+/// 端口物理偏移偏置映射类型
+pub type PortBiasMaps = (HashMap<(String, String), f32>, HashMap<(String, String), f32>);
+
 /// 计算图谱连线所对应的引脚物理偏移权重 (Port-Aware Biases)
 pub fn compute_port_biases(
     graph: &Graph,
     augmented_edges: &[(String, String)],
-) -> (HashMap<(String, String), f32>, HashMap<(String, String), f32>) {
+) -> PortBiasMaps {
     let mut orig_out_bias: HashMap<(String, String), f32> = HashMap::new();
     let mut orig_in_bias: HashMap<(String, String), f32> = HashMap::new();
 
@@ -37,11 +40,12 @@ pub fn compute_port_biases(
         if let Some(&b) = orig_out_bias.get(&(u.clone(), v.clone())) {
             out_biases.insert((u.clone(), v.clone()), b);
         } else if v.starts_with("__dummy_") {
-            let target = v.split('_').last().unwrap_or(v);
+            let target = v.split('_').next_back().unwrap_or(v);
             if let Some(&b) = orig_out_bias.get(&(u.clone(), target.to_string())) {
                 out_biases.insert((u.clone(), v.clone()), b);
             }
         }
+
 
         if let Some(&b) = orig_in_bias.get(&(u.clone(), v.clone())) {
             in_biases.insert((u.clone(), v.clone()), b);

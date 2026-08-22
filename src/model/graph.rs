@@ -78,7 +78,9 @@ impl Graph {
 
     /// 提取并汇总图谱中所有引用的 Actor 角色及其动作、查询与关联节点
     pub fn get_actors_summary(&self) -> Vec<super::actor::ActorInfo> {
-        let mut map: HashMap<String, (HashSet<String>, HashSet<String>, Vec<String>)> = HashMap::new();
+        type ActorSummaryEntry = (HashSet<String>, HashSet<String>, Vec<String>);
+        let mut map: HashMap<String, ActorSummaryEntry> = HashMap::new();
+
 
         for node in &self.nodes {
             if let Some(sub) = &node.subtitle {

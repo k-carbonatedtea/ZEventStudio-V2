@@ -1,6 +1,7 @@
 use gpui::*;
 use crate::model::PortDirection;
-use crate::ui::state::AppState;
+use crate::ui::state::{AppState, QuickAddConnectionSource, QuickAddModalState};
+
 
 /// 渲染节点右键上下文快捷操作菜单 (Node Context Menu: 上方插入/下方插入/删除节点)
 pub fn render_node_context_menu(
@@ -115,11 +116,14 @@ pub fn render_node_context_menu(
                                             .map(|p| p.id.clone())
                                             .unwrap_or_else(|| "in".to_string());
                                         let insert_pos = (target_node.pos.0, target_node.pos.1 - 120.0);
-                                        st.quick_add_modal = Some((
-                                            insert_pos.0,
-                                            insert_pos.1,
-                                            Some((n_id.clone(), port_id, PortDirection::Input)),
-                                        ));
+                                        st.quick_add_modal = Some(QuickAddModalState {
+                                            position: (insert_pos.0, insert_pos.1),
+                                            source: Some(QuickAddConnectionSource {
+                                                node_id: n_id.clone(),
+                                                port_id,
+                                                direction: PortDirection::Input,
+                                            }),
+                                        });
                                     }
                                     st.node_context_menu = None;
                                     cx.notify();
@@ -157,11 +161,14 @@ pub fn render_node_context_menu(
                                             source_node.pos.0,
                                             source_node.pos.1 + source_node.size.1 + 80.0,
                                         );
-                                        st.quick_add_modal = Some((
-                                            insert_pos.0,
-                                            insert_pos.1,
-                                            Some((n_id.clone(), port_id, PortDirection::Output)),
-                                        ));
+                                        st.quick_add_modal = Some(QuickAddModalState {
+                                            position: (insert_pos.0, insert_pos.1),
+                                            source: Some(QuickAddConnectionSource {
+                                                node_id: n_id.clone(),
+                                                port_id,
+                                                direction: PortDirection::Output,
+                                            }),
+                                        });
                                     }
                                     st.node_context_menu = None;
                                     cx.notify();

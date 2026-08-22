@@ -108,11 +108,14 @@ pub fn render_node_detail(
                         .font_weight(FontWeight::BOLD)
                         .text_color(hsla(215.0 / 360.0, 0.2, 0.7, 1.0))
                         .child(format!(
-                            "{} ({} / {})",
+                            "{} ({}: {} / {}: {})",
                             state.t("inspector.ports_summary"),
-                            format!("{}: {}", state.t("inspector.port_in"), node.inputs.len()),
-                            format!("{}: {}", state.t("inspector.port_out"), node.outputs.len())
+                            state.t("inspector.port_in"),
+                            node.inputs.len(),
+                            state.t("inspector.port_out"),
+                            node.outputs.len()
                         )),
+
                 )
                 .child(
                     div()

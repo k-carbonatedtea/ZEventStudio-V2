@@ -189,7 +189,6 @@ pub fn pick_and_load_file(model: &Entity<AppState>, cx: &mut App) {
                         crate::model::layout::auto_layout_graph(&mut loaded_graph);
                         st.graph = loaded_graph;
                         st.fit_view();
-                        st.active_preset_id = "custom_file".to_string();
                         st.current_tab = AppWorkspaceTab::Flowchart;
                         st.toast = Some(Toast::success(format!("📂 成功加载: {}", file_name)));
                         st.recent_projects.insert(
@@ -199,7 +198,6 @@ pub fn pick_and_load_file(model: &Entity<AppState>, cx: &mut App) {
                                 name: file_name.clone(),
                                 path: path_str.clone(),
                                 project_type: ext.clone(),
-                                preset_id: None,
                             },
                         );
                         cx.notify();
@@ -217,10 +215,10 @@ pub fn pick_and_load_file(model: &Entity<AppState>, cx: &mut App) {
                     name: file_name,
                     path: path_str,
                     project_type: ext,
-                    preset_id: None,
                 },
             );
             cx.notify();
+
         });
     }
 }

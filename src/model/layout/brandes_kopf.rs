@@ -30,8 +30,7 @@ pub fn brandes_kopf_coordinates(
     // 2. 迭代进行弹簧/重心松弛与对称居中 (Centering & Alignment Passes)
     for _ in 0..12 {
         // 自顶向下对齐 (Top-to-Bottom: Align with parents)
-        for r in 1..max_rank {
-            let layer = &layers[r];
+        for layer in layers.iter().take(max_rank).skip(1) {
             for id in layer {
                 align_with_neighbors(id, preds, &mut coords);
             }
@@ -40,8 +39,7 @@ pub fn brandes_kopf_coordinates(
         }
 
         // 自底向上对齐 (Bottom-to-Top: Align with children)
-        for r in (0..max_rank - 1).rev() {
-            let layer = &layers[r];
+        for layer in layers.iter().take(max_rank.saturating_sub(1)).rev() {
             for id in layer {
                 align_with_neighbors(id, succs, &mut coords);
             }
@@ -49,6 +47,7 @@ pub fn brandes_kopf_coordinates(
             enforce_layer_spacing(layer, nodes, &mut coords, node_spacing_x);
         }
     }
+
 
     // 3. 对称居中微调：确保分叉与汇合点完美处于父/子节点群的几何中心
     for layer in layers {

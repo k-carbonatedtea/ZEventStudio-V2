@@ -54,7 +54,7 @@ impl AppState {
                     }
                 }
 
-                let ext = path.split('.').last().unwrap_or("pack").to_string();
+                let ext = path.split('.').next_back().unwrap_or("pack").to_string();
                 self.add_recent_project(name.clone(), path.to_string(), ext);
                 self.active_sidebar_tab = SidebarTab::Files;
                 self.toast = Some(Toast::success(format!("{} {}", self.t("toast.project_loaded"), name)));
@@ -94,16 +94,18 @@ impl AppState {
         self.selected_file_path = Some(path.to_string());
 
         let raw_name = path
-            .split("//")
-            .last()
+            .rsplit("//")
+            .next()
             .unwrap_or(path)
-            .split('/')
-            .last()
+            .rsplit('/')
+            .next()
             .unwrap_or(path)
-            .split('\\')
-            .last()
+            .rsplit('\\')
+            .next()
             .unwrap_or(path)
             .to_string();
+
+
 
         let lower_name = raw_name.to_lowercase();
 
@@ -155,8 +157,8 @@ impl AppState {
                 name,
                 path,
                 project_type,
-                preset_id: None,
             },
+
         );
     }
 }

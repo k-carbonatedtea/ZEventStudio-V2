@@ -1,34 +1,10 @@
 # Rust / Cargo
 /target/
 target/
-src-tauri/target/
-**/*.rs.bk
 *.pdb
-
-# Tauri
-/src-tauri/gen/schemas/
-
-# Node & Frontend
-node_modules/
-dist/
-dist-ssr/
-*.local
-.env*.local
-.npm/
-.eslintcache
-.stylelintcache
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+**/*.rs.bk
 
 # Backups & Temporary files
-src_react_backup/
 *.bak
 *.backup
 *.tmp
@@ -44,19 +20,10 @@ src_react_backup/
 !.vscode/launch.json
 .idea/
 *.iml
-.fleet/
 .zed/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
 
 # OS Generated Files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 desktop.ini
+

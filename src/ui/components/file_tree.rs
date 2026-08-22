@@ -131,16 +131,11 @@ fn render_file_tree_node(
                 ),
         )
         // 渲染子节点列表
-        .children(if is_container && is_expanded {
-            if let Some(children) = &node.children {
-                Some(render_file_tree(children, state, model, level + 1))
-            } else {
-                None
-            }
-        } else {
-            None
-        })
+        .children((is_container && is_expanded).then(|| {
+            node.children.as_ref().map(|children| render_file_tree(children, state, model, level + 1))
+        }).flatten())
 }
+
 
 /// 根据文件/封包属性获取对应展示图标
 fn get_node_icon(node: &FileNode) -> &'static str {

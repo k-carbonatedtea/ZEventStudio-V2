@@ -5,7 +5,8 @@ use crate::ui::canvas::grid::draw_canvas_grid;
 use crate::ui::canvas::groups::render_groups_layer;
 use crate::ui::canvas::nodes::render_nodes_layer;
 use crate::ui::quick_add::render_quick_add_modal;
-use crate::ui::state::{AppState, DragState};
+use crate::ui::state::{AppState, DragState, QuickAddConnectionSource, QuickAddModalState};
+
 
 pub fn render_flow_canvas(
     state: &AppState,
@@ -104,8 +105,12 @@ pub fn render_flow_canvas(
                         return;
                     }
                     let (canvas_x, canvas_y) = st.screen_to_canvas(mx, my);
-                    st.quick_add_modal = Some((canvas_x, canvas_y, None));
+                    st.quick_add_modal = Some(QuickAddModalState {
+                        position: (canvas_x, canvas_y),
+                        source: None,
+                    });
                     cx.notify();
+
                 });
             }
         })
@@ -170,7 +175,14 @@ pub fn render_flow_canvas(
                 if let DragState::Connecting { source_node_id, source_port_id, direction, .. } = &st.drag_state.clone() {
                     // 松开连线在空白画布上时，弹出快速新建节点浮层
                     let (canvas_x, canvas_y) = st.screen_to_canvas(mx, my);
-                    st.quick_add_modal = Some((canvas_x, canvas_y, Some((source_node_id.clone(), source_port_id.clone(), *direction))));
+                    st.quick_add_modal = Some(QuickAddModalState {
+                        position: (canvas_x, canvas_y),
+                        source: Some(QuickAddConnectionSource {
+                            node_id: source_node_id.clone(),
+                            port_id: source_port_id.clone(),
+                            direction: *direction,
+                        }),
+                    });
                 }
                 st.drag_state = DragState::None;
                 cx.notify();
@@ -217,14 +229,15 @@ pub fn render_flow_canvas(
         // 4. Nodes Layer
         .child(render_nodes_layer(state, model))
         // 5. Quick Add modal overlay if active
-        .children(quick_add.map(|(cx, cy, src)| {
-            render_quick_add_modal(state, (cx, cy), src, model)
+        .children(quick_add.map(|qa| {
+            render_quick_add_modal(state, qa.position, qa.source, model)
         }))
         // 6. Node Context Menu overlay if active
         .children(node_context.map(|(nid, cpos)| {
             render_node_context_menu(state, &nid, cpos, model)
         }))
 }
+
 
 
 

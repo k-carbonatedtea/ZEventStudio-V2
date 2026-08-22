@@ -1,0 +1,6 @@
+[target.'cfg(all())']
+rustflags = ["-A", "linker_messages"]
+
+[future-incompat-report]
+frequency = "never"
+

@@ -1,13 +1,15 @@
 pub mod i18n;
 mod model;
-mod presets;
 mod ui;
+
 
 use gpui::*;
 use ui::AppView;
 
+/// 主应用程序入口函数
 fn main() {
     gpui_platform::application().run(|cx: &mut App| {
+        // 初始化 gpui-component 基础组件系统
         gpui_component::init(cx);
 
         let window_options = WindowOptions {
@@ -17,7 +19,7 @@ fn main() {
                 cx,
             ))),
             titlebar: Some(TitlebarOptions {
-                title: Some("NodeFlow Studio - GPU-Accelerated Nodeflow Editor".into()),
+                title: Some("ZEvent Studio - GPU-Accelerated Nodeflow Editor".into()),
                 appears_transparent: false,
                 traffic_light_position: None,
             }),
@@ -25,8 +27,9 @@ fn main() {
         };
 
         cx.open_window(window_options, |_, cx| {
-            cx.new(|cx| AppView::new(cx))
+            cx.new(AppView::new)
         })
-        .expect("Failed to open NodeFlow Studio main window");
+        .expect("Failed to open ZEvent Studio main window");
     });
 }
+

@@ -1,5 +1,6 @@
 use gpui::*;
 use super::socket::{render_absolute_input_socket, render_absolute_output_socket};
+use super::NodeRenderContext;
 use crate::model::{KeyHighlight, NodeData, PortDirection, PropertyItem};
 use crate::ui::state::{AppState, DragState};
 
@@ -7,19 +8,12 @@ use crate::ui::state::{AppState, DragState};
 pub fn render_event_card(
     state: &AppState,
     node: &NodeData,
-    screen_pos: (f32, f32),
-    node_size: (f32, f32),
-    zoom: f32,
-    is_selected: bool,
-    connecting_state: &DragState,
-    active_path_nodes: Option<&std::collections::HashSet<String>>,
-    expand_all: bool,
-    model: &Entity<AppState>,
+    ctx: &NodeRenderContext,
 ) -> impl IntoElement {
-    let (screen_x, screen_y) = screen_pos;
-    let (node_w, node_h) = node_size;
+    let (screen_x, screen_y) = ctx.screen_pos;
+    let (node_w, node_h) = ctx.node_size;
 
-    let z = zoom;
+    let z = ctx.zoom;
 
     let socket_size = (9.0 * z).clamp(3.0, 12.0);
     let font_title = (11.5 * z).clamp(2.0, 20.0);
@@ -33,14 +27,14 @@ pub fn render_event_card(
     let highlights = node.extract_key_highlights();
 
     // 链路追踪 (Flow Tracing) O(1) 快速判定
-    let (is_on_active_path, is_unrelated) = if let Some(path_set) = active_path_nodes {
+    let (is_on_active_path, is_unrelated) = if let Some(path_set) = ctx.active_path_nodes {
         let on_path = path_set.contains(&node.id);
         (on_path, !on_path)
     } else {
         (false, false)
     };
 
-    let card_border = if is_selected {
+    let card_border = if ctx.is_selected {
         hsla(45.0 / 360.0, 0.98, 0.60, 1.0) // 选中金黄色发光 #fbbf24
     } else if is_on_active_path {
         hsla(45.0 / 360.0, 0.85, 0.50, 0.90) // 链路上游/下游节点
@@ -52,8 +46,8 @@ pub fn render_event_card(
 
     let node_id_left = node.id.clone();
     let node_id_right = node.id.clone();
-    let model_drag_left = model.clone();
-    let model_drag_right = model.clone();
+    let model_drag_left = ctx.model.clone();
+    let model_drag_right = ctx.model.clone();
 
     let mut card = div()
         .id(SharedString::from(format!("node_{}", node.id)))
@@ -176,7 +170,7 @@ pub fn render_event_card(
                         .child(sub.clone())
                 }))
                 // 3. 核心高频业务参数胶囊 / 完整参数列表
-                .children(if expand_all {
+                .children(if ctx.expand_all {
                     render_full_parameters(state, &node.properties, z)
                 } else {
                     render_smart_highlights(&highlights, z)
@@ -188,7 +182,7 @@ pub fn render_event_card(
                 .iter()
                 .map(|p| {
                     let offset = node.get_port_offset(&p.id, PortDirection::Input);
-                    render_absolute_input_socket(p, node, offset, z, socket_size, connecting_state, model)
+                    render_absolute_input_socket(p, node, offset, z, socket_size, ctx.connecting_state, ctx.model)
                 })
                 .collect::<Vec<_>>()
         } else {
@@ -200,13 +194,14 @@ pub fn render_event_card(
                 .iter()
                 .map(|p| {
                     let offset = node.get_port_offset(&p.id, PortDirection::Output);
-                    render_absolute_output_socket(p, node, offset, z, socket_size, connecting_state, model)
+                    render_absolute_output_socket(p, node, offset, z, socket_size, ctx.connecting_state, ctx.model)
                 })
                 .collect::<Vec<_>>()
         } else {
             vec![]
         })
 }
+
 
 
 /// 渲染智能提炼的关键高频业务参数胶囊药丸 (Smart Parameter Highlights)

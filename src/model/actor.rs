@@ -162,7 +162,8 @@ pub fn extract_node_highlights(node: &NodeData) -> Vec<KeyHighlight> {
 
     // 1. 对白消息 (MessageId)
     if let Some(msg) = node.properties.iter().find(|p| p.key == "MessageId") {
-        let short_msg = msg.val.split(':').last().unwrap_or(&msg.val);
+        let short_msg = msg.val.split(':').next_back().unwrap_or(&msg.val);
+
         highlights.push(KeyHighlight {
             label: "对白".to_string(),
             value: short_msg.to_string(),

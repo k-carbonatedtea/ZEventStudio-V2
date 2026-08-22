@@ -102,19 +102,23 @@ pub fn assign_ranks(
     ranks
 }
 
+/// 虚拟节点插入与分层划分的返回结果
+#[derive(Debug, Clone)]
+pub struct DummyNodeAugmentResult {
+    pub augmented_nodes: HashMap<String, LayoutNode>,
+    pub augmented_edges: Vec<(String, String)>,
+    pub layers: Vec<Vec<String>>,
+    pub max_rank: usize,
+    pub edge_dummy_map: HashMap<(String, String), Vec<String>>,
+}
+
 /// 插入虚拟过渡节点 (Dummy Nodes) 消除跨层连线并记录航点映射
 pub fn insert_dummy_nodes(
     comp_nodes: &HashMap<String, LayoutNode>,
     comp_edges: &[(String, String)],
     ranks: &HashMap<String, usize>,
     node_indices: &HashMap<String, usize>,
-) -> (
-    HashMap<String, LayoutNode>,
-    Vec<(String, String)>,
-    Vec<Vec<String>>,
-    usize,
-    HashMap<(String, String), Vec<String>>,
-) {
+) -> DummyNodeAugmentResult {
     let mut augmented_nodes = comp_nodes.clone();
     let mut augmented_edges: Vec<(String, String)> = Vec::new();
     let mut edge_dummy_map: HashMap<(String, String), Vec<String>> = HashMap::new();
@@ -164,16 +168,15 @@ pub fn insert_dummy_nodes(
         layers[node.rank].push(node.id.clone());
     }
 
-    for r in 0..=max_rank {
-        layers[r].sort_by_key(|id| {
-            if let Some(&idx) = node_indices.get(id) {
-                idx
-            } else {
-                999999
-            }
-        });
+    for layer in layers.iter_mut().take(max_rank + 1) {
+        layer.sort_by_key(|id| node_indices.get(id).copied().unwrap_or(999999));
     }
 
-    (augmented_nodes, augmented_edges, layers, max_rank, edge_dummy_map)
+    DummyNodeAugmentResult {
+        augmented_nodes,
+        augmented_edges,
+        layers,
+        max_rank,
+        edge_dummy_map,
+    }
 }
-

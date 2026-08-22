@@ -2,15 +2,16 @@ use gpui::*;
 use gpui::StatefulInteractiveElement;
 use crate::model::{NodeKind, PortDirection};
 use crate::ui::components::Toast;
-use crate::ui::state::AppState;
+use crate::ui::state::{AppState, QuickAddConnectionSource};
 
 /// 渲染双击/连线拉出时的快速新建节点浮层
 pub fn render_quick_add_modal(
     state: &AppState,
     canvas_pos: (f32, f32),
-    source_connection: Option<(String, String, PortDirection)>,
+    source_connection: Option<QuickAddConnectionSource>,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+
     let node_types = vec![
         (
             NodeKind::Action,
@@ -64,10 +65,11 @@ pub fn render_quick_add_modal(
 
     let model_close = model.clone();
     let status_hint = match &source_connection {
-        Some((_, _, PortDirection::Output)) => state.t("quick_add.auto_connect_in"),
-        Some((_, _, PortDirection::Input)) => state.t("quick_add.auto_connect_out"),
-        None => state.t("quick_add.click_create"),
+        Some(src) if src.direction == PortDirection::Output => state.t("quick_add.auto_connect_in"),
+        Some(src) if src.direction == PortDirection::Input => state.t("quick_add.auto_connect_out"),
+        _ => state.t("quick_add.click_create"),
     };
+
 
     let (screen_mx, screen_my) = (
         state.pan.0 + canvas_pos.0 * state.zoom,
@@ -170,14 +172,14 @@ pub fn render_quick_add_modal(
                                         let new_id = st.add_node_at(node_k, node_title, canvas_pos);
 
                                         // 若由引脚长按拽出触发，根据方向自动建立连线
-                                        if let Some((s_node, s_port, dir)) = src {
-                                            match dir {
+                                        if let Some(src_info) = src {
+                                            match src_info.direction {
                                                 PortDirection::Output => {
                                                     // 输出引脚拽出 -> 连接到新节点的第一个输入引脚
                                                     if let Some(target_n) = st.graph.find_node(&new_id) {
                                                         if let Some(first_in) = target_n.inputs.first() {
                                                             let t_port = first_in.id.clone();
-                                                            st.connect_ports(&s_node, &s_port, &new_id, &t_port);
+                                                            st.connect_ports(&src_info.node_id, &src_info.port_id, &new_id, &t_port);
                                                         }
                                                     }
                                                 }
@@ -186,12 +188,13 @@ pub fn render_quick_add_modal(
                                                     if let Some(source_n) = st.graph.find_node(&new_id) {
                                                         if let Some(first_out) = source_n.outputs.first() {
                                                             let out_port = first_out.id.clone();
-                                                            st.connect_ports(&new_id, &out_port, &s_node, &s_port);
+                                                            st.connect_ports(&new_id, &out_port, &src_info.node_id, &src_info.port_id);
                                                         }
                                                     }
                                                 }
                                             }
                                         }
+
 
                                         st.quick_add_modal = None;
                                         st.toast = Some(Toast::success(st.t("quick_add.created_node")));

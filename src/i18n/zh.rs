@@ -1,6 +1,7 @@
 /// 中文 (Simplified Chinese) 本地化词典
-pub fn get_zh<'a>(key: &'a str) -> &'a str {
+pub fn get_zh(key: &str) -> &str {
     match key {
+
         // ---------------- 顶部工具栏 (Toolbar) ----------------
         "toolbar.auto_layout" => "自动排版",
         "toolbar.expand_params" => "展开参数",
@@ -93,7 +94,6 @@ pub fn get_zh<'a>(key: &'a str) -> &'a str {
         "sidebar.tab_events" => "⚡ 事件",
         "sidebar.tab_actors" => "🎭 角色",
         "sidebar.tab_palette" => "📦 组件",
-        "sidebar.tab_presets" => "🎮 案例",
 
         "explorer.title" => "资源管理器",
         "explorer.no_project" => "未打开项目或封包",
@@ -171,9 +171,8 @@ pub fn get_zh<'a>(key: &'a str) -> &'a str {
         "default_node.comment" => "便签备注 (Comment)",
 
         // ---------------- Toast 提示信息 (Toast Notifications) ----------------
-        "toast.preset_loaded" => "⚡ 已成功载入 100enemy.bfevfl 官方 EVFL 事件流",
-        "toast.switch_preset" => "已切换至案例：",
         "toast.auto_layout_done" => "✨ 已完成 DAG 拓扑分层自动排版",
+
         "toast.perf_on" => "🔥 极速性能模式已开启：GPU 全速无锁帧渲染",
         "toast.perf_off" => "🌿 标准模式已恢复：动态按需省电渲染",
         "toast.expand_params_on" => "📋 已展开全部节点参数详情",

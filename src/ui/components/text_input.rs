@@ -8,7 +8,8 @@ pub fn render_blinking_cursor(color: Hsla) -> impl IntoElement {
         .map(|d| d.as_millis())
         .unwrap_or(0);
     // 530ms 周期闪烁 (前 530ms 显示，后 530ms 隐藏)
-    let is_visible = (now_ms / 530) % 2 == 0;
+    let is_visible = (now_ms / 530).is_multiple_of(2);
+
 
     div()
         .w(px(2.0))
