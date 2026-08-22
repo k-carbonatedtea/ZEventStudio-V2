@@ -33,9 +33,29 @@ impl Graph {
         }
     }
 
+    /// 根据 EVFL 命名规范生成唯一的节点名称与 ID (如 Event0, Event1, Event59 ... 不与现有节点冲突)
+    pub fn generate_unique_node_name(&self, kind: &NodeKind) -> (String, String) {
+        let prefix = match kind {
+            NodeKind::EntryPoint => "EntryPoint",
+            _ => "Event",
+        };
+
+        let mut counter = self.nodes.len();
+        let mut name = format!("{}{}", prefix, counter);
+        while self.nodes.iter().any(|n| n.id == name || n.title == name) {
+            counter += 1;
+            name = format!("{}{}", prefix, counter);
+        }
+
+        let id = name.clone();
+        let title = name;
+        (id, title)
+    }
+
     pub fn add_node(&mut self, node: NodeData) {
         self.nodes.push(node);
     }
+
 
     pub fn remove_node(&mut self, node_id: &str) {
         self.nodes.retain(|n| n.id != node_id);
