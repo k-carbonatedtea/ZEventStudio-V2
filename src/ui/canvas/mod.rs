@@ -7,7 +7,8 @@ pub mod node_editor;
 pub mod nodes;
 
 pub use flow_canvas::render_flow_canvas;
-pub use node_editor::{render_node_editor_modal, BranchItem, NodeEditorModalState};
+pub use node_editor::{render_node_editor_modal, NodeEditorModalState};
+
 
 
 

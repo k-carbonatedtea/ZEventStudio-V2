@@ -19,6 +19,20 @@ pub struct BranchItem {
     pub target_id: String,
 }
 
+/// 节点编辑模态框当前激活的键盘可输入字段
+#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ActiveEditField {
+
+    None,
+    FlowchartName,
+    EntryPointName,
+    BranchValue(usize),
+    BranchTarget(usize),
+    ParamKey(usize),
+    ParamVal(usize),
+}
+
 /// 节点编辑模态框全局状态
 #[derive(Debug, Clone, PartialEq)]
 pub struct NodeEditorModalState {
@@ -31,11 +45,13 @@ pub struct NodeEditorModalState {
     pub join_node_id: Option<String>,
     pub branches: Vec<BranchItem>,
     pub properties: Vec<PropertyItem>,
+    pub active_field: ActiveEditField,
     pub is_adding_param: bool,
     pub new_param_type: String,
     pub new_param_key: String,
     pub new_param_val: String,
 }
+
 
 /// 渲染节点属性与分支编辑模态框 (Node Editor Modal)
 pub fn render_node_editor_modal(

@@ -1,5 +1,5 @@
 use crate::model::{Edge, NodeKind, Port, PropertyItem};
-use crate::ui::canvas::{BranchItem, NodeEditorModalState};
+use crate::ui::canvas::node_editor::{ActiveEditField, BranchItem, NodeEditorModalState};
 use crate::ui::components::Toast;
 use crate::ui::state::AppState;
 
@@ -12,17 +12,49 @@ impl AppState {
             let subtitle = node.subtitle.clone().unwrap_or_default();
             let properties = node.properties.clone();
 
-            let res_flowchart_name = properties
+            // 1. 精确提取 SubFlow 的流程图名称 (Flowchart / ResFlowchartName)
+            let mut res_flowchart_name = properties
                 .iter()
-                .find(|p| p.key == "ResFlowchartName")
+                .find(|p| {
+                    p.key.eq_ignore_ascii_case("flowchart")
+                        || p.key.eq_ignore_ascii_case("resflowchartname")
+                })
                 .map(|p| p.val.clone())
                 .unwrap_or_default();
 
-            let entry_point_name = properties
+            // 2. 精确提取 SubFlow 的入口点名称 (EntryPoint / EntryPointName)
+            let mut entry_point_name = properties
                 .iter()
-                .find(|p| p.key == "EntryPointName")
+                .find(|p| {
+                    p.key.eq_ignore_ascii_case("entrypoint")
+                        || p.key.eq_ignore_ascii_case("entrypointname")
+                })
                 .map(|p| p.val.clone())
                 .unwrap_or_default();
+
+            // 3. 若属性未显式定义，从副标题 subtitle ("Flowchart :: EntryPoint") 中智能解析
+            if res_flowchart_name.is_empty() && entry_point_name.is_empty() {
+                if let Some(ref sub) = node.subtitle {
+                    if let Some((fc, ep)) = sub.split_once(" :: ") {
+                        res_flowchart_name = fc.trim().to_string();
+                        entry_point_name = ep.trim().to_string();
+                    } else if !sub.is_empty() {
+                        entry_point_name = sub.trim().to_string();
+                    }
+                }
+            }
+
+            // 4. 对 SubFlow 节点，从通用参数列表中过滤 Flowchart 与 EntryPoint 伪属性，
+            // 避免在下方的“参数属性 (Parameters)”表格中重复列出
+            let mut clean_properties = properties;
+            if node_kind == NodeKind::SubFlow {
+                clean_properties.retain(|p| {
+                    !p.key.eq_ignore_ascii_case("flowchart")
+                        && !p.key.eq_ignore_ascii_case("resflowchartname")
+                        && !p.key.eq_ignore_ascii_case("entrypoint")
+                        && !p.key.eq_ignore_ascii_case("entrypointname")
+                });
+            }
 
             // 提取 Switch 分支或 Fork 并行流的目标节点
             let mut branches = Vec::new();
@@ -104,7 +136,8 @@ impl AppState {
                 entry_point_name,
                 join_node_id,
                 branches,
-                properties,
+                properties: clean_properties,
+                active_field: ActiveEditField::None,
                 is_adding_param: false,
                 new_param_type: "Int".to_string(),
                 new_param_key: String::new(),
@@ -127,39 +160,44 @@ impl AppState {
 
             if let Some(node) = self.graph.find_node_mut(&node_id) {
                 node.title = modal.title.clone();
-                node.subtitle = if modal.subtitle.is_empty() {
-                    None
-                } else {
-                    Some(modal.subtitle.clone())
-                };
-
                 let mut props = modal.properties.clone();
 
                 if modal.node_kind == NodeKind::SubFlow {
-                    if !modal.res_flowchart_name.is_empty() {
-                        if let Some(p) = props.iter_mut().find(|p| p.key == "ResFlowchartName") {
-                            p.val = modal.res_flowchart_name.clone();
-                        } else {
-                            props.push(PropertyItem {
-                                key: "ResFlowchartName".into(),
-                                val: modal.res_flowchart_name.clone(),
-                                val_type: "string".into(),
-                            });
-                        }
-                    }
+                    props.retain(|p| {
+                        !p.key.eq_ignore_ascii_case("flowchart")
+                            && !p.key.eq_ignore_ascii_case("resflowchartname")
+                            && !p.key.eq_ignore_ascii_case("entrypoint")
+                            && !p.key.eq_ignore_ascii_case("entrypointname")
+                    });
                     if !modal.entry_point_name.is_empty() {
-                        if let Some(p) = props.iter_mut().find(|p| p.key == "EntryPointName") {
-                            p.val = modal.entry_point_name.clone();
-                        } else {
-                            props.push(PropertyItem {
-                                key: "EntryPointName".into(),
-                                val: modal.entry_point_name.clone(),
-                                val_type: "string".into(),
-                            });
-                        }
+                        props.push(PropertyItem {
+                            key: "EntryPoint".to_string(),
+                            val: modal.entry_point_name.clone(),
+                            val_type: "string".to_string(),
+                        });
                     }
+                    if !modal.res_flowchart_name.is_empty() {
+                        props.push(PropertyItem {
+                            key: "Flowchart".to_string(),
+                            val: modal.res_flowchart_name.clone(),
+                            val_type: "string".to_string(),
+                        });
+                    }
+                    let sub = if modal.res_flowchart_name.is_empty() {
+                        modal.entry_point_name.clone()
+                    } else {
+                        format!("{} :: {}", modal.res_flowchart_name, modal.entry_point_name)
+                    };
+                    node.subtitle = Some(sub);
+                } else {
+                    node.subtitle = if modal.subtitle.is_empty() {
+                        None
+                    } else {
+                        Some(modal.subtitle.clone())
+                    };
                 }
                 node.properties = props;
+
 
                 // 同步 Switch / Fork 的分支输出引脚与连线
                 if matches!(modal.node_kind, NodeKind::Switch | NodeKind::Fork) {

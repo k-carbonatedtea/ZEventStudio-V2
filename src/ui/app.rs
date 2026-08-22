@@ -161,6 +161,73 @@ impl Render for AppView {
                     return;
                 }
 
+                let mut modal_handled = false;
+                model_key.update(cx, |st, cx| {
+                    if let Some(ref mut modal) = st.active_node_editor_modal {
+                        modal_handled = true;
+                        let mut should_notify = false;
+                        match modal.active_field {
+                            crate::ui::canvas::node_editor::ActiveEditField::FlowchartName => {
+                                let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.res_flowchart_name, event);
+                                if is_esc { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::None; }
+                                if is_enter { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::EntryPointName; }
+                                should_notify = changed || is_enter || is_esc;
+                            }
+                            crate::ui::canvas::node_editor::ActiveEditField::EntryPointName => {
+                                let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.entry_point_name, event);
+                                if is_esc || is_enter { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::None; }
+                                should_notify = changed || is_enter || is_esc;
+                            }
+                            crate::ui::canvas::node_editor::ActiveEditField::BranchValue(idx) => {
+                                if idx < modal.branches.len() {
+                                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.branches[idx].value, event);
+                                    if is_esc || is_enter { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::None; }
+                                    should_notify = changed || is_enter || is_esc;
+                                }
+                            }
+                            crate::ui::canvas::node_editor::ActiveEditField::BranchTarget(idx) => {
+                                if idx < modal.branches.len() {
+                                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.branches[idx].target_id, event);
+                                    if is_esc || is_enter { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::None; }
+                                    should_notify = changed || is_enter || is_esc;
+                                }
+                            }
+                            crate::ui::canvas::node_editor::ActiveEditField::ParamKey(idx) => {
+                                if idx < modal.properties.len() {
+                                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.properties[idx].key, event);
+                                    if is_esc { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::None; }
+                                    if is_enter { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::ParamVal(idx); }
+                                    should_notify = changed || is_enter || is_esc;
+                                }
+                            }
+                            crate::ui::canvas::node_editor::ActiveEditField::ParamVal(idx) => {
+                                if idx < modal.properties.len() {
+                                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.properties[idx].val, event);
+                                    if is_esc || is_enter { modal.active_field = crate::ui::canvas::node_editor::ActiveEditField::None; }
+                                    should_notify = changed || is_enter || is_esc;
+                                }
+                            }
+                            crate::ui::canvas::node_editor::ActiveEditField::None => {
+                                if event.keystroke.key == "escape" {
+                                    st.active_node_editor_modal = None;
+                                    should_notify = true;
+                                } else if event.keystroke.key == "enter" {
+                                    st.save_node_editor();
+                                    should_notify = true;
+                                }
+                            }
+                        }
+                        if should_notify {
+                            cx.notify();
+                        }
+                    }
+                });
+
+                if modal_handled {
+                    return;
+                }
+
+
 
                 model_key.update(cx, |st, cx| {
                     if st.is_adding_action {
