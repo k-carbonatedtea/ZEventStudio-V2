@@ -66,7 +66,7 @@ pub fn is_graph_modified(current: &Graph, original: &Graph) -> bool {
         return true;
     }
 
-    // 3. 逐个节点属性、副标题、端口引脚与坐标比对
+    // 3. 逐个节点属性、副标题与端口引脚比对 (不比对画布位置坐标，移动节点位置不计入修改)
     for orig_node in &original.nodes {
         if let Some(curr_node) = current.find_node(&orig_node.id) {
             if curr_node.title != orig_node.title
@@ -75,8 +75,6 @@ pub fn is_graph_modified(current: &Graph, original: &Graph) -> bool {
                 || curr_node.properties != orig_node.properties
                 || curr_node.inputs != orig_node.inputs
                 || curr_node.outputs != orig_node.outputs
-                || (curr_node.pos.0 - orig_node.pos.0).abs() > 0.5
-                || (curr_node.pos.1 - orig_node.pos.1).abs() > 0.5
             {
                 return true;
             }
@@ -84,6 +82,7 @@ pub fn is_graph_modified(current: &Graph, original: &Graph) -> bool {
             return true;
         }
     }
+
 
     // 4. 连线拓扑比对
     for orig_edge in &original.edges {
@@ -122,5 +121,18 @@ mod tests {
         current.remove_node("Node2");
         assert!(!is_graph_modified(&current, &original));
     }
+
+    #[test]
+    fn test_is_graph_modified_move_node_does_not_count_as_modified() {
+        let mut original = Graph::new("TestFlow");
+        original.add_node(NodeData::new("Node1", "Event1", NodeKind::Action, (100.0, 100.0)));
+
+        let mut current = original.clone();
+        // 移动节点在画布上的坐标
+        current.find_node_mut("Node1").unwrap().pos = (500.0, 600.0);
+        // 节点位置不属于 EVFL 文件实质内容，不应被计为修改
+        assert!(!is_graph_modified(&current, &original));
+    }
 }
+
 
