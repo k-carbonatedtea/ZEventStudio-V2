@@ -64,7 +64,7 @@ pub fn brandes_kopf_coordinates(
         }
     }
 
-    // 4. 入口点与顶层主干全局居中：确保 EntryPoint 节点与起始主干严格位于整图水平中轴线上
+    // 4. 入口点与顶层主干全局居中：确保 EntryPoint 节点与起始主干严格位于整图水平中轴线上 如果不需要强制入口点可注释掉这段代码
     let mut all_min = f32::INFINITY;
     let mut all_max = f32::NEG_INFINITY;
     for (id, &x) in coords.iter() {
@@ -93,7 +93,6 @@ pub fn brandes_kopf_coordinates(
 
     coords
 }
-
 
 /// 辅助函数：将节点对齐到其邻居节点群的平均 X 坐标
 fn align_with_neighbors(
@@ -147,7 +146,6 @@ fn center_join_node(
         }
     }
 }
-
 
 /// 强制同层节点从左向右保持最小间距，并在中心发生偏移时进行对称平移
 pub fn enforce_layer_spacing(
