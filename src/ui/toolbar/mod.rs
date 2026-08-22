@@ -1,16 +1,14 @@
 pub mod branding;
 pub mod controls;
 pub mod status_pill;
-pub mod zoom_group;
 
 use gpui::*;
 use branding::render_branding;
 use controls::render_controls;
 use status_pill::render_status_pill;
-use zoom_group::render_zoom_group;
 use crate::ui::state::AppState;
 
-/// 渲染顶部现代化玻璃拟态工具栏 (Logo/Branding + Central Controls + Zoom + Status Pill)
+/// 渲染顶部现代化玻璃拟态工具栏 (Logo/Branding + Central Controls + Status Pill)
 pub fn render_toolbar(
     state: &AppState,
     fps: f32,
@@ -30,15 +28,14 @@ pub fn render_toolbar(
         .shadow_md()
         // Left: Logo & Active Graph Tag
         .child(render_branding(state))
-        // Center: Interactive Controls & Zoom Capsule
+        // Center: Interactive Controls (Auto Layout, Expand Params, Knife Mode)
         .child(
             div()
                 .flex()
                 .items_center()
                 .gap_2p5()
-                .child(render_controls(state, model))
-                .child(render_zoom_group(state, model)),
+                .child(render_controls(state, model)),
         )
-        // Right: Language Switch & FPS Indicator Badge
+        // Right: Language Switch & FPS / Performance Pill (点击切换性能/省电模式)
         .child(render_status_pill(state, fps, frame_time, model))
 }
