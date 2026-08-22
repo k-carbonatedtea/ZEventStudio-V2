@@ -203,15 +203,18 @@ pub fn render_flow_canvas(
         })
 
 
-        // Scroll wheel to zoom
+        // Scroll wheel to zoom (当模态框激活时不缩放背景画布)
         .on_scroll_wheel(move |e, _, cx| {
-            let dy: f32 = match e.delta {
-                ScrollDelta::Pixels(pt) => pt.y.into(),
-                ScrollDelta::Lines(pt) => pt.y * 20.0,
-            };
-            let zoom_factor = if dy > 0.0 { 1.08 } else { 0.92 };
-
             model_scroll.update(cx, |st, cx| {
+                if st.active_node_editor_modal.is_some() || st.quick_add_modal.is_some() {
+                    return;
+                }
+                let dy: f32 = match e.delta {
+                    ScrollDelta::Pixels(pt) => pt.y.into(),
+                    ScrollDelta::Lines(pt) => pt.y * 20.0,
+                };
+                let zoom_factor = if dy > 0.0 { 1.08 } else { 0.92 };
+
                 let old_zoom = st.zoom;
                 let new_zoom = (old_zoom * zoom_factor).clamp(0.25, 2.5);
 
@@ -226,6 +229,7 @@ pub fn render_flow_canvas(
                 cx.notify();
             });
         })
+
         // 1. Background Grid
         .child(
             canvas(

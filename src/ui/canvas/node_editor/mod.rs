@@ -4,14 +4,23 @@ use crate::ui::state::AppState;
 
 pub mod actor_action_selectors;
 pub mod fork_editor;
+pub mod param_row;
 pub mod params_editor;
 pub mod subflow_editor;
 pub mod switch_editor;
 
+#[allow(unused_imports)]
 pub use fork_editor::render_fork_editor;
+#[allow(unused_imports)]
+pub use param_row::render_param_row;
+#[allow(unused_imports)]
 pub use params_editor::render_params_table_editor;
+#[allow(unused_imports)]
 pub use subflow_editor::render_subflow_editor;
+#[allow(unused_imports)]
 pub use switch_editor::render_switch_editor;
+
+
 
 
 
@@ -94,13 +103,15 @@ pub fn render_node_editor_modal(
         .flex()
         .items_center()
         .justify_center()
+        .on_scroll_wheel(|_, _, cx| {
+            cx.stop_propagation();
+        })
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             model_cancel.update(cx, |st, cx| {
                 st.close_node_editor();
                 cx.notify();
             });
         })
-
         .child(
             div()
                 .w(px(580.0))
@@ -113,6 +124,9 @@ pub fn render_node_editor_modal(
                 .flex()
                 .flex_col()
                 .overflow_hidden()
+                .on_scroll_wheel(|_, _, cx| {
+                    cx.stop_propagation();
+                })
                 .on_mouse_down(MouseButton::Left, |_, _, cx| {
                     cx.stop_propagation();
                 })
