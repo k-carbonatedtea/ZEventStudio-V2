@@ -56,11 +56,17 @@ pub fn get_zh(key: &str) -> &str {
         "events_view.select_prompt" => "请选择上方列表中的事件以查看详情与参数",
         "events_view.jump_to_flowchart" => "🎯 跳转至流程图定位",
 
+        // ---------------- 顶部多标签栏 (Document Tab Bar) ----------------
+        "tab_bar.close_tab" => "关闭标签页",
+        "tab_bar.new_tab" => "新建流程图",
+        "tab_bar.untitled" => "未命名流程图",
+
         // ---------------- 节点卡片与图形 (Nodes & Canvas) ----------------
         "node.parameters_label" => "参数属性 (Parameters):",
         "node.wait_join" => "等待并发分支汇合",
         "node.fork_count" => "分支数",
         "edge.cut" => "✂ 剪断",
+
 
         // ---------------- 属性检查器 (Inspector) ----------------
         "inspector.title" => "属性检查器",

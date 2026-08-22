@@ -56,11 +56,17 @@ pub fn get_en(key: &str) -> &str {
         "events_view.select_prompt" => "Select an event from the table above to view details",
         "events_view.jump_to_flowchart" => "🎯 Focus in Flowchart",
 
+        // ---------------- 顶部多标签栏 (Document Tab Bar) ----------------
+        "tab_bar.close_tab" => "Close Tab",
+        "tab_bar.new_tab" => "New Flowchart",
+        "tab_bar.untitled" => "Untitled Flowchart",
+
         // ---------------- 节点卡片与图形 (Nodes & Canvas) ----------------
         "node.parameters_label" => "Parameters:",
         "node.wait_join" => "Wait for parallel join",
         "node.fork_count" => "Forks",
         "edge.cut" => "✂ Cut",
+
 
         // ---------------- 属性检查器 (Inspector) ----------------
         "inspector.title" => "Inspector",

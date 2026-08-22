@@ -327,9 +327,27 @@ impl Render for AppView {
                             .overflow_hidden()
                             .child(render_sidebar(state, &self.model))
                             .child(crate::ui::sidebar::render_sidebar_resize_handle(state, &self.model))
-                            .child(render_flow_canvas(state, &self.model))
-                            .child(render_inspector(state, &self.model))
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .flex()
+                                    .flex_col()
+                                    .size_full()
+                                    .overflow_hidden()
+                                    // 顶部多文档/多文件标签栏 (Document Tab Bar)
+                                    .child(crate::ui::render_document_tab_bar(state, &self.model))
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .flex()
+                                            .size_full()
+                                            .overflow_hidden()
+                                            .child(render_flow_canvas(state, &self.model))
+                                            .child(render_inspector(state, &self.model)),
+                                    ),
+                            )
                             .into_any_element(),
+
 
 
                         AppWorkspaceTab::Actors => {

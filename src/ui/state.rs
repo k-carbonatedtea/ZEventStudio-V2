@@ -122,8 +122,11 @@ pub struct AppState {
     pub expanded_tree_paths: std::collections::HashSet<String>,
     pub selected_file_path: Option<String>,
     pub file_search_query: String,
-}
 
+    // 多文档标签页状态 (Document Tabs)
+    pub open_tabs: Vec<crate::model::OpenDocumentTab>,
+    pub active_tab_id: Option<String>,
+}
 
 #[allow(dead_code)]
 impl AppState {
@@ -145,6 +148,10 @@ impl AppState {
             active_sidebar_tab: SidebarTab::EntryPoints,
             current_tab: AppWorkspaceTab::Welcome,
             welcome_tab: WelcomeTab::QuickStart,
+            open_tabs: Vec::new(),
+            active_tab_id: None,
+
+
 
 
             recent_projects: Vec::new(),
@@ -197,11 +204,32 @@ impl AppState {
 
 
     pub fn new_blank_flow(&mut self) {
-        self.graph = Graph::new("NewEventFlow");
-        self.graph.ensure_actors_populated();
+        if let Some(cur_id) = &self.active_tab_id {
+            if let Some(tab) = self.open_tabs.iter_mut().find(|t| &t.id == cur_id) {
+                tab.graph = Some(self.graph.clone());
+            }
+        }
+
+        let new_id = uuid::Uuid::new_v4().to_string();
+        let tab_name = format!("Untitled_{}.bfevfl", self.open_tabs.len() + 1);
+        let mut graph = Graph::new(&tab_name);
+        graph.ensure_actors_populated();
+
+        let new_tab = crate::model::OpenDocumentTab::new(
+            new_id.clone(),
+            tab_name.clone(),
+            tab_name,
+            "bfevfl".to_string(),
+            Some(graph.clone()),
+        );
+        self.open_tabs.push(new_tab);
+        self.active_tab_id = Some(new_id);
+        self.graph = graph;
+        self.fit_view();
         self.current_tab = AppWorkspaceTab::Flowchart;
         self.toast = Some(Toast::success("✨ 已创建全新空白 EventFlow 流程图"));
     }
+
 
 
 

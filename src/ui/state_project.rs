@@ -1,4 +1,5 @@
 use crate::model::file_tree::{read_file_from_path, scan_project_path};
+use crate::model::OpenDocumentTab;
 use crate::ui::components::Toast;
 use crate::ui::sidebar::SidebarTab;
 use crate::ui::state::{AppState, AppWorkspaceTab, RecentProjectItem};
@@ -89,6 +90,58 @@ impl AppState {
         self.expanded_tree_paths.clear();
     }
 
+    /// 切换当前活跃文档标签页
+    pub fn switch_document_tab(&mut self, tab_id: &str) {
+        if self.active_tab_id.as_deref() == Some(tab_id) {
+            return;
+        }
+        // 1. 先将当前活跃图拓扑缓存至旧标签项
+        if let Some(cur_id) = &self.active_tab_id {
+            if let Some(tab) = self.open_tabs.iter_mut().find(|t| &t.id == cur_id) {
+                tab.graph = Some(self.graph.clone());
+            }
+        }
+
+        // 2. 加载目标标签项
+        if let Some(target_tab) = self.open_tabs.iter().find(|t| t.id == tab_id).cloned() {
+            self.active_tab_id = Some(target_tab.id);
+            self.selected_file_path = Some(target_tab.file_path.clone());
+            if let Some(cached_graph) = target_tab.graph {
+                self.graph = cached_graph;
+                self.fit_view();
+                self.current_tab = AppWorkspaceTab::Flowchart;
+            } else {
+                self.load_file_by_path(&target_tab.file_path);
+            }
+        }
+    }
+
+    /// 关闭指定文档标签页
+    pub fn close_document_tab(&mut self, tab_id: &str) {
+        let idx = self.open_tabs.iter().position(|t| t.id == tab_id);
+        if let Some(i) = idx {
+            self.open_tabs.remove(i);
+            if self.active_tab_id.as_deref() == Some(tab_id) {
+                if let Some(next_tab) = self
+                    .open_tabs
+                    .get(i)
+                    .or_else(|| self.open_tabs.get(i.saturating_sub(1)))
+                {
+                    let next_id = next_tab.id.clone();
+                    let next_graph = next_tab.graph.clone();
+                    self.active_tab_id = Some(next_id);
+                    if let Some(g) = next_graph {
+                        self.graph = g;
+                        self.fit_view();
+                    }
+                } else {
+                    self.active_tab_id = None;
+                    self.current_tab = AppWorkspaceTab::Welcome;
+                }
+            }
+        }
+    }
+
     /// 根据虚拟路径或物理路径加载事件流或数据文件至编辑器
     pub fn load_file_by_path(&mut self, path: &str) {
         self.selected_file_path = Some(path.to_string());
@@ -105,9 +158,40 @@ impl AppState {
             .unwrap_or(path)
             .to_string();
 
-
-
         let lower_name = raw_name.to_lowercase();
+        let file_type = if lower_name.ends_with(".bfevfl") {
+            "bfevfl"
+        } else if lower_name.ends_with(".json") {
+            "json"
+        } else if lower_name.ends_with(".txt") || lower_name.ends_with(".log") {
+            "txt"
+        } else {
+            "generic"
+        };
+
+        // 缓存当前旧活跃标签图
+        if let Some(active_id) = &self.active_tab_id {
+            if let Some(tab) = self.open_tabs.iter_mut().find(|t| &t.id == active_id) {
+                tab.graph = Some(self.graph.clone());
+            }
+        }
+
+        // 查找或新建标签页
+        let target_tab_id = if let Some(existing) = self.open_tabs.iter().find(|t| t.file_path == path) {
+            existing.id.clone()
+        } else {
+            let new_id = uuid::Uuid::new_v4().to_string();
+            let new_tab = OpenDocumentTab::new(
+                new_id.clone(),
+                raw_name.clone(),
+                path.to_string(),
+                file_type.to_string(),
+                None,
+            );
+            self.open_tabs.push(new_tab);
+            new_id
+        };
+        self.active_tab_id = Some(target_tab_id.clone());
 
         match read_file_from_path(path) {
             Ok(bytes) => {
@@ -117,7 +201,13 @@ impl AppState {
                             loaded_graph.name = raw_name.clone();
                             loaded_graph.ensure_actors_populated();
                             crate::model::layout::auto_layout_graph(&mut loaded_graph);
-                            self.graph = loaded_graph;
+                            self.graph = loaded_graph.clone();
+
+                            if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == target_tab_id) {
+                                tab.graph = Some(loaded_graph);
+                                tab.title = raw_name.clone();
+                            }
+
                             self.fit_view();
                             self.current_tab = AppWorkspaceTab::Flowchart;
                             self.toast = Some(Toast::success(format!("{} {}", self.t("toast.file_loaded"), raw_name)));
@@ -131,7 +221,13 @@ impl AppState {
                         if let Ok(mut loaded_graph) = serde_json::from_str::<crate::model::Graph>(&json_str) {
                             loaded_graph.ensure_actors_populated();
                             crate::model::layout::auto_layout_graph(&mut loaded_graph);
-                            self.graph = loaded_graph;
+                            self.graph = loaded_graph.clone();
+
+                            if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == target_tab_id) {
+                                tab.graph = Some(loaded_graph);
+                                tab.title = raw_name.clone();
+                            }
+
                             self.fit_view();
                             self.current_tab = AppWorkspaceTab::Flowchart;
                             self.toast = Some(Toast::success(format!("{} {}", self.t("toast.file_loaded"), raw_name)));
@@ -158,7 +254,6 @@ impl AppState {
                 path,
                 project_type,
             },
-
         );
     }
 }
