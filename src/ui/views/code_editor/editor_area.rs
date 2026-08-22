@@ -16,7 +16,6 @@ pub fn render_editor_area(
         .size_full()
         .overflow_hidden()
         .bg(hsla(240.0 / 360.0, 0.06, 0.07, 1.0))
-        .p_1()
         .children(editor_state.map(|ed| {
             Editor::new(ed)
                 .bordered(false)
