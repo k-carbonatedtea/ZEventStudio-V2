@@ -192,9 +192,24 @@ pub fn get_en<'a>(key: &'a str) -> &'a str {
         "group.subgraph" => "Event Flow Scope",
         "group.nodes_count" => "nodes",
         "tracing.upstream" => "Upstream",
-        "tracing.downstream" => "Downstream",
-        "tracing.active" => "Tracing Active Flow Path",
+        // ---------------- 欢迎与启动页 (Welcome / Launcher Page) ----------------
+        "tab.welcome" => "Welcome",
+        "empty.title" => "Event Studio",
+        "empty.subtitle" => "Professional BotW EventFlow Visualization & Localization Editor",
+        "empty.quickStartTab" => "Quick Start",
+        "empty.recentProjectsTab" => "Recent Files & Mods",
+        "empty.openFile" => "Open Single File",
+        "empty.openFileDesc" => "Supports .bfevfl / .sbeventpack / .pack / .msbt / .aamp / .byml",
+        "empty.openMod" => "Open Mod Folder",
+        "empty.openModDesc" => "Supports Wii U (content) & Switch (romfs) root mod folders",
+        "empty.newFlow" => "Create Blank Flow",
+        "empty.newFlowDesc" => "Build brand new EventFlow story and logic from scratch",
+        "empty.dragHint" => "Or drag & drop game files / mod folders directly into any area of this window",
+        "empty.viewGuide" => "View User Guide",
+        "empty.noRecentProjects" => "No recent projects yet",
+        "empty.clearRecent" => "Clear Recent History",
 
         _ => key,
     }
 }
+

@@ -12,3 +12,4 @@ serde_json = "1"
 uuid = { version = "1.10", features = ["v4", "fast-rng", "serde"] }
 revfl = { git = "https://github.com/k-carbonatedtea/Revfl" }
 smol = "2.0"
+rfd = "0.17.2"

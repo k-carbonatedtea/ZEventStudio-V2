@@ -192,9 +192,24 @@ pub fn get_zh<'a>(key: &'a str) -> &'a str {
         "group.subgraph" => "剧情流程分区",
         "group.nodes_count" => "节点",
         "tracing.upstream" => "上游前驱",
-        "tracing.downstream" => "下游分支",
-        "tracing.active" => "因果链路高亮追踪中",
+        // ---------------- 欢迎与启动页 (Welcome / Launcher Page) ----------------
+        "tab.welcome" => "启动页 (Welcome)",
+        "empty.title" => "Event Studio",
+        "empty.subtitle" => "专业的任天堂旷野之息 (BotW) 事件流可视化与文本本地化编辑器",
+        "empty.quickStartTab" => "快速开始",
+        "empty.recentProjectsTab" => "最近打开的文件与模组",
+        "empty.openFile" => "打开单个文件",
+        "empty.openFileDesc" => "支持 .bfevfl / .sbeventpack / .pack / .msbt / .aamp / .byml",
+        "empty.openMod" => "打开 Mod 文件夹",
+        "empty.openModDesc" => "支持 Wii U (content) 与 Switch (romfs) 模组根目录",
+        "empty.newFlow" => "新建空白事件流",
+        "empty.newFlowDesc" => "从零开始构建全新的 EventFlow 剧情与逻辑",
+        "empty.dragHint" => "或直接将游戏文件/模组文件夹拖拽至此窗口任意区域即可极速打开",
+        "empty.viewGuide" => "查看使用说明",
+        "empty.noRecentProjects" => "暂无最近打开的项目",
+        "empty.clearRecent" => "清空最近记录",
 
         _ => key,
     }
 }
+

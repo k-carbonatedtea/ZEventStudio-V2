@@ -26,10 +26,28 @@ pub enum DragState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AppWorkspaceTab {
     #[default]
+    Welcome,
     Flowchart,
     Actors,
     Events,
     Json,
+}
+
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum WelcomeTab {
+    #[default]
+    QuickStart,
+    Recent,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecentProjectItem {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub project_type: String,
+    pub preset_id: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -47,9 +65,10 @@ pub struct AppState {
     pub active_preset_id: String,
     pub active_sidebar_tab: SidebarTab,
     pub current_tab: AppWorkspaceTab,
+    pub welcome_tab: WelcomeTab,
+    pub recent_projects: Vec<RecentProjectItem>,
     pub selected_actor_idx: usize,
     pub is_adding_action: bool,
-
     pub new_action_name: String,
     pub show_action_dropdown: bool,
     pub is_adding_query: bool,
@@ -65,6 +84,7 @@ pub struct AppState {
     pub new_param_val: String,
     pub show_param_dropdown: bool,
     pub toast: Option<Toast>,
+
 
 
     pub quick_add_modal: Option<(f32, f32, Option<(String, String, PortDirection)>)>,
@@ -100,7 +120,39 @@ impl AppState {
             fps: 60.0,
             active_preset_id: "zelda_100enemy".to_string(),
             active_sidebar_tab: SidebarTab::EntryPoints,
-            current_tab: AppWorkspaceTab::Flowchart,
+            current_tab: AppWorkspaceTab::Welcome,
+            welcome_tab: WelcomeTab::QuickStart,
+
+            recent_projects: vec![
+                RecentProjectItem {
+                    id: "rec_1".to_string(),
+                    name: "100enemy.bfevfl".to_string(),
+                    path: "romfs/Event/EventFlow/100enemy.bfevfl".to_string(),
+                    project_type: "bfevfl".to_string(),
+                    preset_id: Some("zelda_100enemy".to_string()),
+                },
+                RecentProjectItem {
+                    id: "rec_2".to_string(),
+                    name: "Quest_Dialogue.bfevfl".to_string(),
+                    path: "romfs/Event/EventFlow/Quest_Dialogue.bfevfl".to_string(),
+                    project_type: "bfevfl".to_string(),
+                    preset_id: Some("quest_dialogue".to_string()),
+                },
+                RecentProjectItem {
+                    id: "rec_3".to_string(),
+                    name: "Combat_AI.bfevfl".to_string(),
+                    path: "romfs/Event/EventFlow/Combat_AI.bfevfl".to_string(),
+                    project_type: "bfevfl".to_string(),
+                    preset_id: Some("combat_ai".to_string()),
+                },
+                RecentProjectItem {
+                    id: "rec_4".to_string(),
+                    name: "Signal_Math.bfevfl".to_string(),
+                    path: "romfs/Event/EventFlow/Signal_Math.bfevfl".to_string(),
+                    project_type: "bfevfl".to_string(),
+                    preset_id: Some("signal_math".to_string()),
+                },
+            ],
             selected_actor_idx: 0,
             is_adding_actor: false,
             new_actor_name: String::new(),
@@ -118,13 +170,10 @@ impl AppState {
             new_param_val: "0".to_string(),
             show_param_dropdown: false,
             toast: Some(Toast::success(crate::i18n::t("toast.preset_loaded", crate::i18n::Language::Zh))),
-
-
             quick_add_modal: None,
             node_context_menu: None,
             inspector_open: true,
             sidebar_open: true,
-
             search_query: String::new(),
             expand_all_params: false,
             performance_mode: false,
@@ -134,6 +183,15 @@ impl AppState {
         state.fit_view();
         state
     }
+
+    pub fn new_blank_flow(&mut self) {
+        self.graph = Graph::new("NewEventFlow");
+        self.graph.ensure_actors_populated();
+        self.active_preset_id = "blank".to_string();
+        self.current_tab = AppWorkspaceTab::Flowchart;
+        self.toast = Some(Toast::success("✨ 已创建全新空白 EventFlow 流程图"));
+    }
+
 
 
     /// 获取当前语言环境下的本地化文本
@@ -177,11 +235,7 @@ impl AppState {
         self.update_node_sizes();
         auto_layout_graph(&mut self.graph);
         self.fit_view();
-        if self.expand_all_params {
-            self.toast = Some(Toast::info(self.t("toast.expand_params_on")));
-        } else {
-            self.toast = Some(Toast::info(self.t("toast.expand_params_off")));
-        }
+        self.toast = Some(Toast::info(if self.expand_all_params { self.t("toast.expand_params_on") } else { self.t("toast.expand_params_off") }));
     }
 
     pub fn update_node_sizes(&mut self) {
@@ -190,36 +244,26 @@ impl AppState {
                 node.size = (180.0, 42.0);
                 continue;
             }
-
             if self.expand_all_params && !node.properties.is_empty() {
-                let param_count = node.properties.len();
-                let height = 110.0 + 22.0 * (param_count as f32);
-                let mut max_text_len = node.title.len().max(node.subtitle.as_ref().map(|s| s.len()).unwrap_or(0));
-                for p in &node.properties {
-                    max_text_len = max_text_len.max(p.key.len() + p.val.len() + 4);
-                }
-                let width = 240.0f32.max(((max_text_len as f32) * 7.2 + 40.0).min(480.0));
-                node.size = (width, height);
+                let height = 110.0 + 22.0 * (node.properties.len() as f32);
+                let mut max_len = node.title.len().max(node.subtitle.as_ref().map(|s| s.len()).unwrap_or(0));
+                for p in &node.properties { max_len = max_len.max(p.key.len() + p.val.len() + 4); }
+                node.size = (240.0f32.max(((max_len as f32) * 7.2 + 40.0).min(480.0)), height);
             } else {
-                let highlights_count = node.extract_key_highlights().len();
-                let highlight_h = (highlights_count as f32) * 24.0;
-
-                let (base_w, base_h) = match node.kind {
-                    NodeKind::Action => (240.0, 85.0 + highlight_h),
-                    NodeKind::Switch => (240.0, 85.0 + highlight_h),
-                    NodeKind::Query => (230.0, 85.0 + highlight_h),
-                    NodeKind::SubFlow => (220.0, 85.0 + highlight_h),
-                    NodeKind::Fork => (210.0, 95.0),
-                    NodeKind::Join => (210.0, 95.0),
+                let hh = (node.extract_key_highlights().len() as f32) * 24.0;
+                let (bw, bh) = match node.kind {
+                    NodeKind::Action | NodeKind::Switch => (240.0, 85.0 + hh),
+                    NodeKind::Query => (230.0, 85.0 + hh),
+                    NodeKind::SubFlow => (220.0, 85.0 + hh),
+                    NodeKind::Fork | NodeKind::Join => (210.0, 95.0),
                     NodeKind::Math => (200.0, 100.0),
                     NodeKind::Comment => (240.0, 120.0),
                     NodeKind::EntryPoint => (180.0, 42.0),
                 };
-                node.size = (base_w, base_h);
+                node.size = (bw, bh);
             }
         }
     }
-
 
     pub fn fit_view(&mut self) {
         if self.graph.nodes.is_empty() {
@@ -227,36 +271,18 @@ impl AppState {
             self.zoom = 1.0;
             return;
         }
-
         let ((min_x, min_y), (max_x, max_y)) = self.graph.get_bounding_box();
-        let graph_w = (max_x - min_x).max(100.0);
-        let graph_h = (max_y - min_y).max(100.0);
-
-        // Target viewport approx 1100x650
-        let vp_w: f32 = 1100.0;
-        let vp_h: f32 = 650.0;
-
-        let scale_x: f32 = (vp_w - 120.0) / graph_w;
-        let scale_y: f32 = (vp_h - 120.0) / graph_h;
-        let target_zoom = scale_x.min(scale_y).clamp(0.45, 1.25);
-
-        let target_pan_x = (vp_w - graph_w * target_zoom) / 2.0 - min_x * target_zoom;
-        let target_pan_y = (vp_h - graph_h * target_zoom) / 2.0 - min_y * target_zoom;
-
-        self.zoom = target_zoom;
-        self.pan = (target_pan_x, target_pan_y);
+        let gw = (max_x - min_x).max(100.0);
+        let gh = (max_y - min_y).max(100.0);
+        let tz = ((1100.0 - 120.0) / gw).min((650.0 - 120.0) / gh).clamp(0.45, 1.25);
+        self.zoom = tz;
+        self.pan = ((1100.0 - gw * tz) / 2.0 - min_x * tz, (650.0 - gh * tz) / 2.0 - min_y * tz);
     }
 
     pub fn focus_node(&mut self, node_id: &str) {
         if let Some(node) = self.graph.find_node(node_id) {
-            let pos = node.pos;
-            let size = node.size;
-            let vp_w: f32 = 1100.0;
-            let vp_h: f32 = 650.0;
-            self.pan = (
-                vp_w / 2.0 - (pos.0 + size.0 / 2.0) * self.zoom,
-                vp_h / 2.0 - (pos.1 + size.1 / 2.0) * self.zoom,
-            );
+            let (pos, size) = (node.pos, node.size);
+            self.pan = (1100.0 / 2.0 - (pos.0 + size.0 / 2.0) * self.zoom, 650.0 / 2.0 - (pos.1 + size.1 / 2.0) * self.zoom);
             self.selected_node_id = Some(node_id.to_string());
             self.toast = Some(Toast::info(format!("{}{}", self.t("toast.focus_node"), node.title)));
         }
@@ -265,50 +291,23 @@ impl AppState {
     pub fn add_node_at(&mut self, kind: NodeKind, _fallback_title: impl Into<String>, pos: (f32, f32)) -> String {
         let (node_id, title) = self.graph.generate_unique_node_name(&kind);
         let mut node = NodeData::new(node_id.clone(), title, kind.clone(), pos);
-
-        // 为新节点自动注入合理的默认 Actor 与 Subtitle
         match kind {
             NodeKind::Action => {
-                let default_actor = self
-                    .graph
-                    .nodes
-                    .iter()
-                    .find_map(|n| {
-                        n.subtitle
-                            .as_ref()
-                            .and_then(|s| s.split(" :: ").next().map(|a| a.to_string()))
-                    })
-                    .unwrap_or_else(|| "EventSystemActor".to_string());
-                node.subtitle = Some(format!("{} :: Demo_FlagOFF", default_actor));
+                let def_actor = self.graph.nodes.iter().find_map(|n| n.subtitle.as_ref().and_then(|s| s.split(" :: ").next().map(|a| a.to_string()))).unwrap_or_else(|| "EventSystemActor".to_string());
+                node.subtitle = Some(format!("{} :: Demo_FlagOFF", def_actor));
             }
             NodeKind::Query => {
-                let default_actor = self
-                    .graph
-                    .nodes
-                    .iter()
-                    .find_map(|n| {
-                        n.subtitle
-                            .as_ref()
-                            .and_then(|s| s.split(" :: ").next().map(|a| a.to_string()))
-                    })
-                    .unwrap_or_else(|| "EventSystemActor".to_string());
-                node.subtitle = Some(format!("{} :: GeneralQuery", default_actor));
+                let def_actor = self.graph.nodes.iter().find_map(|n| n.subtitle.as_ref().and_then(|s| s.split(" :: ").next().map(|a| a.to_string()))).unwrap_or_else(|| "EventSystemActor".to_string());
+                node.subtitle = Some(format!("{} :: GeneralQuery", def_actor));
             }
-            NodeKind::Switch => {
-                node.subtitle = Some("EventFlags".to_string());
-            }
-            NodeKind::SubFlow => {
-                node.subtitle = Some("CommonSubFlow".to_string());
-            }
+            NodeKind::Switch => { node.subtitle = Some("EventFlags".to_string()); }
+            NodeKind::SubFlow => { node.subtitle = Some("CommonSubFlow".to_string()); }
             _ => {}
         }
-
         self.graph.add_node(node);
         self.selected_node_id = Some(node_id.clone());
         node_id
     }
-
-
 
     pub fn delete_selected_node(&mut self) {
         if let Some(id) = self.selected_node_id.take() {
@@ -318,49 +317,31 @@ impl AppState {
     }
 
     pub fn get_canvas_origin(&self) -> (f32, f32) {
-        let left = if self.sidebar_open { 280.0 } else { 0.0 };
-        let top = 44.0;
-        (left, top)
+        (if self.sidebar_open { 280.0 } else { 0.0 }, 44.0)
     }
 
-
-    pub fn screen_to_canvas(&self, screen_x: f32, screen_y: f32) -> (f32, f32) {
-        let (orig_x, orig_y) = self.get_canvas_origin();
-        let local_x = screen_x - orig_x - self.pan.0;
-        let local_y = screen_y - orig_y - self.pan.1;
-        (local_x / self.zoom, local_y / self.zoom)
+    pub fn screen_to_canvas(&self, sx: f32, sy: f32) -> (f32, f32) {
+        let (ox, oy) = self.get_canvas_origin();
+        ((sx - ox - self.pan.0) / self.zoom, (sy - oy - self.pan.1) / self.zoom)
     }
 
-    pub fn canvas_to_screen(&self, canvas_x: f32, canvas_y: f32) -> (f32, f32) {
-        let (orig_x, orig_y) = self.get_canvas_origin();
-        let local_x = canvas_x * self.zoom + self.pan.0 + orig_x;
-        let local_y = canvas_y * self.zoom + self.pan.1 + orig_y;
-        (local_x, local_y)
+    pub fn canvas_to_screen(&self, cx: f32, cy: f32) -> (f32, f32) {
+        let (ox, oy) = self.get_canvas_origin();
+        (cx * self.zoom + self.pan.0 + ox, cy * self.zoom + self.pan.1 + oy)
     }
 
-
-    pub fn sever_edge(&mut self, source_node: &str, target_node: &str) {
-        self.graph.sever_edge(source_node, target_node);
+    pub fn sever_edge(&mut self, src: &str, tgt: &str) {
+        self.graph.sever_edge(src, tgt);
         self.toast = Some(Toast::info(self.t("toast.sever_edge")));
     }
 
-    pub fn connect_ports(
-        &mut self,
-        source_node_id: &str,
-        source_port_id: &str,
-        target_node_id: &str,
-        target_port_id: &str,
-    ) {
-        if source_node_id == target_node_id {
-            return; // No self-loops
+    pub fn connect_ports(&mut self, s_node: &str, s_port: &str, t_node: &str, t_port: &str) {
+        if s_node != t_node {
+            self.graph.add_edge(Edge::new(s_node, s_port, t_node, t_port));
+            self.toast = Some(Toast::success(self.t("toast.connect_edge")));
         }
-
-        let edge = Edge::new(source_node_id, source_port_id, target_node_id, target_port_id);
-        self.graph.add_edge(edge);
-        self.toast = Some(Toast::success(self.t("toast.connect_edge")));
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -370,12 +351,11 @@ mod tests {
     fn test_toggle_expand_params() {
         let mut state = AppState::new();
         assert!(!state.expand_all_params);
-
         state.toggle_expand_params();
         assert!(state.expand_all_params);
         assert!(!state.graph.nodes.is_empty());
-
         state.toggle_expand_params();
         assert!(!state.expand_all_params);
     }
 }
+

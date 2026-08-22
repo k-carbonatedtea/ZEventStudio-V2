@@ -17,13 +17,19 @@ pub fn render_bottom_tabs(
         .flex()
         .items_center()
         .px_3()
-        .gap_1p5()
+        .child(render_bottom_tab_item(
+            state.t("tab.welcome"),
+            current_tab == AppWorkspaceTab::Welcome,
+            AppWorkspaceTab::Welcome,
+            model,
+        ))
         .child(render_bottom_tab_item(
             state.t("tab.flowchart"),
             current_tab == AppWorkspaceTab::Flowchart,
             AppWorkspaceTab::Flowchart,
             model,
         ))
+
         .child(render_bottom_tab_item(
             state.t("tab.actors"),
             current_tab == AppWorkspaceTab::Actors,

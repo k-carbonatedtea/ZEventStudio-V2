@@ -96,8 +96,20 @@ impl Render for AppView {
             .bg(hsla(220.0 / 360.0, 0.35, 0.08, 1.0))
             .font_family(".SystemUIFont")
             .text_color(rgb(0xffffff))
-            // 全局键盘输入拦截器：当正在添加动作/查询/参数/角色时，直接捕获物理键盘键入
+            // 全局键盘输入拦截器：快捷键与实体键盘键入
             .on_key_down(move |event, _window, cx| {
+                if event.keystroke.modifiers.control && event.keystroke.key == "o" {
+                    crate::ui::views::welcome::quick_tab::pick_and_load_file(&model_key, cx);
+                    return;
+                }
+                if event.keystroke.modifiers.control && event.keystroke.key == "n" {
+                    model_key.update(cx, |st, cx| {
+                        st.new_blank_flow();
+                        cx.notify();
+                    });
+                    return;
+                }
+
                 model_key.update(cx, |st, cx| {
                     if st.is_adding_action {
                         let (changed, is_enter, is_esc) = handle_text_key_event(&mut st.new_action_name, event);
@@ -180,13 +192,16 @@ impl Render for AppView {
             })
             // 顶部工具栏 (Toolbar)
             .child(render_toolbar(state, current_fps, current_frame_time, &self.model))
-            // 全局主工作区主体 (根据底部 Tab 切换：流程图 / 角色管理 / 事件列表 / JSON 源码)
+            // 全局主工作区主体 (根据底部 Tab 切换：启动页 / 流程图 / 角色管理 / 事件列表 / JSON 源码)
             .child(
                 div()
                     .flex_1()
                     .size_full()
                     .overflow_hidden()
                     .child(match current_tab {
+                        AppWorkspaceTab::Welcome => {
+                            crate::ui::views::render_welcome_view(state, &self.model).into_any_element()
+                        }
                         AppWorkspaceTab::Flowchart => div()
                             .flex()
                             .size_full()
@@ -207,6 +222,7 @@ impl Render for AppView {
                         }
                     }),
             )
+
             // 底部工作区全局选项卡栏 (Bottom Tabs Bar)
             .child(render_bottom_tabs(state, &self.model))
             // Floating Toast notification
