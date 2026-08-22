@@ -1,8 +1,11 @@
 pub mod brandes_kopf;
 pub mod config;
+pub mod crossings;
+pub mod ranks;
 pub mod sugiyama;
 
 pub use config::LayoutConfig;
+
 use crate::model::graph::Graph;
 use crate::model::node::NodeKind;
 use std::collections::{HashMap, HashSet, VecDeque};
