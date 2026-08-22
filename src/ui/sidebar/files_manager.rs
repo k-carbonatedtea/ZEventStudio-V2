@@ -35,8 +35,8 @@ pub fn render_files_manager(
                 .items_center()
                 .justify_between()
                 .border_b_1()
-                .border_color(hsla(220.0 / 360.0, 0.25, 0.18, 1.0))
-                .bg(hsla(220.0 / 360.0, 0.35, 0.08, 1.0))
+                .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
+                .bg(hsla(240.0 / 360.0, 0.06, 0.05, 1.0))
                 // 项目名 / 封包名
                 .child(
                     div()
@@ -101,16 +101,16 @@ pub fn render_files_manager(
                         .px_2p5()
                         .py_1()
                         .rounded_lg()
-                        .bg(hsla(220.0 / 360.0, 0.25, 0.15, 1.0))
+                        .bg(hsla(240.0 / 360.0, 0.06, 0.11, 1.0))
                         .border_1()
-                        .border_color(hsla(215.0 / 360.0, 0.25, 0.28, 1.0))
+                        .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
                         .child(div().text_size(px(11.0)).child("🔍"))
                         .child(
                             div()
                                 .flex_1()
                                 .text_size(px(11.0))
                                 .text_color(if search_val.is_empty() {
-                                    hsla(215.0 / 360.0, 0.20, 0.55, 1.0)
+                                    hsla(240.0 / 360.0, 0.05, 0.55, 1.0)
                                 } else {
                                     hsla(0.0, 0.0, 1.0, 1.0)
                                 })
@@ -140,7 +140,7 @@ pub fn render_files_manager(
                         .child(
                             div()
                                 .text_size(px(11.5))
-                                .text_color(hsla(215.0 / 360.0, 0.20, 0.65, 1.0))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.65, 1.0))
                                 .child(state.t("welcome.no_folder_hint")),
                         )
                         // 打开 Mod 目录按钮
@@ -173,17 +173,17 @@ pub fn render_files_manager(
                                 .py_1p5()
                                 .px_3()
                                 .rounded_md()
-                                .bg(hsla(220.0 / 360.0, 0.35, 0.15, 1.0))
+                                .bg(hsla(240.0 / 360.0, 0.06, 0.12, 1.0))
                                 .border_1()
-                                .border_color(hsla(220.0 / 360.0, 0.25, 0.22, 1.0))
-                                .hover(|s| s.bg(hsla(215.0 / 360.0, 0.40, 0.20, 1.0)))
+                                .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
+                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.18, 1.0)))
                                 .cursor_pointer()
                                 .flex()
                                 .items_center()
                                 .justify_center()
                                 .gap_2()
                                 .text_size(px(11.5))
-                                .text_color(hsla(215.0 / 360.0, 0.15, 0.85, 1.0))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.85, 1.0))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_pack_file(&model_open_pack, cx);
                                 })
@@ -197,17 +197,17 @@ pub fn render_files_manager(
                                 .py_1p5()
                                 .px_3()
                                 .rounded_md()
-                                .bg(hsla(220.0 / 360.0, 0.35, 0.15, 1.0))
+                                .bg(hsla(240.0 / 360.0, 0.06, 0.12, 1.0))
                                 .border_1()
-                                .border_color(hsla(220.0 / 360.0, 0.25, 0.22, 1.0))
-                                .hover(|s| s.bg(hsla(220.0 / 360.0, 0.40, 0.20, 1.0)))
+                                .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
+                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.18, 1.0)))
                                 .cursor_pointer()
                                 .flex()
                                 .items_center()
                                 .justify_center()
                                 .gap_2()
                                 .text_size(px(11.5))
-                                .text_color(hsla(215.0 / 360.0, 0.15, 0.85, 1.0))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.85, 1.0))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_file(&model_open_file, cx);
                                 })
@@ -231,13 +231,14 @@ where
         .rounded_md()
         .cursor_pointer()
         .text_size(px(11.0))
-        .text_color(hsla(215.0 / 360.0, 0.20, 0.70, 1.0))
+        .text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0))
         .hover(|s| {
-            s.bg(hsla(215.0 / 360.0, 0.30, 0.20, 1.0))
-                .text_color(hsla(0.0, 0.0, 1.0, 1.0))
+            s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
+                .text_color(rgb(0xffffff))
         })
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             on_click(cx);
         })
         .child(icon)
 }
+

@@ -105,6 +105,8 @@ pub struct AppState {
 
     pub inspector_open: bool,
     pub sidebar_open: bool,
+    pub sidebar_width: f32,
+    pub is_resizing_sidebar: bool,
     pub search_query: String,
     pub expand_all_params: bool,
     pub performance_mode: bool,
@@ -166,6 +168,8 @@ impl AppState {
             node_context_menu: None,
             inspector_open: true,
             sidebar_open: true,
+            sidebar_width: 290.0,
+            is_resizing_sidebar: false,
             search_query: String::new(),
             expand_all_params: false,
             performance_mode: false,
@@ -183,6 +187,11 @@ impl AppState {
         state.fit_view();
         state
     }
+
+    pub fn set_sidebar_width(&mut self, width: f32) {
+        self.sidebar_width = width.clamp(180.0, 750.0);
+    }
+
 
     pub fn new_blank_flow(&mut self) {
         self.graph = Graph::new("NewEventFlow");

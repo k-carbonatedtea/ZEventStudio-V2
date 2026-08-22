@@ -47,7 +47,7 @@ fn render_file_tree_node(
     let path_clone = node.path.clone();
     let model_click = model.clone();
 
-    let pad_left = (level * 14 + 10) as f32;
+    let pad_left = (level * 12 + 8) as f32;
 
     div()
         .flex()
@@ -64,15 +64,15 @@ fn render_file_tree_node(
                 .rounded_md()
                 .cursor_pointer()
                 .bg(if is_selected {
-                    hsla(215.0 / 360.0, 0.45, 0.22, 1.0)
+                    hsla(215.0 / 360.0, 0.50, 0.22, 1.0)
                 } else {
                     hsla(0.0, 0.0, 0.0, 0.0)
                 })
                 .hover(|s| {
                     if is_selected {
-                        s.bg(hsla(215.0 / 360.0, 0.50, 0.26, 1.0))
+                        s.bg(hsla(215.0 / 360.0, 0.55, 0.26, 1.0))
                     } else {
-                        s.bg(hsla(220.0 / 360.0, 0.25, 0.16, 1.0))
+                        s.bg(hsla(240.0 / 360.0, 0.06, 0.14, 1.0))
                     }
                 })
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
@@ -91,13 +91,15 @@ fn render_file_tree_node(
                         .flex()
                         .items_center()
                         .gap_1p5()
+                        .flex_1()
                         .overflow_hidden()
+                        .whitespace_nowrap()
                         // 展开/折叠三角指示符
                         .child(
                             div()
                                 .w(px(12.0))
                                 .text_size(px(10.0))
-                                .text_color(hsla(215.0 / 360.0, 0.20, 0.60, 1.0))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.60, 1.0))
                                 .flex()
                                 .items_center()
                                 .justify_center()
@@ -121,15 +123,17 @@ fn render_file_tree_node(
                                 .text_color(if is_selected {
                                     hsla(0.0, 0.0, 1.0, 1.0)
                                 } else if is_container {
-                                    hsla(215.0 / 360.0, 0.20, 0.90, 1.0)
+                                    hsla(240.0 / 360.0, 0.05, 0.90, 1.0)
                                 } else {
-                                    hsla(215.0 / 360.0, 0.20, 0.75, 1.0)
+                                    hsla(240.0 / 360.0, 0.05, 0.75, 1.0)
                                 })
                                 .overflow_hidden()
+                                .whitespace_nowrap()
                                 .child(node.name.clone()),
                         ),
                 ),
         )
+
         // 渲染子节点列表
         .children((is_container && is_expanded).then(|| {
             node.children.as_ref().map(|children| render_file_tree(children, state, model, level + 1))

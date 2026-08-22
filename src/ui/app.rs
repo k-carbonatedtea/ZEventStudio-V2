@@ -68,12 +68,55 @@ impl Render for AppView {
         }
 
         let state = self.model.read(cx);
-        let toast = state.toast.clone();
         let current_fps = self.fps;
         let current_frame_time = self.frame_time_ms;
         let current_tab = state.current_tab;
 
+        // 3秒自动隐藏 Toast 提示气泡并触发平滑重绘
+        let visible_toast = if let Some(ref t) = state.toast {
+            let elapsed = t.created_at.elapsed().as_secs_f32();
+            if elapsed >= t.duration_secs {
+                let model_dismiss = self.model.clone();
+                cx.spawn(async move |_this, cx| {
+                    cx.update(|cx| {
+                        model_dismiss.update(cx, |st, cx| {
+                            if let Some(ref cur) = st.toast {
+                                if cur.created_at.elapsed().as_secs_f32() >= cur.duration_secs {
+                                    st.toast = None;
+                                    cx.notify();
+                                }
+                            }
+                        });
+                    });
+                }).detach();
+                None
+            } else {
+                let remaining_ms = ((t.duration_secs - elapsed) * 1000.0).max(50.0) as u64;
+                let model_timer = self.model.clone();
+                cx.spawn(async move |_this, cx| {
+                    smol::Timer::after(std::time::Duration::from_millis(remaining_ms + 10)).await;
+                    cx.update(|cx| {
+                        model_timer.update(cx, |st, cx| {
+                            if let Some(ref cur) = st.toast {
+                                if cur.created_at.elapsed().as_secs_f32() >= cur.duration_secs {
+                                    st.toast = None;
+                                    cx.notify();
+                                }
+                            }
+                        });
+                    });
+                }).detach();
+                Some(t.clone())
+            }
+        } else {
+            None
+        };
+
+
+
         let model_key = self.model.clone();
+        let model_root_move = self.model.clone();
+        let model_root_up = self.model.clone();
 
         div()
             .id("app_root_view")
@@ -81,9 +124,28 @@ impl Render for AppView {
             .flex()
             .flex_col()
             .size_full()
-            .bg(hsla(220.0 / 360.0, 0.35, 0.08, 1.0))
+            .bg(hsla(240.0 / 360.0, 0.06, 0.07, 1.0))
             .font_family(".SystemUIFont")
             .text_color(rgb(0xffffff))
+            // 侧边栏拖拽调宽全局鼠标移动监听
+            .on_mouse_move(move |e, _window, cx| {
+                let mx: f32 = e.position.x.into();
+                model_root_move.update(cx, |st, cx| {
+                    if st.is_resizing_sidebar {
+                        st.set_sidebar_width(mx);
+                        cx.notify();
+                    }
+                });
+            })
+            // 侧边栏拖拽调宽鼠标释放
+            .on_mouse_up(MouseButton::Left, move |_e, _window, cx| {
+                model_root_up.update(cx, |st, cx| {
+                    if st.is_resizing_sidebar {
+                        st.is_resizing_sidebar = false;
+                        cx.notify();
+                    }
+                });
+            })
             // 全局键盘输入拦截器：快捷键与实体键盘键入
             .on_key_down(move |event, _window, cx| {
                 if event.keystroke.modifiers.control && event.keystroke.key == "o" {
@@ -97,6 +159,7 @@ impl Render for AppView {
                     });
                     return;
                 }
+
 
                 model_key.update(cx, |st, cx| {
                     if st.is_adding_action {
@@ -195,9 +258,11 @@ impl Render for AppView {
                             .size_full()
                             .overflow_hidden()
                             .child(render_sidebar(state, &self.model))
+                            .child(crate::ui::sidebar::render_sidebar_resize_handle(state, &self.model))
                             .child(render_flow_canvas(state, &self.model))
                             .child(render_inspector(state, &self.model))
                             .into_any_element(),
+
 
                         AppWorkspaceTab::Actors => {
                             render_actor_manager_view(state, &self.model).into_any_element()
@@ -215,14 +280,15 @@ impl Render for AppView {
             .children((current_tab != AppWorkspaceTab::Welcome).then(|| {
                 render_bottom_tabs(state, &self.model)
             }))
-            // Floating Toast notification
-            .children(toast.map(|t| {
+            // Floating Toast notification (自动3秒后消失)
+            .children(visible_toast.map(|t| {
                 div()
                     .absolute()
                     .bottom_12()
                     .right_4()
                     .child(render_toast(&t))
             }))
+
     }
 }
 

@@ -22,13 +22,14 @@ pub fn render_welcome_sidebar(
         .unwrap_or_else(|| state.t("welcome.no_folder").to_string());
 
     div()
-        .w(px(260.0))
+        .w(px(state.sidebar_width))
+        .flex_shrink_0()
         .h_full()
-        .bg(hsla(220.0 / 360.0, 0.35, 0.08, 1.0))
-        .border_r_1()
-        .border_color(hsla(220.0 / 360.0, 0.25, 0.16, 1.0))
+        .bg(hsla(240.0 / 360.0, 0.06, 0.07, 1.0))
+        .overflow_hidden()
         .flex()
         .flex_col()
+
         // 顶部标题栏
         .child(
             div()
@@ -38,12 +39,13 @@ pub fn render_welcome_sidebar(
                 .items_center()
                 .justify_between()
                 .border_b_1()
-                .border_color(hsla(220.0 / 360.0, 0.20, 0.14, 1.0))
+                .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
+                .bg(hsla(240.0 / 360.0, 0.06, 0.05, 1.0))
                 .child(
                     div()
                         .text_size(px(11.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(hsla(215.0 / 360.0, 0.20, 0.80, 1.0))
+                        .text_color(hsla(240.0 / 360.0, 0.05, 0.80, 1.0))
                         .child(state.t("welcome.explorer")),
                 )
                 .child(
@@ -59,8 +61,8 @@ pub fn render_welcome_sidebar(
                                 .rounded_md()
                                 .cursor_pointer()
                                 .text_size(px(11.0))
-                                .text_color(hsla(215.0 / 360.0, 0.20, 0.70, 1.0))
-                                .hover(|s| s.bg(hsla(215.0 / 360.0, 0.30, 0.20, 1.0)).text_color(rgb(0xffffff)))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0))
+                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0)).text_color(rgb(0xffffff)))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     model_new.update(cx, |st, cx| {
                                         st.new_blank_flow();
@@ -77,8 +79,8 @@ pub fn render_welcome_sidebar(
                                 .rounded_md()
                                 .cursor_pointer()
                                 .text_size(px(11.0))
-                                .text_color(hsla(215.0 / 360.0, 0.20, 0.70, 1.0))
-                                .hover(|s| s.bg(hsla(215.0 / 360.0, 0.30, 0.20, 1.0)).text_color(rgb(0xffffff)))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0))
+                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0)).text_color(rgb(0xffffff)))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     model_refresh.update(cx, |st, cx| {
                                         st.reload_project();
@@ -95,8 +97,8 @@ pub fn render_welcome_sidebar(
                                 .rounded_md()
                                 .cursor_pointer()
                                 .text_size(px(11.0))
-                                .text_color(hsla(215.0 / 360.0, 0.20, 0.70, 1.0))
-                                .hover(|s| s.bg(hsla(215.0 / 360.0, 0.30, 0.20, 1.0)).text_color(rgb(0xffffff)))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0))
+                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0)).text_color(rgb(0xffffff)))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     model_collapse.update(cx, |st, cx| {
                                         st.collapse_all_tree_paths();
@@ -120,7 +122,7 @@ pub fn render_welcome_sidebar(
                     div()
                         .px_3()
                         .py_1p5()
-                        .bg(hsla(220.0 / 360.0, 0.25, 0.11, 1.0))
+                        .bg(hsla(240.0 / 360.0, 0.06, 0.10, 1.0))
                         .flex()
                         .items_center()
                         .gap_1p5()
@@ -145,7 +147,7 @@ pub fn render_welcome_sidebar(
                         .child(
                             div()
                                 .text_size(px(11.5))
-                                .text_color(hsla(215.0 / 360.0, 0.20, 0.65, 1.0))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.65, 1.0))
                                 .child(state.t("welcome.no_folder_hint")),
                         )
                         // 打开文件夹大按钮
@@ -174,7 +176,7 @@ pub fn render_welcome_sidebar(
                         .child(
                             div()
                                 .text_size(px(10.5))
-                                .text_color(hsla(215.0 / 360.0, 0.20, 0.50, 1.0))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.50, 1.0))
                                 .child(state.t("welcome.open_folder_desc")),
                         )
                         // 打开 SARC 封包按钮
@@ -184,17 +186,17 @@ pub fn render_welcome_sidebar(
                                 .py_1p5()
                                 .px_3()
                                 .rounded_md()
-                                .bg(hsla(220.0 / 360.0, 0.35, 0.15, 1.0))
+                                .bg(hsla(240.0 / 360.0, 0.06, 0.12, 1.0))
                                 .border_1()
-                                .border_color(hsla(220.0 / 360.0, 0.25, 0.22, 1.0))
-                                .hover(|s| s.bg(hsla(215.0 / 360.0, 0.40, 0.20, 1.0)))
+                                .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
+                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.18, 1.0)))
                                 .cursor_pointer()
                                 .flex()
                                 .items_center()
                                 .justify_center()
                                 .gap_2()
                                 .text_size(px(11.5))
-                                .text_color(hsla(215.0 / 360.0, 0.15, 0.85, 1.0))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.85, 1.0))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_pack_file(&model_pack, cx);
                                 })
@@ -208,17 +210,17 @@ pub fn render_welcome_sidebar(
                                 .py_1p5()
                                 .px_3()
                                 .rounded_md()
-                                .bg(hsla(220.0 / 360.0, 0.35, 0.15, 1.0))
+                                .bg(hsla(240.0 / 360.0, 0.06, 0.12, 1.0))
                                 .border_1()
-                                .border_color(hsla(220.0 / 360.0, 0.25, 0.22, 1.0))
-                                .hover(|s| s.bg(hsla(220.0 / 360.0, 0.40, 0.20, 1.0)))
+                                .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
+                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.18, 1.0)))
                                 .cursor_pointer()
                                 .flex()
                                 .items_center()
                                 .justify_center()
                                 .gap_2()
                                 .text_size(px(11.5))
-                                .text_color(hsla(215.0 / 360.0, 0.15, 0.85, 1.0))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.85, 1.0))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_file(&model_file, cx);
                                 })
@@ -228,5 +230,6 @@ pub fn render_welcome_sidebar(
                         .into_any_element()
                 }),
         )
+
 }
 

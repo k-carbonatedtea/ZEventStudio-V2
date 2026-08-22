@@ -40,22 +40,23 @@ pub fn render_entry_point_list(
                 .bg(if is_selected {
                     hsla(0.0, 0.65, 0.25, 0.95)
                 } else {
-                    hsla(220.0 / 360.0, 0.30, 0.14, 0.8)
+                    hsla(240.0 / 360.0, 0.06, 0.11, 1.0)
                 })
                 .border_1()
                 .border_color(if is_selected {
                     hsla(0.0, 0.85, 0.55, 1.0)
                 } else {
-                    hsla(215.0 / 360.0, 0.25, 0.25, 0.8)
+                    hsla(240.0 / 360.0, 0.06, 0.20, 1.0)
                 })
                 .hover(|s| {
                     if !is_selected {
-                        s.bg(hsla(215.0 / 360.0, 0.35, 0.20, 1.0))
+                        s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
                     } else {
                         s
                     }
                 })
                 .cursor_pointer()
+
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     let tid = target_id.clone();
                     model_focus.update(cx, |st, cx| {

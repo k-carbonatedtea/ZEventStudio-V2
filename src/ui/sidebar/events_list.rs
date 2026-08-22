@@ -43,7 +43,7 @@ pub fn render_events_list(
                 .px_1()
                 .pb_1()
                 .border_b_1()
-                .border_color(hsla(220.0 / 360.0, 0.25, 0.20, 1.0))
+                .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
                 .child(
                     div()
                         .font_weight(FontWeight::BOLD)
@@ -56,7 +56,7 @@ pub fn render_events_list(
                         .px_2()
                         .py_0p5()
                         .rounded_full()
-                        .bg(hsla(215.0 / 360.0, 0.40, 0.25, 0.9))
+                        .bg(hsla(240.0 / 360.0, 0.06, 0.18, 1.0))
                         .text_size(px(10.5))
                         .font_weight(FontWeight::BOLD)
                         .text_color(hsla(45.0 / 360.0, 0.95, 0.65, 1.0))
@@ -77,7 +77,7 @@ pub fn render_events_list(
                         div()
                             .p_4()
                             .text_size(px(11.5))
-                            .text_color(hsla(215.0 / 360.0, 0.20, 0.55, 1.0))
+                            .text_color(hsla(240.0 / 360.0, 0.05, 0.55, 1.0))
                             .flex()
                             .items_center()
                             .justify_center()
@@ -101,21 +101,22 @@ pub fn render_events_list(
                                 .p_2()
                                 .rounded_lg()
                                 .bg(if is_active {
-                                    hsla(215.0 / 360.0, 0.40, 0.26, 1.0)
+                                    hsla(215.0 / 360.0, 0.50, 0.24, 1.0)
                                 } else {
-                                    hsla(220.0 / 360.0, 0.30, 0.14, 0.8)
+                                    hsla(240.0 / 360.0, 0.06, 0.11, 1.0)
                                 })
                                 .border_1()
                                 .border_color(if is_active {
                                     hsla(45.0 / 360.0, 0.98, 0.60, 1.0)
                                 } else {
-                                    hsla(215.0 / 360.0, 0.25, 0.22, 0.8)
+                                    hsla(240.0 / 360.0, 0.06, 0.20, 1.0)
                                 })
                                 .hover(|s| {
-                                    s.bg(hsla(215.0 / 360.0, 0.35, 0.22, 1.0))
-                                        .border_color(hsla(215.0 / 360.0, 0.40, 0.45, 1.0))
+                                    s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
+                                        .border_color(hsla(240.0 / 360.0, 0.06, 0.30, 1.0))
                                 })
                                 .cursor_pointer()
+
                                 .on_mouse_down(MouseButton::Left, {
                                     let n_id = node_id.clone();
                                     move |_, _, cx| {

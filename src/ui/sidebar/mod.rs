@@ -4,13 +4,13 @@ pub mod events_list;
 pub mod files_manager;
 pub mod node_palette;
 
-use gpui::*;
 use crate::ui::sidebar::actors_manager::render_actors_manager;
 use crate::ui::sidebar::entry_points::render_entry_point_list;
 use crate::ui::sidebar::events_list::render_events_list;
 use crate::ui::sidebar::files_manager::render_files_manager;
 use crate::ui::sidebar::node_palette::render_node_palette;
 use crate::ui::state::AppState;
+use gpui::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SidebarTab {
@@ -22,10 +22,7 @@ pub enum SidebarTab {
 }
 
 /// 渲染左侧导航侧边栏 (支持资源文件/流程入口/事件列表/角色管理/组件库)
-pub fn render_sidebar(
-    state: &AppState,
-    model: &Entity<AppState>,
-) -> impl IntoElement {
+pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
     let active_tab = state.active_sidebar_tab;
     let search_val = state.search_query.clone();
 
@@ -36,19 +33,20 @@ pub fn render_sidebar(
     let model_tab_pal = model.clone();
 
     div()
-        .w(px(280.0))
+        .w(px(state.sidebar_width))
+        .flex_shrink_0()
         .h_full()
         .flex()
         .flex_col()
-        .bg(hsla(220.0 / 360.0, 0.35, 0.10, 0.98))
-        .border_r_1()
-        .border_color(hsla(220.0 / 360.0, 0.25, 0.20, 1.0))
+        .bg(hsla(240.0 / 360.0, 0.06, 0.07, 1.0))
+        .overflow_hidden()
         // 顶部 Tab 选项卡栏
         .child(
             div()
                 .flex()
                 .border_b_1()
-                .border_color(hsla(220.0 / 360.0, 0.25, 0.20, 1.0))
+                .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
+                .bg(hsla(240.0 / 360.0, 0.06, 0.05, 1.0))
                 .p_1()
                 .gap_1()
                 // 0. 资源
@@ -89,45 +87,44 @@ pub fn render_sidebar(
         )
         // 搜索过滤栏 (在事件/角色/组件 Tab 下展示)
         .children(
-            if matches!(active_tab, SidebarTab::Events | SidebarTab::Actors | SidebarTab::Palette) {
+            if matches!(
+                active_tab,
+                SidebarTab::Events | SidebarTab::Actors | SidebarTab::Palette
+            ) {
                 let placeholder = match active_tab {
                     SidebarTab::Events => state.t("sidebar.events_search"),
                     SidebarTab::Actors => state.t("sidebar.actors_search"),
                     _ => state.t("sidebar.search_placeholder"),
                 };
                 Some(
-                    div()
-                        .px_2p5()
-                        .pt_2()
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_2()
-                                .px_2p5()
-                                .py_1()
-                                .rounded_lg()
-                                .bg(hsla(220.0 / 360.0, 0.25, 0.15, 1.0))
-                                .border_1()
-                                .border_color(hsla(215.0 / 360.0, 0.25, 0.28, 1.0))
-                                .child(div().text_size(px(11.0)).child("🔍"))
-                                .child(
-                                    div()
-                                        .flex_1()
-                                        .text_size(px(11.0))
-                                        .text_color(if search_val.is_empty() {
-                                            hsla(215.0 / 360.0, 0.20, 0.55, 1.0)
-                                        } else {
-                                            hsla(0.0, 0.0, 1.0, 1.0)
-                                        })
-
-                                        .child(if search_val.is_empty() {
-                                            placeholder.to_string()
-                                        } else {
-                                            search_val
-                                        }),
-                                ),
-                        ),
+                    div().px_2p5().pt_2().child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .px_2p5()
+                            .py_1()
+                            .rounded_lg()
+                            .bg(hsla(240.0 / 360.0, 0.06, 0.11, 1.0))
+                            .border_1()
+                            .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
+                            .child(div().text_size(px(11.0)).child("🔍"))
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .text_size(px(11.0))
+                                    .text_color(if search_val.is_empty() {
+                                        hsla(240.0 / 360.0, 0.05, 0.55, 1.0)
+                                    } else {
+                                        hsla(0.0, 0.0, 1.0, 1.0)
+                                    })
+                                    .child(if search_val.is_empty() {
+                                        placeholder.to_string()
+                                    } else {
+                                        search_val
+                                    }),
+                            ),
+                    ),
                 )
             } else {
                 None
@@ -141,7 +138,9 @@ pub fn render_sidebar(
                 .overflow_y_scroll()
                 .child(match active_tab {
                     SidebarTab::Files => render_files_manager(state, model).into_any_element(),
-                    SidebarTab::EntryPoints => render_entry_point_list(state, model).into_any_element(),
+                    SidebarTab::EntryPoints => {
+                        render_entry_point_list(state, model).into_any_element()
+                    }
                     SidebarTab::Events => render_events_list(state, model).into_any_element(),
                     SidebarTab::Actors => render_actors_manager(state, model).into_any_element(),
                     SidebarTab::Palette => render_node_palette(state, model).into_any_element(),
@@ -150,7 +149,6 @@ pub fn render_sidebar(
 }
 
 fn render_tab_btn(
-
     title: &'static str,
     is_active: bool,
     target_tab: SidebarTab,
@@ -162,22 +160,26 @@ fn render_tab_btn(
         .py_1p5()
         .rounded_md()
         .bg(if is_active {
-            hsla(215.0 / 360.0, 0.40, 0.22, 1.0)
+            hsla(240.0 / 360.0, 0.06, 0.18, 1.0)
         } else {
             hsla(0.0, 0.0, 0.0, 0.0)
         })
         .text_size(px(10.5))
-        .font_weight(if is_active { FontWeight::BOLD } else { FontWeight::NORMAL })
+        .font_weight(if is_active {
+            FontWeight::BOLD
+        } else {
+            FontWeight::NORMAL
+        })
         .text_color(if is_active {
             hsla(0.0, 0.0, 1.0, 1.0)
         } else {
-            hsla(215.0 / 360.0, 0.20, 0.65, 1.0)
+            hsla(240.0 / 360.0, 0.05, 0.65, 1.0)
         })
         .flex()
         .items_center()
         .justify_center()
         .cursor_pointer()
-        .hover(|s| s.bg(hsla(215.0 / 360.0, 0.30, 0.18, 1.0)))
+        .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.13, 1.0)))
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             model_click.update(cx, |st, cx| {
                 st.active_sidebar_tab = target_tab;
@@ -185,4 +187,33 @@ fn render_tab_btn(
             });
         })
         .child(title)
+}
+
+/// 渲染侧边栏右侧可拖拽调整宽度的分界条 (支持悬浮与拖拽高亮)
+pub fn render_sidebar_resize_handle(
+    state: &AppState,
+    model: &Entity<AppState>,
+) -> impl IntoElement {
+    let is_resizing = state.is_resizing_sidebar;
+    let model_down = model.clone();
+
+    div()
+        .id("sidebar_resize_handle")
+        .w(px(4.0))
+        .h_full()
+        .flex_shrink_0()
+        .cursor_col_resize()
+        .bg(if is_resizing {
+            hsla(215.0 / 360.0, 0.95, 0.60, 1.0)
+        } else {
+            hsla(240.0 / 360.0, 0.06, 0.16, 1.0)
+        })
+        .hover(|s| s.bg(hsla(215.0 / 360.0, 0.95, 0.60, 1.0)))
+        .on_mouse_down(MouseButton::Left, move |_e, _, cx| {
+            cx.stop_propagation();
+            model_down.update(cx, |st, cx| {
+                st.is_resizing_sidebar = true;
+                cx.notify();
+            });
+        })
 }

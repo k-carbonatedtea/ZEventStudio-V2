@@ -132,6 +132,11 @@ pub fn render_flow_canvas(
             let mx: f32 = e.position.x.into();
             let my: f32 = e.position.y.into();
             model_mouse_move.update(cx, |st, cx| {
+                if st.is_resizing_sidebar {
+                    st.set_sidebar_width(mx);
+                    cx.notify();
+                    return;
+                }
                 match &st.drag_state.clone() {
                     DragState::PanCanvas { start_mouse, start_pan } => {
                         let dx = mx - start_mouse.0;
@@ -172,7 +177,13 @@ pub fn render_flow_canvas(
             let mx: f32 = e.position.x.into();
             let my: f32 = e.position.y.into();
             model_mouse_up.update(cx, |st, cx| {
+                if st.is_resizing_sidebar {
+                    st.is_resizing_sidebar = false;
+                    cx.notify();
+                    return;
+                }
                 if let DragState::Connecting { source_node_id, source_port_id, direction, .. } = &st.drag_state.clone() {
+
                     // 松开连线在空白画布上时，弹出快速新建节点浮层
                     let (canvas_x, canvas_y) = st.screen_to_canvas(mx, my);
                     st.quick_add_modal = Some(QuickAddModalState {

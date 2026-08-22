@@ -40,7 +40,7 @@ pub fn render_actors_manager(
                 .px_1()
                 .pb_1()
                 .border_b_1()
-                .border_color(hsla(220.0 / 360.0, 0.25, 0.20, 1.0))
+                .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
                 .child(
                     div()
                         .font_weight(FontWeight::BOLD)
@@ -74,7 +74,7 @@ pub fn render_actors_manager(
                         div()
                             .p_4()
                             .text_size(px(11.5))
-                            .text_color(hsla(215.0 / 360.0, 0.20, 0.55, 1.0))
+                            .text_color(hsla(240.0 / 360.0, 0.05, 0.55, 1.0))
                             .flex()
                             .items_center()
                             .justify_center()
@@ -108,13 +108,14 @@ pub fn render_actors_manager(
                             div()
                                 .p_2p5()
                                 .rounded_lg()
-                                .bg(hsla(220.0 / 360.0, 0.30, 0.14, 0.8))
+                                .bg(hsla(240.0 / 360.0, 0.06, 0.11, 1.0))
                                 .border_1()
-                                .border_color(hsla(215.0 / 360.0, 0.25, 0.25, 0.8))
+                                .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
                                 .hover(|s| {
-                                    s.bg(hsla(215.0 / 360.0, 0.35, 0.20, 1.0))
+                                    s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
                                         .border_color(hsla(271.0 / 360.0, 0.60, 0.55, 1.0))
                                 })
+
                                 .child(
                                     div()
                                         .flex()

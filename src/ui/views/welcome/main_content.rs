@@ -12,16 +12,16 @@ pub fn render_welcome_main_content(
     div()
         .flex_1()
         .h_full()
-        .bg(hsla(220.0 / 360.0, 0.35, 0.06, 1.0))
+        .bg(hsla(240.0 / 360.0, 0.06, 0.06, 1.0))
         .flex()
         .flex_col()
         // 顶部编辑器选项卡栏 (Tab Strip)
         .child(
             div()
                 .h(px(36.0))
-                .bg(hsla(220.0 / 360.0, 0.40, 0.08, 1.0))
+                .bg(hsla(240.0 / 360.0, 0.06, 0.05, 1.0))
                 .border_b_1()
-                .border_color(hsla(220.0 / 360.0, 0.25, 0.16, 1.0))
+                .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
                 .flex()
                 .items_center()
                 .px_2()
@@ -29,7 +29,7 @@ pub fn render_welcome_main_content(
                     div()
                         .h(px(35.0))
                         .px_3()
-                        .bg(hsla(220.0 / 360.0, 0.35, 0.06, 1.0))
+                        .bg(hsla(240.0 / 360.0, 0.06, 0.06, 1.0))
                         .border_t_2()
                         .border_color(hsla(215.0 / 360.0, 0.80, 0.55, 1.0))
                         .flex()
@@ -42,6 +42,7 @@ pub fn render_welcome_main_content(
                         .child(state.t("tab.welcome")),
                 ),
         )
+
         // 欢迎页内容主体滚动区
         .child(
             div()
@@ -251,8 +252,9 @@ fn render_vs_recent_row(
         .items_center()
         .justify_between()
         .py_1()
-        .hover(|s| s.bg(hsla(220.0 / 360.0, 0.25, 0.12, 1.0)))
+        .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.12, 1.0)))
         .cursor_pointer()
+
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             let idata = item_clone.clone();
             model_open.update(cx, |st, cx| {
