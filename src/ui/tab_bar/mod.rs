@@ -2,7 +2,9 @@ use gpui::*;
 use crate::ui::state::AppState;
 
 pub mod tab_item;
+pub mod unsaved_modal;
 pub use tab_item::render_tab_item;
+pub use unsaved_modal::render_unsaved_changes_modal;
 
 /// 渲染顶部多文件/文档标签栏 (Document Tabs Bar)
 pub fn render_document_tab_bar(

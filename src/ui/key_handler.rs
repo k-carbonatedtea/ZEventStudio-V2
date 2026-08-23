@@ -17,7 +17,27 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
         return true;
     }
 
-    // 3. 节点属性与分支编辑模态框键盘输入拦截
+    // 3. 快捷键: Ctrl+W 关闭当前标签页
+    if event.keystroke.modifiers.control && event.keystroke.key == "w" {
+        if let Some(id) = state.active_tab_id.clone() {
+            state.request_close_document_tab(&id);
+            return true;
+        }
+    }
+
+    // 4. 未保存修改确认模态框键盘事件拦截 (Esc 取消, Enter 保存并关闭)
+    if state.unsaved_changes_modal.is_some() {
+        if event.keystroke.key == "escape" {
+            state.cancel_unsaved_changes_modal();
+            return true;
+        } else if event.keystroke.key == "enter" {
+            state.confirm_save_and_close_tab();
+            return true;
+        }
+        return false;
+    }
+
+    // 5. 节点属性与分支编辑模态框键盘输入拦截
     if let Some(ref mut modal) = state.active_node_editor_modal {
         let mut should_notify = false;
         match modal.active_field {

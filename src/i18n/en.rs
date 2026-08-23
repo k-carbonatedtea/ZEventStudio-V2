@@ -246,6 +246,12 @@ pub fn get_en(key: &str) -> &str {
         // ---------------- 节点编辑模态框 (Node Editor Modal) ----------------
         "modal.cancel" => "Cancel",
         "modal.save" => "Save",
+        "modal.unsaved_title" => "Unsaved Changes",
+        "modal.unsaved_message" => "Do you want to save changes to the following file?",
+        "modal.unsaved_hint" => "If you don't save, your changes will be lost.",
+        "modal.unsaved_save" => "Save",
+        "modal.unsaved_dont_save" => "Don't Save",
+        "modal.unsaved_cancel" => "Cancel",
         "modal.edit_switch" => "Edit Switch Conditions",
         "modal.edit_event" => "Edit Event",
         "modal.edit_fork" => "Edit Fork Branches",

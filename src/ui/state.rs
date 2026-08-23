@@ -66,6 +66,14 @@ pub struct QuickAddModalState {
     pub source: Option<QuickAddConnectionSource>,
 }
 
+/// 未保存文件关闭确认弹窗状态
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnsavedChangesModalState {
+    pub tab_id: String,
+    pub title: String,
+    pub file_path: String,
+}
+
 #[allow(dead_code)]
 pub struct AppState {
     pub graph: Graph,
@@ -103,6 +111,7 @@ pub struct AppState {
     pub quick_add_modal: Option<QuickAddModalState>,
     pub node_context_menu: Option<(String, (f32, f32))>,
     pub active_node_editor_modal: Option<crate::ui::canvas::NodeEditorModalState>,
+    pub unsaved_changes_modal: Option<UnsavedChangesModalState>,
 
     pub inspector_open: bool,
 
@@ -173,6 +182,7 @@ impl AppState {
             quick_add_modal: None,
             node_context_menu: None,
             active_node_editor_modal: None,
+            unsaved_changes_modal: None,
             inspector_open: true,
 
             sidebar_open: true,

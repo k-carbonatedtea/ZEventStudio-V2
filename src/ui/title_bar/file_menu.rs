@@ -94,7 +94,7 @@ pub fn render_file_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                         .on_click(move |_, _, cx| {
                             m_close_tab.update(cx, |st, cx| {
                                 if let Some(id) = st.active_tab_id.clone() {
-                                    st.close_document_tab(&id);
+                                    st.request_close_document_tab(&id);
                                 }
                                 cx.notify();
                             });

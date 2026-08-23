@@ -265,29 +265,36 @@ impl AppState {
         }
     }
 
-    /// 保存当前活跃文档（无论是流程图还是代码编辑器文件，自动写回磁盘或 SARC）
-    pub fn save_active_document(&mut self) {
-        let active_id = match self.active_tab_id.clone() {
-            Some(id) => id,
-            None => {
-                self.toast = Some(Toast::info(self.t("toast.no_active_file")));
-                return;
-            }
-        };
+    /// 保存指定文档标签页（无论是当前活跃或后台标签、流程图还是代码文件，写回磁盘或 SARC）
+    pub fn save_document_tab(&mut self, tab_id: &str) -> bool {
+        let is_active = self.active_tab_id.as_deref() == Some(tab_id);
 
-        let (tab_kind, file_path, code_info) = {
-            let tab = match self.open_tabs.iter().find(|t| t.id == active_id) {
+        let tab_info = {
+            let tab = match self.open_tabs.iter().find(|t| t.id == tab_id) {
                 Some(t) => t,
-                None => return,
+                None => return false,
             };
             let code_info = tab.code_state.as_ref().map(|c| (c.content.clone(), c.format, c.endian));
-            (tab.tab_kind, tab.file_path.clone(), code_info)
+            let graph_to_save = if is_active && tab.tab_kind == DocumentTabKind::Flowchart {
+                Some(self.graph.clone())
+            } else {
+                tab.graph.clone()
+            };
+            (tab.tab_kind, tab.file_path.clone(), code_info, graph_to_save)
         };
+
+        let (tab_kind, file_path, code_info, graph_to_save) = tab_info;
 
         match tab_kind {
             DocumentTabKind::Flowchart => {
-                // 编译 BFEVFL 流程图并写回
-                match crate::model::evfl::save_bfevfl_to_bytes(&self.graph) {
+                let target_graph = match graph_to_save {
+                    Some(g) => g,
+                    None => {
+                        self.toast = Some(Toast::error(self.t("toast.no_active_file")));
+                        return false;
+                    }
+                };
+                match crate::model::evfl::save_bfevfl_to_bytes(&target_graph) {
                     Ok(bytes) => {
                         let final_bytes = if crate::model::should_compress_yaz0(&file_path) {
                             roead::yaz0::compress(&bytes)
@@ -296,19 +303,23 @@ impl AppState {
                         };
                         match write_file_to_target(&file_path, &final_bytes) {
                             Ok(_) => {
-                                if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == active_id) {
-                                    tab.original_graph = Some(self.graph.clone());
+                                if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
+                                    tab.original_graph = Some(target_graph.clone());
+                                    tab.graph = Some(target_graph.clone());
                                     tab.is_modified = false;
                                 }
                                 self.toast = Some(Toast::success(self.t("toast.save_success")));
+                                true
                             }
                             Err(e) => {
                                 self.toast = Some(Toast::error(format!("{}: {}", self.t("toast.save_failed"), e)));
+                                false
                             }
                         }
                     }
                     Err(e) => {
                         self.toast = Some(Toast::error(format!("{}: {}", self.t("toast.compile_failed"), e)));
+                        false
                     }
                 }
             }
@@ -318,26 +329,43 @@ impl AppState {
                         Ok(bytes) => {
                             match write_file_to_target(&file_path, &bytes) {
                                 Ok(_) => {
-                                    if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == active_id) {
+                                    if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
                                         if let Some(ref mut code) = tab.code_state {
                                             code.mark_saved();
                                         }
                                         tab.is_modified = false;
                                     }
                                     self.toast = Some(Toast::success(self.t("toast.save_success")));
+                                    true
                                 }
                                 Err(e) => {
                                     self.toast = Some(Toast::error(format!("{}: {}", self.t("toast.save_failed"), e)));
+                                    false
                                 }
                             }
                         }
                         Err(e) => {
                             self.toast = Some(Toast::error(e));
+                            false
                         }
                     }
+                } else {
+                    false
                 }
             }
         }
+    }
+
+    /// 保存当前活跃文档（无论是流程图还是代码编辑器文件，自动写回磁盘或 SARC）
+    pub fn save_active_document(&mut self) -> bool {
+        let active_id = match self.active_tab_id.clone() {
+            Some(id) => id,
+            None => {
+                self.toast = Some(Toast::info(self.t("toast.no_active_file")));
+                return false;
+            }
+        };
+        self.save_document_tab(&active_id)
     }
 
     /// 更新当前活跃代码编辑器的文本内容

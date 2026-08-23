@@ -120,7 +120,7 @@ pub fn render_tab_item(
                     cx.stop_propagation();
                     let id = tab_id_close.clone();
                     model_close.update(cx, |st, cx| {
-                        st.close_document_tab(&id);
+                        st.request_close_document_tab(&id);
                         cx.notify();
                     });
                 })

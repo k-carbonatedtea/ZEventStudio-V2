@@ -126,6 +126,56 @@ impl AppState {
         }
     }
 
+    /// 请求关闭指定文档标签页（检查未保存修改，有修改则弹出保存确认提示框）
+    pub fn request_close_document_tab(&mut self, tab_id: &str) {
+        // 1. 若关闭的是当前活跃流程图标签，确保当前图数据已同步至标签项并精确重算 is_modified
+        if self.active_tab_id.as_deref() == Some(tab_id) {
+            if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
+                if tab.tab_kind == DocumentTabKind::Flowchart {
+                    tab.graph = Some(self.graph.clone());
+                }
+                tab.recompute_modified();
+            }
+        }
+
+        // 2. 检查该标签是否包含未保存更改
+        if let Some(tab) = self.open_tabs.iter().find(|t| t.id == tab_id) {
+            if tab.is_modified {
+                self.unsaved_changes_modal = Some(crate::ui::state::UnsavedChangesModalState {
+                    tab_id: tab.id.clone(),
+                    title: tab.title.clone(),
+                    file_path: tab.file_path.clone(),
+                });
+                return;
+            }
+        }
+
+        // 3. 无未保存修改，直接关闭
+        self.close_document_tab(tab_id);
+    }
+
+    /// 确认保存并关闭当前弹窗指定的标签页
+    pub fn confirm_save_and_close_tab(&mut self) {
+        if let Some(modal) = self.unsaved_changes_modal.take() {
+            let tab_id = modal.tab_id.clone();
+            if self.save_document_tab(&tab_id) {
+                self.close_document_tab(&tab_id);
+            }
+        }
+    }
+
+    /// 确认不保存（放弃修改）并关闭当前弹窗指定的标签页
+    pub fn confirm_discard_and_close_tab(&mut self) {
+        if let Some(modal) = self.unsaved_changes_modal.take() {
+            self.close_document_tab(&modal.tab_id);
+        }
+    }
+
+    /// 取消未保存弹窗
+    pub fn cancel_unsaved_changes_modal(&mut self) {
+        self.unsaved_changes_modal = None;
+    }
+
     /// 关闭指定文档标签页
     pub fn close_document_tab(&mut self, tab_id: &str) {
         let idx = self.open_tabs.iter().position(|t| t.id == tab_id);

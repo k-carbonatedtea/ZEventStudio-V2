@@ -320,5 +320,9 @@ impl Render for AppView {
             .children((state.active_node_editor_modal.is_some()).then(|| {
                 render_node_editor_modal(state, &self.model)
             }))
+            // 未保存修改关闭确认模态框
+            .children((state.unsaved_changes_modal.is_some()).then(|| {
+                crate::ui::render_unsaved_changes_modal(state, &self.model)
+            }))
     }
 }

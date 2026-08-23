@@ -16,7 +16,7 @@ pub mod toolbar;
 pub mod views;
 
 pub use app::AppView;
-pub use tab_bar::render_document_tab_bar;
+pub use tab_bar::{render_document_tab_bar, render_unsaved_changes_modal};
 #[allow(unused_imports)]
 pub use theme::{AppTheme, ThemePalette};
 pub use title_bar::render_title_bar;

@@ -241,6 +241,12 @@ pub fn get_zh(key: &str) -> &str {
         // ---------------- 节点编辑模态框 (Node Editor Modal) ----------------
         "modal.cancel" => "取消",
         "modal.save" => "保存",
+        "modal.unsaved_title" => "未保存的更改",
+        "modal.unsaved_message" => "是否保存对以下文件的修改？",
+        "modal.unsaved_hint" => "如果不保存，您所做的修改将会丢失。",
+        "modal.unsaved_save" => "保存",
+        "modal.unsaved_dont_save" => "不保存",
+        "modal.unsaved_cancel" => "取消",
         "modal.edit_switch" => "编辑 Switch 条件分支",
         "modal.edit_event" => "编辑事件",
         "modal.edit_fork" => "编辑 Fork 并行分支",
