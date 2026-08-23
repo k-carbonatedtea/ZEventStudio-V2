@@ -139,6 +139,7 @@ impl AppState {
                 })
                 .map(|e| e.target_node_id.clone());
 
+            self.node_context_menu = None;
             self.active_node_editor_modal = Some(NodeEditorModalState {
                 node_id: node.id.clone(),
                 node_kind,

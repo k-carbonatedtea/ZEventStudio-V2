@@ -110,6 +110,7 @@ pub fn render_node_context_menu(
                             move |_, _, cx| {
                                 cx.stop_propagation();
                                 model_edit.update(cx, |st, cx| {
+                                    st.node_context_menu = None;
                                     st.open_node_editor(&n_id);
                                     cx.notify();
                                 });
