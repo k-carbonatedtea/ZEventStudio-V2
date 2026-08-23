@@ -1,4 +1,5 @@
 use gpui::*;
+use gpui_component::tooltip::Tooltip;
 use crate::model::OpenDocumentTab;
 use crate::ui::state::AppState;
 
@@ -12,6 +13,7 @@ pub fn render_tab_item(
     let pal = state.theme();
     let tab_id = tab.id.clone();
     let tab_id_close = tab.id.clone();
+    let file_path = tab.file_path.clone();
     let model_click = model.clone();
     let model_close = model.clone();
 
@@ -26,7 +28,19 @@ pub fn render_tab_item(
         _ => hsla(240.0 / 360.0, 0.05, 0.75, 1.0),
     };
 
+    let tooltip_path = file_path.clone();
+
     div()
+        .id(ElementId::Name(format!("tab-item-{}", tab.id).into()))
+        .tooltip(move |window, cx| {
+            let path_for_el = tooltip_path.clone();
+            Tooltip::element(move |_window, _cx| {
+                div()
+                    .text_size(px(10.5))
+                    .child(path_for_el.clone())
+            })
+            .build(window, cx)
+        })
         .h(px(26.0))
         .px_2p5()
         .rounded_md()

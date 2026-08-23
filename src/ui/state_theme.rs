@@ -40,6 +40,7 @@ impl AppState {
         gpui_theme.colors.input = pal.panel_border.into();
         gpui_theme.colors.title_bar = pal.panel_surface.into();
         gpui_theme.colors.title_bar_border = pal.panel_border.into();
+        gpui_theme.tokens = (&gpui_theme.colors).into();
 
         // 统一代码编辑器高亮风格 (从对应明暗默认主题派生，确保完整的语法着色)
         let base_hl = if pal.is_dark {

@@ -11,15 +11,8 @@ pub fn render_document_tab_bar(
 ) -> impl IntoElement {
     let active_id = state.active_tab_id.as_deref().unwrap_or("");
     let model_new = model.clone();
-
-    let active_file_path = state
-        .open_tabs
-        .iter()
-        .find(|t| t.id == active_id)
-        .map(|t| t.file_path.clone())
-        .unwrap_or_else(|| state.graph.name.clone());
-
     let pal = state.theme();
+
     div()
         .id("document_tab_bar")
         .h(px(32.0))
@@ -59,7 +52,6 @@ pub fn render_document_tab_bar(
                             s.bg(pal.card_surface)
                                 .text_color(pal.text_primary)
                         })
-
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                             model_new.update(cx, |st, cx| {
                                 st.new_blank_flow();
@@ -67,20 +59,6 @@ pub fn render_document_tab_bar(
                             });
                         })
                         .child("+"),
-                ),
-        )
-        // 右侧：当前活跃文件虚拟路径提示 / 统计徽章
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap_2()
-                .pr_2()
-                .child(
-                    div()
-                        .text_size(px(11.0))
-                        .text_color(hsla(240.0 / 360.0, 0.05, 0.40, 1.0))
-                        .child(active_file_path),
                 ),
         )
 }

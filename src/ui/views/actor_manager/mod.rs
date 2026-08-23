@@ -22,28 +22,30 @@ pub fn render_actor_manager_view(
 
     let model_add_actor = model.clone();
 
+    let pal = state.theme();
+
     div()
         .flex()
         .flex_col()
         .size_full()
-        .bg(hsla(220.0 / 360.0, 0.35, 0.08, 1.0))
-        .text_color(rgb(0xffffff))
+        .bg(pal.app_bg)
+        .text_color(pal.text_primary)
         // 顶部工具栏 (角色总数统计 + 添加角色按钮)
         .child(
             div()
                 .h(px(40.0))
                 .px_4()
                 .border_b_1()
-                .border_color(hsla(220.0 / 360.0, 0.25, 0.18, 1.0))
+                .border_color(pal.panel_border)
                 .flex()
                 .items_center()
                 .justify_between()
-                .bg(hsla(220.0 / 360.0, 0.30, 0.10, 0.95))
+                .bg(pal.panel_surface)
                 .child(
                     div()
                         .font_weight(FontWeight::BOLD)
                         .text_size(px(13.0))
-                        .text_color(hsla(0.0, 0.0, 1.0, 0.95))
+                        .text_color(pal.text_primary)
                         .child(format!("共 {} 个角色", total_count)),
                 )
                 .child(
@@ -51,11 +53,11 @@ pub fn render_actor_manager_view(
                         .px_3()
                         .py_1()
                         .rounded_md()
-                        .bg(hsla(215.0 / 360.0, 0.40, 0.22, 1.0))
-                        .hover(|s| s.bg(hsla(215.0 / 360.0, 0.50, 0.30, 1.0)))
+                        .bg(pal.card_surface)
+                        .hover(move |s| s.bg(pal.card_hover))
                         .cursor_pointer()
                         .text_size(px(12.0))
-                        .text_color(rgb(0xffffff))
+                        .text_color(pal.text_primary)
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                             model_add_actor.update(cx, |st, cx| {
                                 st.is_adding_actor = !st.is_adding_actor;
@@ -280,9 +282,9 @@ pub fn render_actor_manager_view(
                 .flex_1()
                 .max_h(px(280.0))
                 .overflow_y_scroll()
-                .bg(hsla(220.0 / 360.0, 0.35, 0.09, 1.0))
+                .bg(pal.app_bg)
                 .border_b_1()
-                .border_color(hsla(220.0 / 360.0, 0.25, 0.18, 1.0))
+                .border_color(pal.panel_border)
                 .child(render_actors_table(state, actors, sel_idx, model)),
         )
 
@@ -293,7 +295,7 @@ pub fn render_actor_manager_view(
                 .size_full()
                 .overflow_hidden()
                 .flex()
-                .bg(hsla(220.0 / 360.0, 0.35, 0.07, 1.0))
+                .bg(pal.app_bg)
                 .children(selected_actor.map(|act| {
                     render_actor_detail_columns(state, &act, sel_idx, model)
                 })),

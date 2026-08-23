@@ -49,6 +49,7 @@ fn main() {
         theme.colors.input = pal.panel_border.into();
         theme.colors.title_bar = pal.panel_surface.into();
         theme.colors.title_bar_border = pal.panel_border.into();
+        theme.tokens = (&theme.colors).into();
 
         theme.highlight_theme = std::sync::Arc::new(gpui_component::highlighter::HighlightTheme {
             name: "ZEventStudio-RelicCyan".to_string(),
