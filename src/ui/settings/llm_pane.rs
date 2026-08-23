@@ -192,7 +192,7 @@ fn render_llm_provider_card(state: &AppState, model: &Entity<AppState>) -> impl 
         .child(
             div()
                 .flex()
-                .items_center()
+                .flex_wrap()
                 .gap_2p5()
                 .child(render_choice_chip(
                     "DeepSeek",

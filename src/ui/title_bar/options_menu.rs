@@ -71,6 +71,9 @@ pub fn render_options_menu(state: &AppState, model: &Entity<AppState>) -> impl I
                                 .on_click(move |_, _, cx| {
                                     m.update(cx, |st, cx| {
                                         st.game_lang = gl;
+                                        st.game_paths.language = gl;
+                                        st.settings_draft.language = gl;
+                                        let _ = st.game_paths.save_to_disk();
                                         cx.notify();
                                     });
                                 }),

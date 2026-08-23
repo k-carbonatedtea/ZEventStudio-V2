@@ -68,7 +68,7 @@ fn render_ui_language_card(state: &AppState, model: &Entity<AppState>) -> impl I
         .child(
             div()
                 .flex()
-                .items_center()
+                .flex_wrap()
                 .gap_2p5()
                 .child(render_choice_chip(
                     "简体中文 (Simplified Chinese)",
@@ -512,16 +512,15 @@ where
     };
 
     div()
-        .flex_1()
-        .h(px(38.0))
-        .px_3p5()
-        .rounded_lg()
+        .px_3()
+        .py_1p5()
+        .rounded_md()
         .bg(bg_color)
         .border_1()
         .border_color(border_color)
         .flex()
         .items_center()
-        .justify_between()
+        .gap_1p5()
         .cursor_pointer()
         .hover(|s| s.border_color(pal.primary_accent))
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
@@ -530,19 +529,9 @@ where
         })
         .child(
             div()
+                .text_size(px(11.5))
                 .font_weight(if is_active { FontWeight::BOLD } else { FontWeight::NORMAL })
-                .text_size(px(12.0))
                 .text_color(text_color)
                 .child(title),
-        )
-        .child(
-            if is_active {
-                div()
-                    .text_size(px(12.0))
-                    .text_color(pal.primary_accent)
-                    .child("✓")
-            } else {
-                div()
-            },
         )
 }
