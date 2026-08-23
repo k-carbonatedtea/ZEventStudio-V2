@@ -7,7 +7,7 @@ use crate::ui::state::ActiveSettingsField;
 
 /// 渲染 Wii U 设置面板
 pub fn render_wiiu_pane(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
-    let pal = state.theme();
+    let is_active = state.settings_draft.current_platform == PlatformType::WiiU;
 
     div()
         .id("settings_wiiu_scroll")
@@ -17,43 +17,8 @@ pub fn render_wiiu_pane(state: &AppState, model: &Entity<AppState>) -> impl Into
         .gap_4()
         .overflow_y_scroll()
         .p_1()
-        // 顶部信息警告卡片 (WiiU 模拟器跨平台路径问题提示)
-        .child(
-            div()
-                .p_3()
-                .rounded_xl()
-                .bg(pal.secondary_accent.opacity(0.1))
-                .border_1()
-                .border_color(pal.secondary_accent.opacity(0.4))
-                .flex()
-                .items_start()
-                .gap_3()
-                .child(
-                    div()
-                        .text_size(px(16.0))
-                        .text_color(pal.secondary_accent)
-                        .child("⚠️"),
-                )
-                .child(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .gap_1()
-                        .child(
-                            div()
-                                .font_weight(FontWeight::BOLD)
-                                .text_size(px(12.5))
-                                .text_color(pal.secondary_accent)
-                                .child(state.t("settings.wiiu_warn_title")),
-                        )
-                        .child(
-                            div()
-                                .text_size(px(11.0))
-                                .text_color(pal.text_secondary)
-                                .child(state.t("settings.wiiu_warn_desc")),
-                        ),
-                ),
-        )
+        // 顶部说明与生效激活状态栏
+        .child(render_wiiu_tip_bar(state, model, is_active))
         // 1. 游戏本体目录 (Base Game)
         .child(render_path_field(
             &state.t("settings.wiiu_game_dir"),
@@ -118,4 +83,99 @@ pub fn render_wiiu_pane(state: &AppState, model: &Entity<AppState>) -> impl Into
                 }
             }
         ))
+}
+
+/// 渲染顶部说明与生效状态条
+fn render_wiiu_tip_bar(
+    state: &AppState,
+    model: &Entity<AppState>,
+    is_active: bool,
+) -> impl IntoElement {
+    let pal = state.theme();
+    let model_set = model.clone();
+
+    div()
+        .p_3p5()
+        .rounded_xl()
+        .bg(pal.card_surface)
+        .border_1()
+        .border_color(pal.card_border)
+        .flex()
+        .items_center()
+        .justify_between()
+        .gap_3()
+        .child(
+            div()
+                .flex_1()
+                .min_w_0()
+                .flex()
+                .items_center()
+                .gap_2()
+                .child(div().flex_shrink_0().text_size(px(14.0)).child("💡"))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .text_size(px(11.5))
+                        .text_color(pal.text_secondary)
+                        .child(state.t("settings.wiiu_tip")),
+                ),
+        )
+        .child(
+            div()
+                .flex_shrink_0()
+                .child(
+                    if is_active {
+                        div()
+                            .px_3()
+                            .py_1()
+                            .rounded_md()
+                            .bg(pal.primary_accent.opacity(0.18))
+                            .border_1()
+                            .border_color(pal.primary_accent)
+                            .flex()
+                            .items_center()
+                            .gap_1p5()
+                            .child(
+                                div()
+                                    .text_size(px(11.0))
+                                    .font_weight(FontWeight::BOLD)
+                                    .text_color(pal.primary_accent)
+                                    .child("✓"),
+                            )
+                            .child(
+                                div()
+                                    .text_size(px(11.0))
+                                    .font_weight(FontWeight::BOLD)
+                                    .text_color(pal.primary_accent)
+                                    .child(state.t("settings.active_badge")),
+                            )
+                            .into_any_element()
+                    } else {
+                        div()
+                            .px_3()
+                            .py_1()
+                            .rounded_md()
+                            .bg(pal.app_bg)
+                            .border_1()
+                            .border_color(pal.panel_border)
+                            .cursor_pointer()
+                            .hover(|s| s.border_color(pal.primary_accent))
+                            .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                                cx.stop_propagation();
+                                model_set.update(cx, |st, cx| {
+                                    st.settings_draft.current_platform = PlatformType::WiiU;
+                                    cx.notify();
+                                });
+                            })
+                            .child(
+                                div()
+                                    .text_size(px(11.0))
+                                    .text_color(pal.text_secondary)
+                                    .child(state.t("settings.set_active_btn")),
+                            )
+                            .into_any_element()
+                    },
+                ),
+        )
 }
