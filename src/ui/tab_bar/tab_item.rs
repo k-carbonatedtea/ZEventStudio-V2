@@ -13,9 +13,11 @@ pub fn render_tab_item(
     let pal = state.theme();
     let tab_id = tab.id.clone();
     let tab_id_close = tab.id.clone();
+    let tab_id_right = tab.id.clone();
     let file_path = tab.file_path.clone();
     let model_click = model.clone();
     let model_close = model.clone();
+    let model_right_click = model.clone();
 
     let icon_color = match tab.icon() {
         "💬" => hsla(215.0 / 360.0, 0.90, 0.65, 1.0),       // 消息对话：蓝色
@@ -29,10 +31,13 @@ pub fn render_tab_item(
     };
 
     let tooltip_path = file_path.clone();
+    let is_menu_open = state.tab_context_menu.is_some() || state.unsaved_changes_modal.is_some();
 
-    div()
-        .id(ElementId::Name(format!("tab-item-{}", tab.id).into()))
-        .tooltip(move |window, cx| {
+    let tab_element = div()
+        .id(ElementId::Name(format!("tab-item-{}", tab.id).into()));
+
+    let tab_element = if !is_menu_open {
+        tab_element.tooltip(move |window, cx| {
             let path_for_el = tooltip_path.clone();
             Tooltip::element(move |_window, _cx| {
                 div()
@@ -41,6 +46,11 @@ pub fn render_tab_item(
             })
             .build(window, cx)
         })
+    } else {
+        tab_element
+    };
+
+    tab_element
         .h(px(26.0))
         .px_2p5()
         .rounded_md()
@@ -70,6 +80,15 @@ pub fn render_tab_item(
             let id = tab_id.clone();
             model_click.update(cx, |st, cx| {
                 st.switch_document_tab(&id);
+                cx.notify();
+            });
+        })
+        .on_mouse_down(MouseButton::Right, move |event, _, cx| {
+            cx.stop_propagation();
+            let id = tab_id_right.clone();
+            let pos = (event.position.x.into(), event.position.y.into());
+            model_right_click.update(cx, |st, cx| {
+                st.tab_context_menu = Some((id, pos));
                 cx.notify();
             });
         })

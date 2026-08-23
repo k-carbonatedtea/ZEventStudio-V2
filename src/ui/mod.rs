@@ -8,6 +8,7 @@ pub mod sidebar;
 pub mod state;
 pub mod state_editor;
 pub mod state_project;
+pub mod state_tabs;
 pub mod state_theme;
 pub mod tab_bar;
 pub mod theme;
@@ -16,7 +17,7 @@ pub mod toolbar;
 pub mod views;
 
 pub use app::AppView;
-pub use tab_bar::{render_document_tab_bar, render_unsaved_changes_modal};
+pub use tab_bar::{render_document_tab_bar, render_tab_context_menu, render_unsaved_changes_modal};
 #[allow(unused_imports)]
 pub use theme::{AppTheme, ThemePalette};
 pub use title_bar::render_title_bar;

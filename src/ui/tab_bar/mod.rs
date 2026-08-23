@@ -1,8 +1,10 @@
 use gpui::*;
 use crate::ui::state::AppState;
 
+pub mod context_menu;
 pub mod tab_item;
 pub mod unsaved_modal;
+pub use context_menu::render_tab_context_menu;
 pub use tab_item::render_tab_item;
 pub use unsaved_modal::render_unsaved_changes_modal;
 

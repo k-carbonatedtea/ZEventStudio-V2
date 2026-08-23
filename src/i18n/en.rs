@@ -132,6 +132,16 @@ pub fn get_en(key: &str) -> &str {
         "tab_bar.close_tab" => "Close Tab",
         "tab_bar.new_tab" => "New Flowchart",
         "tab_bar.untitled" => "Untitled Flowchart",
+        "tab_menu.close" => "Close",
+        "tab_menu.close_others" => "Close Others",
+        "tab_menu.close_to_right" => "Close to the Right",
+        "tab_menu.close_saved" => "Close Saved",
+        "tab_menu.close_all" => "Close All",
+        "tab_menu.save" => "Save File",
+        "tab_menu.copy_path" => "Copy Full Path",
+        "tab_menu.copy_name" => "Copy File Name",
+        "tab_menu.path_copied" => "✨ File path copied to clipboard",
+        "tab_menu.name_copied" => "✨ File name copied to clipboard",
 
         // ---------------- 节点卡片与图形 (Nodes & Canvas) ----------------
         "node.parameters_label" => "Parameters:",

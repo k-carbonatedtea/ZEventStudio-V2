@@ -132,6 +132,16 @@ pub fn get_zh(key: &str) -> &str {
         "tab_bar.close_tab" => "关闭标签页",
         "tab_bar.new_tab" => "新建流程图",
         "tab_bar.untitled" => "未命名流程图",
+        "tab_menu.close" => "关闭",
+        "tab_menu.close_others" => "关闭其他",
+        "tab_menu.close_to_right" => "关闭右侧标签页",
+        "tab_menu.close_saved" => "关闭已保存",
+        "tab_menu.close_all" => "全部关闭",
+        "tab_menu.save" => "保存文件",
+        "tab_menu.copy_path" => "复制完整路径",
+        "tab_menu.copy_name" => "复制文件名",
+        "tab_menu.path_copied" => "✨ 已复制文件路径到剪贴板",
+        "tab_menu.name_copied" => "✨ 已复制文件名到剪贴板",
 
         // ---------------- 节点卡片与图形 (Nodes & Canvas) ----------------
         "node.parameters_label" => "参数属性 (Parameters):",

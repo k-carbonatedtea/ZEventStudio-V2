@@ -110,6 +110,7 @@ pub struct AppState {
 
     pub quick_add_modal: Option<QuickAddModalState>,
     pub node_context_menu: Option<(String, (f32, f32))>,
+    pub tab_context_menu: Option<(String, (f32, f32))>,
     pub active_node_editor_modal: Option<crate::ui::canvas::NodeEditorModalState>,
     pub unsaved_changes_modal: Option<UnsavedChangesModalState>,
 
@@ -181,6 +182,7 @@ impl AppState {
             toast: None,
             quick_add_modal: None,
             node_context_menu: None,
+            tab_context_menu: None,
             active_node_editor_modal: None,
             unsaved_changes_modal: None,
             inspector_open: true,

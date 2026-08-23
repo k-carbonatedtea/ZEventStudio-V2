@@ -316,6 +316,10 @@ impl Render for AppView {
                     .right_4()
                     .child(render_toast(t))
             }))
+            // 标签页右键上下文菜单
+            .children(state.tab_context_menu.as_ref().map(|(tid, pos)| {
+                crate::ui::render_tab_context_menu(state, tid, *pos, &self.model)
+            }))
             // 节点属性与分支编辑模态框
             .children((state.active_node_editor_modal.is_some()).then(|| {
                 render_node_editor_modal(state, &self.model)
