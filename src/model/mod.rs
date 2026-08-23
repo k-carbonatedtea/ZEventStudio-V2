@@ -18,7 +18,7 @@ pub mod ai_def;
 #[allow(unused_imports)]
 pub use bcml::{import_bcml_paths, BcmlImportResult};
 #[allow(unused_imports)]
-pub use settings::{GamePathSettings, PlatformType, SwitchPathSettings, WiiUPathSettings};
+pub use settings::{GamePathSettings, PlatformType, RecentProjectItem, SwitchPathSettings, WiiUPathSettings};
 
 #[allow(unused_imports)]
 pub use actor::*;

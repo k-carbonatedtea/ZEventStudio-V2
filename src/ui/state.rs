@@ -43,13 +43,7 @@ pub enum WelcomeTab {
     Recent,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RecentProjectItem {
-    pub id: String,
-    pub name: String,
-    pub path: String,
-    pub project_type: String,
-}
+pub use crate::model::RecentProjectItem;
 
 /// 快速新建节点时的源连接端口信息
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -204,7 +198,7 @@ impl AppState {
             welcome_tab: WelcomeTab::QuickStart,
             open_tabs: Vec::new(),
             active_tab_id: None,
-            recent_projects: Vec::new(),
+            recent_projects: game_paths.recent_projects.clone(),
             selected_actor_idx: 0,
             is_adding_actor: false,
             new_actor_name: String::new(),

@@ -1,6 +1,5 @@
 use gpui::*;
-use crate::ui::components::Toast;
-use crate::ui::state::{AppState, AppWorkspaceTab, RecentProjectItem};
+use crate::ui::state::{AppState, RecentProjectItem};
 use crate::ui::views::welcome::quick_tab::{pick_and_load_file, pick_and_load_mod_folder};
 use crate::ui::views::welcome::walkthrough_col::render_walkthrough_section;
 
@@ -215,7 +214,7 @@ fn render_recent_files_section(
                             .cursor_pointer()
                             .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                 model_clear.update(cx, |st, cx| {
-                                    st.recent_projects.clear();
+                                    st.clear_recent_projects();
                                     cx.notify();
                                 });
                             })
@@ -265,12 +264,7 @@ fn render_vs_recent_row(
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             let idata = item_clone.clone();
             model_open.update(cx, |st, cx| {
-                if !idata.path.is_empty() {
-                    st.load_file_by_path(&idata.path);
-                }
-                st.fit_view();
-                st.current_tab = AppWorkspaceTab::Flowchart;
-                st.toast = Some(Toast::success(format!("📂 已加载: {}", idata.name)));
+                st.open_recent_item(&idata);
                 cx.notify();
             });
         })
@@ -297,7 +291,7 @@ fn render_vs_recent_row(
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     cx.stop_propagation();
                     model_del.update(cx, |st, cx| {
-                        if idx < st.recent_projects.len() { st.recent_projects.remove(idx); }
+                        st.remove_recent_project(idx);
                         cx.notify();
                     });
                 })

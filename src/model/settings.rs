@@ -74,6 +74,15 @@ impl Default for LlmSettings {
     }
 }
 
+/// 最近打开的项目或文件记录
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecentProjectItem {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub project_type: String,
+}
+
 /// 全局游戏与编辑器偏好设置
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GamePathSettings {
@@ -85,6 +94,8 @@ pub struct GamePathSettings {
     pub custom_ai_dump_dir: String,
     #[serde(default)]
     pub llm: LlmSettings,
+    #[serde(default)]
+    pub recent_projects: Vec<RecentProjectItem>,
 }
 
 impl Default for GamePathSettings {
@@ -96,6 +107,7 @@ impl Default for GamePathSettings {
             switch: SwitchPathSettings::default(),
             custom_ai_dump_dir: String::new(),
             llm: LlmSettings::default(),
+            recent_projects: Vec::new(),
         }
     }
 }

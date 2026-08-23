@@ -1,6 +1,5 @@
 use gpui::*;
-use crate::ui::components::Toast;
-use crate::ui::state::{AppState, AppWorkspaceTab, RecentProjectItem};
+use crate::ui::state::{AppState, RecentProjectItem};
 
 #[allow(dead_code)]
 /// 渲染欢迎启动页的「最近打开的文件与模组」列表面板
@@ -80,7 +79,7 @@ pub fn render_recent_projects_tab(
                             .text_color(hsla(0.0, 0.0, 0.90, 1.0))
                             .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                 model_clear.update(cx, |st, cx| {
-                                    st.recent_projects.clear();
+                                    st.clear_recent_projects();
                                     cx.notify();
                                 });
                             })
@@ -128,12 +127,7 @@ fn render_recent_item_row(
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             let item_data = item_clone.clone();
             model_open.update(cx, |st, cx| {
-                if !item_data.path.is_empty() {
-                    st.load_file_by_path(&item_data.path);
-                }
-                st.fit_view();
-                st.current_tab = AppWorkspaceTab::Flowchart;
-                st.toast = Some(Toast::success(format!("📂 已加载: {}", item_data.name)));
+                st.open_recent_item(&item_data);
                 cx.notify();
             });
         })
@@ -207,9 +201,7 @@ fn render_recent_item_row(
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     cx.stop_propagation();
                     model_del.update(cx, |st, cx| {
-                        if idx < st.recent_projects.len() {
-                            st.recent_projects.remove(idx);
-                        }
+                        st.remove_recent_project(idx);
                         cx.notify();
                     });
                 })

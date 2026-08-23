@@ -1,6 +1,5 @@
 use gpui::*;
-use crate::ui::components::Toast;
-use crate::ui::state::{AppState, AppWorkspaceTab, RecentProjectItem};
+use crate::ui::state::AppState;
 
 #[allow(dead_code)]
 /// 渲染欢迎启动页的「快速开始」功能面板
@@ -170,58 +169,14 @@ pub fn pick_and_load_file(model: &Entity<AppState>, cx: &mut App) {
                 .unwrap_or_else(|| "Unknown.bfevfl".to_string());
 
             let is_sarc = crate::model::is_sarc_extension(&file_name);
-            let ext = path
-                .extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or("")
-                .to_lowercase();
 
             cx.update(|cx| {
                 model.update(cx, |st, cx| {
                     if is_sarc {
                         st.open_pack_file(&path_str);
-                        cx.notify();
-                        return;
+                    } else {
+                        st.load_file_by_path(&path_str);
                     }
-
-                    if ext == "bfevfl" {
-                        if let Ok(bytes) = std::fs::read(&path) {
-                            if let Ok(mut loaded_graph) =
-                                crate::model::evfl::load_bfevfl_from_bytes(&bytes)
-                            {
-                                loaded_graph.name = file_name.clone();
-                                loaded_graph.ensure_actors_populated();
-                                crate::model::layout::auto_layout_graph(&mut loaded_graph);
-                                st.graph = loaded_graph;
-                                st.fit_view();
-                                st.current_tab = AppWorkspaceTab::Flowchart;
-                                st.toast = Some(Toast::success(format!("📂 成功加载: {}", file_name)));
-                                st.recent_projects.insert(
-                                    0,
-                                    RecentProjectItem {
-                                        id: uuid::Uuid::new_v4().to_string(),
-                                        name: file_name.clone(),
-                                        path: path_str.clone(),
-                                        project_type: ext.clone(),
-                                    },
-                                );
-                                cx.notify();
-                                return;
-                            }
-                        }
-                    }
-
-                    st.current_tab = AppWorkspaceTab::Flowchart;
-                    st.toast = Some(Toast::success(format!("📂 已打开文件: {}", file_name)));
-                    st.recent_projects.insert(
-                        0,
-                        RecentProjectItem {
-                            id: uuid::Uuid::new_v4().to_string(),
-                            name: file_name,
-                            path: path_str,
-                            project_type: ext,
-                        },
-                    );
                     cx.notify();
                 });
             });
