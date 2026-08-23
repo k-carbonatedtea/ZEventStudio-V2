@@ -3,10 +3,15 @@ pub fn get_en(key: &str) -> &str {
     match key {
         // ---------------- 顶部菜单栏 (Menu Bar) ----------------
         "menu.file" => "File",
+        "menu.options" => "Options",
         "menu.edit" => "Edit",
         "menu.selection" => "Selection",
         "menu.view" => "View",
         "menu.help" => "Help",
+
+        "menu.ui_language" => "UI Language",
+        "menu.game_language" => "Game Language",
+        "menu.settings" => "Settings...",
 
         "menu.new_flow" => "New EventFlow (Ctrl+N)",
         "menu.open_file" => "Open File... (Ctrl+O)",
@@ -327,6 +332,7 @@ pub fn get_en(key: &str) -> &str {
         "toast.compile_failed" => "❌ Format compilation failed",
         "toast.no_active_file" => "⚠️ No active file opened",
         "toast.revert_success" => "🔄 File reverted to original state",
+        "toast.settings_reset" => "🔄 Settings have been reset to default",
 
         // ---------------- 角色分类与关键参数 (Actor Theme & Smart Params) ----------------
         "actor.system" => "System Logic",
@@ -385,6 +391,57 @@ pub fn get_en(key: &str) -> &str {
         "empty.viewGuide" => "View User Guide",
         "empty.noRecentProjects" => "No recent projects yet",
         "empty.clearRecent" => "Clear Recent History",
+
+        // ---------------- 设置与首选项 (Settings Modal) ----------------
+        "settings.title" => "Preferences & Settings",
+        "settings.subtitle" => "Configure UI language, game localization, canvas rendering, and mod environment",
+        "settings.tab_general" => "General & Language",
+        "settings.tab_canvas" => "Editor & Canvas",
+        "settings.tab_performance" => "Graphics & Performance",
+        "settings.tab_game" => "Game & Export",
+        "settings.close" => "Done",
+        "settings.reset_defaults" => "Reset Defaults",
+
+        "settings.ui_lang_title" => "UI Language",
+        "settings.ui_lang_desc" => "Switch the display language of the editor user interface",
+        "settings.game_lang_title" => "Game Text Language",
+        "settings.game_lang_desc" => "Set BotW / TotK MSBT dialogue & message localization language",
+        "settings.startup_title" => "Startup Behavior",
+        "settings.startup_welcome" => "Show Welcome Page on startup",
+        "settings.startup_welcome_desc" => "Display quick start workspace and recent items when no files are open",
+
+        "settings.params_expand_title" => "Node Parameter Display",
+        "settings.params_expand_desc" => "Expand parameter lists by default when opening or creating flows",
+        "settings.params_expand_opt" => "Expand all parameters by default",
+        "settings.grid_style_title" => "Canvas Grid Style",
+        "settings.grid_style_desc" => "Select background grid rendering style for flowchart canvas",
+        "settings.grid_dots" => "Dot Grid (Dots)",
+        "settings.grid_lines" => "Fine Grid (Lines)",
+        "settings.grid_none" => "Clean (None)",
+        "settings.edge_style_title" => "Connection Curve Algorithm",
+        "settings.edge_style_desc" => "Curve fitting style for node connection lines",
+        "settings.edge_bezier" => "Cubic Bezier (Smooth)",
+        "settings.edge_smooth" => "Rounded Orthogonal (Step)",
+
+        "settings.perf_mode_title" => "Extreme Performance Mode",
+        "settings.perf_mode_desc" => "Enable 60FPS high refresh rendering and simplify blurs for faster response",
+        "settings.culling_title" => "Viewport Culling",
+        "settings.culling_desc" => "Automatically skip off-screen node & edge calculations to maintain high framerate",
+        "settings.culling_active" => "Always Enabled (Hardware Accelerated)",
+        "settings.status_bar_title" => "Status Bar Performance Monitor",
+        "settings.status_bar_desc" => "Display realtime FPS and frame render time in the top toolbar",
+
+        "settings.engine_title" => "Target Game Engine",
+        "settings.engine_desc" => "Target game format for EventFlow and actor dictionary matching",
+        "settings.engine_botw" => "The Legend of Zelda: Breath of the Wild (BotW)",
+        "settings.engine_totk" => "The Legend of Zelda: Tears of the Kingdom (TotK)",
+        "settings.endian_title" => "Default Binary Endianness",
+        "settings.endian_desc" => "Binary endian format used when saving SARC / BFEVFL / MSBT files",
+        "settings.endian_little" => "Little Endian (Switch / PC)",
+        "settings.endian_big" => "Big Endian (Wii U)",
+        "settings.backup_title" => "Safety Backup on Save",
+        "settings.backup_desc" => "Automatically generate .bak backup copies when saving packs",
+        "settings.backup_enable" => "Automatically create backups when saving",
 
         _ => key,
     }

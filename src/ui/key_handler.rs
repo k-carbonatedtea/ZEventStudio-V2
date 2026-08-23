@@ -40,6 +40,12 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
         return true;
     }
 
+    // 5.1 首选项设置弹窗拦截 (Esc 关闭)
+    if state.settings_modal_open && event.keystroke.key == "escape" {
+        state.settings_modal_open = false;
+        return true;
+    }
+
     // 6. 未保存修改确认模态框键盘事件拦截 (Esc 取消, Enter 保存并关闭)
     if state.unsaved_changes_modal.is_some() {
         if event.keystroke.key == "escape" {

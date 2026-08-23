@@ -1,6 +1,7 @@
 pub mod edit_menu;
 pub mod file_menu;
 pub mod help_menu;
+pub mod options_menu;
 pub mod selection_menu;
 pub mod view_menu;
 
@@ -10,6 +11,7 @@ use crate::ui::state::AppState;
 use edit_menu::render_edit_menu;
 use file_menu::render_file_menu;
 use help_menu::render_help_menu;
+use options_menu::render_options_menu;
 use selection_menu::render_selection_menu;
 use view_menu::render_view_menu;
 
@@ -63,8 +65,9 @@ pub fn render_title_bar(state: &AppState, model: &Entity<AppState>) -> impl Into
                                 .child("ZEvent"),
                         ),
                 )
-                // 核心菜单选项: 文件 / 编辑 / 选择 / 查看 / 帮助
+                // 核心菜单选项: 文件 / 选项 / 编辑 / 选择 / 查看 / 帮助
                 .child(render_file_menu(state, model))
+                .child(render_options_menu(state, model))
                 .child(render_edit_menu(state, model))
                 .child(render_selection_menu(state, model))
                 .child(render_view_menu(state, model))

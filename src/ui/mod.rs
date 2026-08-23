@@ -4,10 +4,13 @@ pub mod components;
 pub mod inspector;
 pub mod key_handler;
 pub mod quick_add;
+pub mod settings;
 pub mod sidebar;
 pub mod state;
+pub mod state_canvas;
 pub mod state_editor;
 pub mod state_project;
+pub mod state_settings;
 pub mod state_tabs;
 pub mod state_theme;
 pub mod tab_bar;
@@ -17,6 +20,9 @@ pub mod toolbar;
 pub mod views;
 
 pub use app::AppView;
+pub use settings::render_settings_modal;
+#[allow(unused_imports)]
+pub use state_settings::{EdgeCurveStyle, GridStyle, SettingsTab, TargetEngine};
 pub use tab_bar::{render_document_tab_bar, render_tab_context_menu, render_unsaved_changes_modal};
 #[allow(unused_imports)]
 pub use theme::{AppTheme, ThemePalette};

@@ -1,4 +1,4 @@
-use crate::model::{auto_layout_graph, Edge, Graph, NodeData, NodeKind, PortDirection};
+use crate::model::{Graph, PortDirection};
 use crate::ui::components::Toast;
 use crate::ui::sidebar::SidebarTab;
 
@@ -127,7 +127,17 @@ pub struct AppState {
     pub frame_time_ms: f32,
     pub show_welcome_on_startup: bool,
     pub lang: crate::i18n::Language,
+    pub game_lang: crate::model::GameLanguage,
     pub current_theme: crate::ui::theme::AppTheme,
+
+    // 首选项设置模态弹窗状态
+    pub settings_modal_open: bool,
+    pub settings_active_tab: crate::ui::state_settings::SettingsTab,
+    pub grid_style: crate::ui::state_settings::GridStyle,
+    pub edge_curve_style: crate::ui::state_settings::EdgeCurveStyle,
+    pub target_engine: crate::ui::state_settings::TargetEngine,
+    pub auto_backup: bool,
+    pub show_perf_stats: bool,
 
     // 资源管理器与项目目录/封包状态
     pub project_path: Option<String>,
@@ -200,7 +210,15 @@ impl AppState {
             frame_time_ms: 1.0,
             show_welcome_on_startup: true,
             lang: crate::i18n::Language::Zh,
+            game_lang: crate::model::GameLanguage::CNzh,
             current_theme: crate::ui::theme::AppTheme::default(),
+            settings_modal_open: false,
+            settings_active_tab: crate::ui::state_settings::SettingsTab::General,
+            grid_style: crate::ui::state_settings::GridStyle::Dots,
+            edge_curve_style: crate::ui::state_settings::EdgeCurveStyle::Bezier,
+            target_engine: crate::ui::state_settings::TargetEngine::BotW,
+            auto_backup: true,
+            show_perf_stats: true,
             project_path: None,
             project_name: None,
             file_tree: Vec::new(),
@@ -216,7 +234,6 @@ impl AppState {
     pub fn set_sidebar_width(&mut self, width: f32) {
         self.sidebar_width = width.clamp(180.0, 750.0);
     }
-
 
     pub fn new_blank_flow(&mut self) {
         if let Some(cur_id) = &self.active_tab_id {
@@ -247,14 +264,10 @@ impl AppState {
         self.toast = Some(Toast::success("✨ 已创建全新空白 EventFlow 流程图"));
     }
 
-
-
-
     /// 获取当前语言环境下的本地化文本
     pub fn t<'a>(&self, key: &'a str) -> &'a str {
         crate::i18n::t(key, self.lang)
     }
-
 
     pub fn toggle_performance_mode(&mut self) {
         self.performance_mode = !self.performance_mode;
@@ -268,59 +281,9 @@ impl AppState {
     pub fn toggle_expand_params(&mut self) {
         self.expand_all_params = !self.expand_all_params;
         self.update_node_sizes();
-        auto_layout_graph(&mut self.graph);
+        crate::model::auto_layout_graph(&mut self.graph);
         self.fit_view();
         self.toast = Some(Toast::info(if self.expand_all_params { self.t("toast.expand_params_on") } else { self.t("toast.expand_params_off") }));
-    }
-
-    pub fn update_node_sizes(&mut self) {
-        for node in &mut self.graph.nodes {
-            if node.kind == NodeKind::EntryPoint {
-                node.size = (180.0, 42.0);
-                continue;
-            }
-            if self.expand_all_params && !node.properties.is_empty() {
-                let height = 110.0 + 22.0 * (node.properties.len() as f32);
-                let mut max_len = node.title.len().max(node.subtitle.as_ref().map(|s| s.len()).unwrap_or(0));
-                for p in &node.properties { max_len = max_len.max(p.key.len() + p.val.len() + 4); }
-                node.size = (240.0f32.max(((max_len as f32) * 7.2 + 40.0).min(480.0)), height);
-            } else {
-                let hh = (node.extract_key_highlights().len() as f32) * 24.0;
-                let (bw, bh) = match node.kind {
-                    NodeKind::Action | NodeKind::Switch => (240.0, 85.0 + hh),
-                    NodeKind::Query => (230.0, 85.0 + hh),
-                    NodeKind::SubFlow => (220.0, 85.0 + hh),
-                    NodeKind::Fork | NodeKind::Join => (210.0, 95.0),
-                    NodeKind::Math => (200.0, 100.0),
-                    NodeKind::Comment => (240.0, 120.0),
-                    NodeKind::EntryPoint => (180.0, 42.0),
-                };
-                node.size = (bw, bh);
-            }
-        }
-    }
-
-    pub fn fit_view(&mut self) {
-        if self.graph.nodes.is_empty() {
-            self.pan = (100.0, 100.0);
-            self.zoom = 1.0;
-            return;
-        }
-        let ((min_x, min_y), (max_x, max_y)) = self.graph.get_bounding_box();
-        let gw = (max_x - min_x).max(100.0);
-        let gh = (max_y - min_y).max(100.0);
-        let tz = ((1100.0 - 120.0) / gw).min((650.0 - 120.0) / gh).clamp(0.45, 1.25);
-        self.zoom = tz;
-        self.pan = ((1100.0 - gw * tz) / 2.0 - min_x * tz, (650.0 - gh * tz) / 2.0 - min_y * tz);
-    }
-
-    pub fn focus_node(&mut self, node_id: &str) {
-        if let Some(node) = self.graph.find_node(node_id) {
-            let (pos, size) = (node.pos, node.size);
-            self.pan = (1100.0 / 2.0 - (pos.0 + size.0 / 2.0) * self.zoom, 650.0 / 2.0 - (pos.1 + size.1 / 2.0) * self.zoom);
-            self.selected_node_id = Some(node_id.to_string());
-            self.toast = Some(Toast::info(format!("{}{}", self.t("toast.focus_node"), node.title)));
-        }
     }
 
     pub fn mark_current_tab_modified(&mut self) {
@@ -334,65 +297,10 @@ impl AppState {
         }
     }
 
-
     pub fn is_file_modified(&self, path: &str) -> bool {
         self.open_tabs.iter().any(|t| t.file_path == path && t.is_modified)
     }
-
-    pub fn auto_layout(&mut self) {
-        self.update_node_sizes();
-        auto_layout_graph(&mut self.graph);
-        self.fit_view();
-        self.mark_current_tab_modified();
-        self.toast = Some(Toast::success(self.t("toast.auto_layout_done")));
-    }
-
-    pub fn add_node_at(&mut self, kind: NodeKind, _fallback_title: impl Into<String>, pos: (f32, f32)) -> String {
-        let (node_id, title) = self.graph.generate_unique_node_name(&kind);
-        let node = NodeData::new(node_id.clone(), title, kind, pos);
-        self.graph.add_node(node);
-        self.selected_node_id = Some(node_id.clone());
-        self.mark_current_tab_modified();
-        node_id
-    }
-
-    pub fn delete_selected_node(&mut self) {
-        if let Some(id) = self.selected_node_id.take() {
-            self.graph.remove_node(&id);
-            self.mark_current_tab_modified();
-            self.toast = Some(Toast::info(self.t("toast.deleted_node")));
-        }
-    }
-
-    pub fn get_canvas_origin(&self) -> (f32, f32) {
-        (if self.sidebar_open { 280.0 } else { 0.0 }, 44.0)
-    }
-
-    pub fn screen_to_canvas(&self, sx: f32, sy: f32) -> (f32, f32) {
-        let (ox, oy) = self.get_canvas_origin();
-        ((sx - ox - self.pan.0) / self.zoom, (sy - oy - self.pan.1) / self.zoom)
-    }
-
-    pub fn canvas_to_screen(&self, cx: f32, cy: f32) -> (f32, f32) {
-        let (ox, oy) = self.get_canvas_origin();
-        (cx * self.zoom + self.pan.0 + ox, cy * self.zoom + self.pan.1 + oy)
-    }
-
-    pub fn sever_edge(&mut self, src: &str, tgt: &str) {
-        self.graph.sever_edge(src, tgt);
-        self.mark_current_tab_modified();
-        self.toast = Some(Toast::info(self.t("toast.sever_edge")));
-    }
-
-    pub fn connect_ports(&mut self, s_node: &str, s_port: &str, t_node: &str, t_port: &str) {
-        if s_node != t_node {
-            self.graph.add_edge(Edge::new(s_node, s_port, t_node, t_port));
-            self.mark_current_tab_modified();
-            self.toast = Some(Toast::success(self.t("toast.connect_edge")));
-        }
-    }
 }
-
 
 #[cfg(test)]
 mod tests {

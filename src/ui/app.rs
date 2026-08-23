@@ -331,5 +331,9 @@ impl Render for AppView {
             .children((state.unsaved_changes_modal.is_some()).then(|| {
                 crate::ui::render_unsaved_changes_modal(state, &self.model)
             }))
+            // 首选项与系统设置模态框
+            .children(state.settings_modal_open.then(|| {
+                crate::ui::render_settings_modal(state, &self.model)
+            }))
     }
 }

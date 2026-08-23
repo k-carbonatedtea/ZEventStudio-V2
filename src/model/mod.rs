@@ -5,6 +5,7 @@ pub mod edge;
 pub mod evfl;
 pub mod file_converter;
 pub mod file_tree;
+pub mod game_language;
 pub mod graph;
 pub mod layout;
 pub mod node;
@@ -25,6 +26,8 @@ pub use evfl::load_bfevfl_from_bytes;
 pub use file_converter::{compile_code_to_bytes, parse_file_to_code, should_compress_yaz0};
 #[allow(unused_imports)]
 pub use file_tree::{is_sarc_extension, read_file_from_path, scan_project_path, FileNode};
+#[allow(unused_imports)]
+pub use game_language::GameLanguage;
 #[allow(unused_imports)]
 pub use graph::Graph;
 #[allow(unused_imports)]

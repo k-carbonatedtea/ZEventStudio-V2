@@ -4,10 +4,15 @@ pub fn get_zh(key: &str) -> &str {
 
         // ---------------- 顶部菜单栏 (Menu Bar) ----------------
         "menu.file" => "文件",
+        "menu.options" => "选项",
         "menu.edit" => "编辑",
         "menu.selection" => "选择",
         "menu.view" => "查看",
         "menu.help" => "帮助",
+
+        "menu.ui_language" => "UI 界面语言",
+        "menu.game_language" => "游戏文本语言",
+        "menu.settings" => "设置...",
 
         "menu.new_flow" => "新建事件流 (Ctrl+N)",
         "menu.open_file" => "打开单个文件... (Ctrl+O)",
@@ -323,6 +328,7 @@ pub fn get_zh(key: &str) -> &str {
         "toast.compile_failed" => "❌ 格式编译失败",
         "toast.no_active_file" => "⚠️ 当前没有打开的文件",
         "toast.revert_success" => "🔄 已重置文件至初始状态",
+        "toast.settings_reset" => "🔄 已恢复所有首选项为默认配置",
 
         // ---------------- 角色分类与关键参数 (Actor Theme & Smart Params) ----------------
         "actor.system" => "系统逻辑",
@@ -381,6 +387,57 @@ pub fn get_zh(key: &str) -> &str {
         "empty.viewGuide" => "查看使用说明",
         "empty.noRecentProjects" => "暂无最近打开的项目",
         "empty.clearRecent" => "清空最近记录",
+
+        // ---------------- 设置与首选项 (Settings Modal) ----------------
+        "settings.title" => "首选项与设置",
+        "settings.subtitle" => "管理界面语言、游戏本地化、画布渲染与封包环境配置",
+        "settings.tab_general" => "常规与语言",
+        "settings.tab_canvas" => "编辑器与画布",
+        "settings.tab_performance" => "渲染与性能",
+        "settings.tab_game" => "游戏与导出",
+        "settings.close" => "完成",
+        "settings.reset_defaults" => "恢复默认",
+
+        "settings.ui_lang_title" => "UI 界面语言",
+        "settings.ui_lang_desc" => "切换应用程序的操作界面多语言显示",
+        "settings.game_lang_title" => "游戏文本语言 (Game Text)",
+        "settings.game_lang_desc" => "设置解析与导出的 BotW / TotK MSBT 消息文本语言环境",
+        "settings.startup_title" => "启动行为",
+        "settings.startup_welcome" => "启动时自动打开欢迎页面",
+        "settings.startup_welcome_desc" => "无打开文档时显示快捷工作区与最近项目",
+
+        "settings.params_expand_title" => "节点参数显示",
+        "settings.params_expand_desc" => "新建或加载流程图时默认展开全部参数卡片",
+        "settings.params_expand_opt" => "默认展开所有参数",
+        "settings.grid_style_title" => "画布背景网格",
+        "settings.grid_style_desc" => "选择流程图画布的背景网格渲染样式",
+        "settings.grid_dots" => "点阵网格 (Dots)",
+        "settings.grid_lines" => "细线网格 (Lines)",
+        "settings.grid_none" => "无网格 (None)",
+        "settings.edge_style_title" => "连线拟合曲线",
+        "settings.edge_style_desc" => "节点之间连接线的平滑曲线风格",
+        "settings.edge_bezier" => "三阶贝塞尔曲线 (Bezier)",
+        "settings.edge_smooth" => "平滑圆角折线 (Smooth)",
+
+        "settings.perf_mode_title" => "极限性能模式",
+        "settings.perf_mode_desc" => "开启 60FPS 极速渲染，关闭复杂背景模糊以提升响应速度",
+        "settings.culling_title" => "视口边界裁剪 (Viewport Culling)",
+        "settings.culling_desc" => "自动跳过可视区域外的节点与连线计算，保持高帧率运行",
+        "settings.culling_active" => "始终启用 (硬件加速)",
+        "settings.status_bar_title" => "状态栏性能监控",
+        "settings.status_bar_desc" => "在顶部工具栏常驻显示实时 FPS 帧率与渲染耗时",
+
+        "settings.engine_title" => "目标游戏引擎",
+        "settings.engine_desc" => "配置事件流与参数字典匹配的目标游戏格式",
+        "settings.engine_botw" => "塞尔达传说: 旷野之息 (BotW)",
+        "settings.engine_totk" => "塞尔达传说: 王国之泪 (TotK)",
+        "settings.endian_title" => "默认二进制字节序 (Endianness)",
+        "settings.endian_desc" => "保存与重构 SARC / BFEVFL / MSBT 时采用的字节序",
+        "settings.endian_little" => "小端序 (Little Endian - Switch / PC)",
+        "settings.endian_big" => "大端序 (Big Endian - Wii U)",
+        "settings.backup_title" => "安全保存与备份",
+        "settings.backup_desc" => "保存或导出封包时自动生成 .bak 备份文件",
+        "settings.backup_enable" => "保存时自动创建备份",
 
         _ => key,
     }
