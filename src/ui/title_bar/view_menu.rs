@@ -84,7 +84,7 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                     PopupMenuItem::new(label_flowchart.clone())
                         .on_click(move |_, _, cx| {
                             m_fc.update(cx, |st, cx| {
-                                st.current_tab = AppWorkspaceTab::Flowchart;
+                                st.switch_workspace_tab(AppWorkspaceTab::Flowchart);
                                 cx.notify();
                             });
                         }),
@@ -93,7 +93,7 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                     PopupMenuItem::new(label_code.clone())
                         .on_click(move |_, _, cx| {
                             m_cd.update(cx, |st, cx| {
-                                st.current_tab = AppWorkspaceTab::CodeEditor;
+                                st.switch_workspace_tab(AppWorkspaceTab::CodeEditor);
                                 cx.notify();
                             });
                         }),

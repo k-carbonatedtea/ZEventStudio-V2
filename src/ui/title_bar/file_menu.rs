@@ -4,7 +4,7 @@ use gpui_component::{
     menu::{DropdownMenu, PopupMenu, PopupMenuItem},
     Sizable,
 };
-use crate::ui::state::{AppState, AppWorkspaceTab};
+use crate::ui::state::AppState;
 
 /// 渲染「文件 (File)」下拉菜单
 pub fn render_file_menu(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
@@ -104,9 +104,7 @@ pub fn render_file_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                     PopupMenuItem::new(label_close_all.clone())
                         .on_click(move |_, _, cx| {
                             m_close_all.update(cx, |st, cx| {
-                                st.open_tabs.clear();
-                                st.active_tab_id = None;
-                                st.current_tab = AppWorkspaceTab::Welcome;
+                                st.close_all_document_tabs();
                                 cx.notify();
                             });
                         }),

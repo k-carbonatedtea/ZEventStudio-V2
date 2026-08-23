@@ -1,7 +1,7 @@
 use crate::model::code_document::CodeDocumentState;
 use crate::model::file_converter::parse_file_to_code;
 use crate::model::file_tree::{read_file_from_path, scan_project_path};
-use crate::model::{DocumentTabKind, OpenDocumentTab};
+use crate::model::{DocumentTabKind, Graph, OpenDocumentTab};
 use crate::ui::components::Toast;
 use crate::ui::sidebar::SidebarTab;
 use crate::ui::state::{AppState, AppWorkspaceTab, RecentProjectItem};
@@ -148,17 +148,87 @@ impl AppState {
                             if let Some(g) = next_graph {
                                 self.graph = g;
                                 self.fit_view();
+                            } else {
+                                self.graph = Graph::new("EventFlow");
                             }
                             self.current_tab = AppWorkspaceTab::Flowchart;
                         }
                         DocumentTabKind::CodeEditor => {
+                            self.graph = Graph::new("EventFlow");
                             self.current_tab = AppWorkspaceTab::CodeEditor;
                         }
                     }
                 } else {
                     self.active_tab_id = None;
+                    self.selected_file_path = None;
+                    self.selected_node_id = None;
+                    self.graph = Graph::new("EventFlow");
                     self.current_tab = AppWorkspaceTab::Welcome;
                 }
+            } else if !self.open_tabs.iter().any(|t| t.tab_kind == DocumentTabKind::Flowchart) {
+                // 如果关闭后台标签后已无任何流程图标签，清空旧流程图拓扑
+                self.graph = Graph::new("EventFlow");
+            }
+        }
+    }
+
+    /// 关闭所有已打开文档标签页并重置状态
+    pub fn close_all_document_tabs(&mut self) {
+        self.open_tabs.clear();
+        self.active_tab_id = None;
+        self.selected_file_path = None;
+        self.selected_node_id = None;
+        self.graph = Graph::new("EventFlow");
+        self.current_tab = AppWorkspaceTab::Welcome;
+    }
+
+    /// 智能切换主工作区模式 (与已打开文档标签协同联动)
+    pub fn switch_workspace_tab(&mut self, target_tab: AppWorkspaceTab) {
+        match target_tab {
+            AppWorkspaceTab::Flowchart => {
+                let is_flow_active = self
+                    .active_tab_id
+                    .as_deref()
+                    .and_then(|id| self.open_tabs.iter().find(|t| t.id == id))
+                    .is_some_and(|t| t.tab_kind == DocumentTabKind::Flowchart);
+
+                if is_flow_active {
+                    self.current_tab = AppWorkspaceTab::Flowchart;
+                } else if let Some(existing_flow) = self
+                    .open_tabs
+                    .iter()
+                    .find(|t| t.tab_kind == DocumentTabKind::Flowchart)
+                    .cloned()
+                {
+                    self.switch_document_tab(&existing_flow.id);
+                } else {
+                    // 没有打开任何流程图文件时，重置为空白图，避免残留已关闭文件的节点
+                    self.graph = Graph::new("EventFlow");
+                    self.current_tab = AppWorkspaceTab::Flowchart;
+                }
+            }
+            AppWorkspaceTab::CodeEditor => {
+                let is_code_active = self
+                    .active_tab_id
+                    .as_deref()
+                    .and_then(|id| self.open_tabs.iter().find(|t| t.id == id))
+                    .is_some_and(|t| t.tab_kind == DocumentTabKind::CodeEditor);
+
+                if is_code_active {
+                    self.current_tab = AppWorkspaceTab::CodeEditor;
+                } else if let Some(existing_code) = self
+                    .open_tabs
+                    .iter()
+                    .find(|t| t.tab_kind == DocumentTabKind::CodeEditor)
+                    .cloned()
+                {
+                    self.switch_document_tab(&existing_code.id);
+                } else {
+                    self.current_tab = AppWorkspaceTab::CodeEditor;
+                }
+            }
+            other => {
+                self.current_tab = other;
             }
         }
     }

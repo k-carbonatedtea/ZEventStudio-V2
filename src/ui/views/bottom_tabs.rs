@@ -91,7 +91,7 @@ fn render_bottom_tab_item(
         .hover(move |s| s.bg(pal.card_hover).text_color(pal.text_primary))
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             model_click.update(cx, |st, cx| {
-                st.current_tab = target_tab;
+                st.switch_workspace_tab(target_tab);
                 cx.notify();
             });
         })
