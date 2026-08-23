@@ -177,7 +177,7 @@ pub fn render_node_detail(
                                 cx.notify();
                             });
                         })
-                        .child("✨ 自动填充游戏参数 (Auto-fill)"),
+                        .child(state.t("inspector.autofill_btn")),
                 )
             } else {
                 None

@@ -178,6 +178,7 @@ fn render_switch_export_dir_card(state: &AppState, model: &Entity<AppState>) -> 
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_path_field<F>(
     title: &str,
     description: &str,

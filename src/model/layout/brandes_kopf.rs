@@ -28,14 +28,13 @@ pub fn brandes_kopf_coordinates(
     }
 
     // 2. 迭代进行弹簧/重心松弛与对称居中 (Centering & Alignment Passes)
-    for _ in 0..12 {
+    for _ in 0..10 {
         // 自顶向下对齐 (Top-to-Bottom: Align with parents)
         for layer in layers.iter().take(max_rank).skip(1) {
             for id in layer {
                 align_with_neighbors(id, preds, &mut coords);
             }
-            // 纠正同层间距重叠
-            enforce_layer_spacing(layer, nodes, &mut coords, node_spacing_x);
+            enforce_bidirectional_spacing(layer, nodes, &mut coords, node_spacing_x);
         }
 
         // 自底向上对齐 (Bottom-to-Top: Align with children)
@@ -43,13 +42,11 @@ pub fn brandes_kopf_coordinates(
             for id in layer {
                 align_with_neighbors(id, succs, &mut coords);
             }
-            // 纠正同层间距重叠
-            enforce_layer_spacing(layer, nodes, &mut coords, node_spacing_x);
+            enforce_bidirectional_spacing(layer, nodes, &mut coords, node_spacing_x);
         }
     }
 
-
-    // 3. 对称居中微调：确保分叉与汇合点完美处于父/子节点群的几何中心
+    // 3. 对称居中微调：确保分叉与汇合点处于分支包围盒中心
     for layer in layers {
         for id in layer {
             let has_fork = succs.get(id).map(|s| s.len() > 1).unwrap_or(false);
@@ -63,7 +60,7 @@ pub fn brandes_kopf_coordinates(
         }
     }
 
-    // 4. 入口点与顶层主干全局居中：确保 EntryPoint 节点与起始主干严格位于整图水平中轴线上 如果不需要强制入口点可注释掉这段代码
+    // 4. 入口点与顶层主干全局居中
     let mut all_min = f32::INFINITY;
     let mut all_max = f32::NEG_INFINITY;
     for (id, &x) in coords.iter() {
@@ -74,7 +71,6 @@ pub fn brandes_kopf_coordinates(
     if all_min.is_finite() && all_max.is_finite() {
         let comp_center_x = (all_min + all_max) / 2.0;
 
-        // 从 Rank 0 开始向下居中单节点主干 (如 EntryPoint -> Action -> Switch)
         for layer in layers {
             if layer.len() == 1 {
                 let single_id = &layer[0];
@@ -85,9 +81,9 @@ pub fn brandes_kopf_coordinates(
         }
     }
 
-    // 5. 最终层内间距强制保障
+    // 5. 最终层内间距双向无偏保障
     for layer in layers {
-        enforce_layer_spacing(layer, nodes, &mut coords, node_spacing_x);
+        enforce_bidirectional_spacing(layer, nodes, &mut coords, node_spacing_x);
     }
 
     coords
@@ -146,8 +142,8 @@ fn center_join_node(
     }
 }
 
-/// 强制同层节点从左向右保持最小间距，并在中心发生偏移时进行对称平移
-pub fn enforce_layer_spacing(
+/// 双向无偏层内间距强制保障 (Left-to-Right + Right-to-Left Averaging)
+pub fn enforce_bidirectional_spacing(
     layer: &[String],
     nodes: &HashMap<String, LayoutNode>,
     coords: &mut HashMap<String, f32>,
@@ -157,20 +153,44 @@ pub fn enforce_layer_spacing(
         return;
     }
 
-    // 从左至右推挤，避免重叠
+    // 1. 从左至右推挤
+    let mut left_pass: Vec<f32> = Vec::with_capacity(layer.len());
+    let mut cur_l = *coords.get(&layer[0]).unwrap_or(&0.0);
+    left_pass.push(cur_l);
+
     for i in 1..layer.len() {
         let left_id = &layer[i - 1];
         let right_id = &layer[i];
-
-        let left_x = *coords.get(left_id).unwrap_or(&0.0);
-        let right_x = *coords.get(right_id).unwrap_or(&0.0);
-
+        let prev_x = left_pass[i - 1];
+        let target_x = *coords.get(right_id).unwrap_or(&0.0);
         let left_w = nodes.get(left_id).map(|n| n.width).unwrap_or(240.0);
         let right_w = nodes.get(right_id).map(|n| n.width).unwrap_or(240.0);
+        let min_required = prev_x + (left_w + right_w) / 2.0 + node_spacing_x;
+        cur_l = target_x.max(min_required);
+        left_pass.push(cur_l);
+    }
 
-        let min_required = left_x + (left_w + right_w) / 2.0 + node_spacing_x;
-        if right_x < min_required {
-            coords.insert(right_id.clone(), min_required);
-        }
+    // 2. 从右至左推挤
+    let mut right_pass: Vec<f32> = vec![0.0; layer.len()];
+    let last_idx = layer.len() - 1;
+    let mut cur_r = *coords.get(&layer[last_idx]).unwrap_or(&0.0);
+    right_pass[last_idx] = cur_r;
+
+    for i in (0..last_idx).rev() {
+        let left_id = &layer[i];
+        let right_id = &layer[i + 1];
+        let next_x = right_pass[i + 1];
+        let target_x = *coords.get(left_id).unwrap_or(&0.0);
+        let left_w = nodes.get(left_id).map(|n| n.width).unwrap_or(240.0);
+        let right_w = nodes.get(right_id).map(|n| n.width).unwrap_or(240.0);
+        let max_allowed = next_x - (left_w + right_w) / 2.0 - node_spacing_x;
+        cur_r = target_x.min(max_allowed);
+        right_pass[i] = cur_r;
+    }
+
+    // 3. 综合取中值，保证对称无偏
+    for (i, id) in layer.iter().enumerate() {
+        let final_x = (left_pass[i] + right_pass[i]) / 2.0;
+        coords.insert(id.clone(), final_x);
     }
 }

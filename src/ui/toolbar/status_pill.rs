@@ -40,10 +40,37 @@ pub fn render_status_pill(
         )
     };
 
+    let model_fit_view = model.clone();
+
     div()
         .flex()
         .items_center()
         .gap_2p5()
+        // 缩放比例指示药丸 (点击一键自适应全图视口)
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap_1()
+                .px_2p5()
+                .py_1()
+                .rounded_lg()
+                .bg(pal.card_surface)
+                .border_1()
+                .border_color(pal.card_border)
+                .hover(|s| s.bg(pal.card_hover).text_color(pal.text_primary))
+                .cursor_pointer()
+                .text_size(px(11.0))
+                .font_weight(FontWeight::BOLD)
+                .text_color(pal.text_secondary)
+                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                    model_fit_view.update(cx, |st, cx| {
+                        st.fit_view();
+                        cx.notify();
+                    });
+                })
+                .child(format!("🔍 {:.0}%", (state.zoom * 100.0).round())),
+        )
         // 多语言切换按钮
         .child(
             div()

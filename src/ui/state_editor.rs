@@ -282,10 +282,11 @@ impl AppState {
             } else {
                 tab.graph.clone()
             };
-            (tab.tab_kind, tab.file_path.clone(), code_info, graph_to_save)
+            let file_type = tab.file_type.clone();
+            (tab.tab_kind, tab.file_path.clone(), file_type, code_info, graph_to_save)
         };
 
-        let (tab_kind, file_path, code_info, graph_to_save) = tab_info;
+        let (tab_kind, file_path, file_type, code_info, graph_to_save) = tab_info;
 
         match tab_kind {
             DocumentTabKind::Flowchart => {
@@ -296,7 +297,16 @@ impl AppState {
                         return false;
                     }
                 };
-                match crate::model::evfl::save_bfevfl_to_bytes(&target_graph) {
+
+                let is_bai = file_type == "baiprog" || crate::model::is_baiprog_extension(&file_path);
+                let compile_res = if is_bai {
+                    let is_text = file_path.ends_with(".txt") || file_path.ends_with(".yaml") || file_path.ends_with(".yml");
+                    crate::model::baiprog::save_baiprog_to_bytes(&target_graph, is_text)
+                } else {
+                    crate::model::evfl::save_bfevfl_to_bytes(&target_graph)
+                };
+
+                match compile_res {
                     Ok(bytes) => {
                         let final_bytes = if crate::model::should_compress_yaz0(&file_path) {
                             roead::yaz0::compress(&bytes)
@@ -458,7 +468,7 @@ impl AppState {
                     }
                     if added_count > 0 {
                         self.toast = Some(Toast::success(
-                            &format!("已自动填充 {} 个参数", added_count),
+                            format!("{} {}", self.t("toast.params_autofilled"), added_count),
                         ));
                     } else {
                         self.toast = Some(Toast::success(self.t("toast.params_complete")));

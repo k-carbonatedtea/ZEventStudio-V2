@@ -44,7 +44,7 @@ impl AppState {
         let ((min_x, min_y), (max_x, max_y)) = self.graph.get_bounding_box();
         let gw = (max_x - min_x).max(100.0);
         let gh = (max_y - min_y).max(100.0);
-        let tz = ((1100.0 - 120.0) / gw).min((650.0 - 120.0) / gh).clamp(0.45, 1.25);
+        let tz = ((1100.0 - 80.0) / gw).min((650.0 - 80.0) / gh).clamp(0.01, 1.5);
         self.zoom = tz;
         self.pan = ((1100.0 - gw * tz) / 2.0 - min_x * tz, (650.0 - gh * tz) / 2.0 - min_y * tz);
     }

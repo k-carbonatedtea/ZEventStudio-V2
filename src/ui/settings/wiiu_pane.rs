@@ -21,8 +21,8 @@ pub fn render_wiiu_pane(state: &AppState, model: &Entity<AppState>) -> impl Into
         .child(render_wiiu_tip_bar(state, model, is_active))
         // 1. 游戏本体目录 (Base Game)
         .child(render_path_field(
-            &state.t("settings.wiiu_game_dir"),
-            &state.t("settings.wiiu_game_dir_desc"),
+            state.t("settings.wiiu_game_dir"),
+            state.t("settings.wiiu_game_dir_desc"),
             &state.settings_draft.wiiu.game_dir,
             "C:\\Cemu\\Games\\The Legend of Zelda Breath of the Wild\\content",
             ActiveSettingsField::WiiuGameDir,
@@ -37,8 +37,8 @@ pub fn render_wiiu_pane(state: &AppState, model: &Entity<AppState>) -> impl Into
         ))
         // 2. 游戏更新目录 (Update)
         .child(render_path_field(
-            &state.t("settings.wiiu_update_dir"),
-            &state.t("settings.wiiu_update_dir_desc"),
+            state.t("settings.wiiu_update_dir"),
+            state.t("settings.wiiu_update_dir_desc"),
             &state.settings_draft.wiiu.update_dir,
             "C:\\Cemu\\mlc01\\usr\\title\\00050000\\101C9500\\content",
             ActiveSettingsField::WiiuUpdateDir,
@@ -53,8 +53,8 @@ pub fn render_wiiu_pane(state: &AppState, model: &Entity<AppState>) -> impl Into
         ))
         // 3. 游戏 DLC 目录 (DLC)
         .child(render_path_field(
-            &state.t("settings.wiiu_dlc_dir"),
-            &state.t("settings.wiiu_dlc_dir_desc"),
+            state.t("settings.wiiu_dlc_dir"),
+            state.t("settings.wiiu_dlc_dir_desc"),
             &state.settings_draft.wiiu.dlc_dir,
             "C:\\Cemu\\mlc01\\usr\\title\\00050000\\101C9500\\aoc\\content",
             ActiveSettingsField::WiiuDlcDir,
@@ -69,8 +69,8 @@ pub fn render_wiiu_pane(state: &AppState, model: &Entity<AppState>) -> impl Into
         ))
         // 4. Mod 导出路径 (Export)
         .child(render_path_field(
-            &state.t("settings.wiiu_export_dir"),
-            &state.t("settings.wiiu_export_dir_desc"),
+            state.t("settings.wiiu_export_dir"),
+            state.t("settings.wiiu_export_dir_desc"),
             &state.settings_draft.wiiu.export_dir,
             "C:\\Cemu\\graphicPacks\\ZeldaBOTW_Mods\\MyNodeFlowMod",
             ActiveSettingsField::WiiuExportDir,

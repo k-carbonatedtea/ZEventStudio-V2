@@ -214,17 +214,19 @@ pub fn render_flow_canvas(
                     ScrollDelta::Pixels(pt) => pt.y.into(),
                     ScrollDelta::Lines(pt) => pt.y * 20.0,
                 };
-                let zoom_factor = if dy > 0.0 { 1.08 } else { 0.92 };
+                let zoom_factor = if dy > 0.0 { 1.10 } else { 0.90 };
 
                 let old_zoom = st.zoom;
-                let new_zoom = (old_zoom * zoom_factor).clamp(0.25, 2.5);
+                let new_zoom = (old_zoom * zoom_factor).clamp(0.01, 5.0);
 
-                // Zoom towards center of canvas
-                let cx_center = 550.0;
-                let cy_center = 350.0;
+                let (ox, oy) = st.get_canvas_origin();
+                let mouse_x: f32 = e.position.x.into();
+                let mouse_y: f32 = e.position.y.into();
+                let local_mx = mouse_x - ox;
+                let local_my = mouse_y - oy;
 
-                st.pan.0 = cx_center - (cx_center - st.pan.0) * (new_zoom / old_zoom);
-                st.pan.1 = cy_center - (cy_center - st.pan.1) * (new_zoom / old_zoom);
+                st.pan.0 = local_mx - (local_mx - st.pan.0) * (new_zoom / old_zoom);
+                st.pan.1 = local_my - (local_my - st.pan.1) * (new_zoom / old_zoom);
                 st.zoom = new_zoom;
 
                 cx.notify();

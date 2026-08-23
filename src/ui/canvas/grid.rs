@@ -12,7 +12,7 @@ pub fn draw_canvas_grid(
     let w: f32 = bounds.size.width.into();
     let h: f32 = bounds.size.height.into();
 
-    if w <= 0.0 || h <= 0.0 {
+    if w <= 0.0 || h <= 0.0 || zoom < 0.04 {
         return;
     }
 

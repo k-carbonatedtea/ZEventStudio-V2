@@ -169,6 +169,7 @@ pub fn get_zh(key: &str) -> &str {
         "inspector.port_out" => "▶ 输出",
         "inspector.parameters" => "EVFL 参数属性列表",
         "inspector.no_parameters" => "暂无自定义参数",
+        "inspector.autofill_btn" => "✨ 自动填充游戏参数",
         "inspector.delete_node" => "🗑️ 删除节点",
         "inspector.topology_stats" => "📊 图谱拓扑统计",
         "inspector.total_nodes" => "📦 总节点数",
@@ -336,6 +337,7 @@ pub fn get_zh(key: &str) -> &str {
         "toast.node_saved" => "✨ 已成功保存节点",
         "toast.node_missing_info" => "节点缺少角色名或动作名",
         "toast.params_complete" => "参数已全部完整，无需填充",
+        "toast.params_autofilled" => "已自动填充参数数量: ",
         "toast.autofill_failed" => "自动填充失败",
 
         // ---------------- 角色分类与关键参数 (Actor Theme & Smart Params) ----------------
@@ -386,7 +388,7 @@ pub fn get_zh(key: &str) -> &str {
         "empty.quickStartTab" => "快速开始",
         "empty.recentProjectsTab" => "最近打开的文件与模组",
         "empty.openFile" => "打开单个文件...",
-        "empty.openFileDesc" => "支持 .bfevfl / .sbeventpack / .pack / .msbt / .aamp / .byml",
+        "empty.openFileDesc" => "支持 .bfevfl / .baiprog / .sbeventpack / .pack / .msbt / .aamp / .byml",
         "empty.openMod" => "打开 Mod 文件夹...",
         "empty.openModDesc" => "支持 Wii U (content) 与 Switch (romfs) 模组根目录",
         "empty.newFlow" => "新建事件流...",

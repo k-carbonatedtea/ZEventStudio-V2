@@ -11,8 +11,8 @@ use crate::model::node::NodeKind;
 use std::collections::{HashMap, HashSet, VecDeque};
 use sugiyama::layout_component;
 
-/// 纯 Rust 实现的工业级 Sugiyama DAG 自动排版引擎 (配合 Brandes-Köpf 节点居中与对齐算法)
-/// 保证父子节点垂直直线对齐、Fork-Join 分支完美对称居中、长连线不交叉、各独立流程独立分列排版。
+/// 纯 Rust 实现的高性能 Sugiyama DAG 自动排版引擎 (配合 Brandes-Köpf 节点居中与对齐算法)
+/// 保证父子节点垂直直线对齐、Fork-Join 分支对称居中、长连线不交叉、各独立流程自适应多列网格排版。
 pub fn auto_layout_graph(graph: &mut Graph) {
     auto_layout_graph_with_config(graph, &LayoutConfig::default());
 }
@@ -33,21 +33,62 @@ pub fn auto_layout_graph_with_config(graph: &mut Graph, config: &LayoutConfig) {
     let (directed_adj, undirected_adj) = build_adjacency_maps(graph, &node_indices);
 
     // 2. 划分连通子图 (Connected Components)
-    let components = find_connected_components(graph, &node_indices, &undirected_adj);
+    let mut components = find_connected_components(graph, &node_indices, &undirected_adj);
 
-    // 3. 对各个独立连通子图分别应用 Sugiyama 分层排版算法
-    let mut current_comp_x = config.start_x;
+    // 3. 排序连通子图 (主干大图排最前，独立小分支紧随其后)
+    components.sort_by(|a, b| {
+        let a_has_ep = a.iter().any(|id| id.eq_ignore_ascii_case("ai_2") || id.starts_with("ep_"));
+        let b_has_ep = b.iter().any(|id| id.eq_ignore_ascii_case("ai_2") || id.starts_with("ep_"));
+        match (a_has_ep, b_has_ep) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => b.len().cmp(&a.len()),
+        }
+    });
 
-    for comp in &components {
-        let comp_width = layout_component(
+    if components.is_empty() {
+        return;
+    }
+
+    // 4. 对连通子图实施 2D 自适应多列布局
+    let (first_w, first_h) = layout_component(
+        &components[0],
+        graph,
+        &node_indices,
+        &directed_adj,
+        config.start_x,
+        config.start_y,
+        config,
+    );
+
+    if components.len() == 1 {
+        return;
+    }
+
+    let max_col_height = first_h.max(1600.0);
+    let mut col_x = config.start_x + first_w + config.component_spacing_x;
+    let mut cur_y = config.start_y;
+    let mut max_w_in_col: f32 = 0.0;
+
+    for comp in &components[1..] {
+        let (comp_w, comp_h) = layout_component(
             comp,
             graph,
             &node_indices,
             &directed_adj,
-            current_comp_x,
+            col_x,
+            cur_y,
             config,
         );
-        current_comp_x += comp_width + config.component_spacing_x;
+
+        max_w_in_col = max_w_in_col.max(comp_w);
+        cur_y += comp_h + config.component_spacing_y;
+
+        if cur_y >= max_col_height {
+            col_x += max_w_in_col + config.component_spacing_x;
+            cur_y = config.start_y;
+            max_w_in_col = 0.0;
+        }
     }
 }
 

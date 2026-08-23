@@ -167,7 +167,7 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                     PopupMenuItem::new(label_zoom_in.clone())
                         .on_click(move |_, _, cx| {
                             m_zi.update(cx, |st, cx| {
-                                st.zoom = (st.zoom * 1.2).min(3.0);
+                                st.zoom = (st.zoom * 1.25).min(5.0);
                                 cx.notify();
                             });
                         }),
@@ -176,7 +176,7 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                     PopupMenuItem::new(label_zoom_out.clone())
                         .on_click(move |_, _, cx| {
                             m_zo.update(cx, |st, cx| {
-                                st.zoom = (st.zoom / 1.2).max(0.2);
+                                st.zoom = (st.zoom / 1.25).max(0.01);
                                 cx.notify();
                             });
                         }),

@@ -68,6 +68,10 @@ pub fn render_entry_card(
         entry_card = entry_card.shadow_md();
     }
 
+    if z < 0.12 {
+        return entry_card;
+    }
+
 
     let node_id_right = node.id.clone();
     let model_header_drag_right = ctx.model.clone();

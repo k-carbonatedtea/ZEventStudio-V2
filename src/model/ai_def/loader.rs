@@ -62,11 +62,9 @@ pub fn get_search_directories(
     }
 
     // 3. 显式传入的游戏补丁与本体目录
-    for opt in [update_dir, game_dir, dlc_dir] {
-        if let Some(d) = opt {
-            if !d.trim().is_empty() {
-                add_dir(PathBuf::from(d));
-            }
+    for d in [update_dir, game_dir, dlc_dir].into_iter().flatten() {
+        if !d.trim().is_empty() {
+            add_dir(PathBuf::from(d));
         }
     }
 
@@ -126,32 +124,30 @@ pub fn load_global_ai_defs(search_dirs: &[PathBuf]) -> Result<AiDefs, String> {
     for base in search_dirs {
         for rel in &relative_paths {
             let full_path = base.join(rel);
-            if full_path.exists() {
-                if full_path.is_file() {
-                    let fname = full_path.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
-                    if fname.ends_with(".sbyml") || fname.ends_with(".byml") {
-                        if let Ok(bytes) = std::fs::read(&full_path) {
-                            if let Ok(defs) = parse_ai_defs(&bytes) {
-                                if !defs.actions.is_empty() {
-                                    let mut write_guard = cache.ai_defs.write().unwrap_or_else(|p| p.into_inner());
-                                    *write_guard = Some(defs.clone());
-                                    return Ok(defs);
-                                }
+            if full_path.exists() && full_path.is_file() {
+                let fname = full_path.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
+                if fname.ends_with(".sbyml") || fname.ends_with(".byml") {
+                    if let Ok(bytes) = std::fs::read(&full_path) {
+                        if let Ok(defs) = parse_ai_defs(&bytes) {
+                            if !defs.actions.is_empty() {
+                                let mut write_guard = cache.ai_defs.write().unwrap_or_else(|p| p.into_inner());
+                                *write_guard = Some(defs.clone());
+                                return Ok(defs);
                             }
                         }
-                    } else if fname.ends_with(".pack") || fname.ends_with(".sarc") {
-                        if let Ok(bytes) = std::fs::read(&full_path) {
-                            let uncompressed = roead::yaz0::decompress(&bytes).unwrap_or(bytes);
-                            if let Ok(sarc) = Sarc::new(&uncompressed) {
-                                if let Some(file) = sarc.files().find(|f| {
-                                    f.name().map_or(false, |n| n.ends_with("AIDef_Game.product.sbyml") || n.ends_with("AIDef_Game.product.byml"))
-                                }) {
-                                    if let Ok(defs) = parse_ai_defs(file.data()) {
-                                        if !defs.actions.is_empty() {
-                                            let mut write_guard = cache.ai_defs.write().unwrap_or_else(|p| p.into_inner());
-                                            *write_guard = Some(defs.clone());
-                                            return Ok(defs);
-                                        }
+                    }
+                } else if fname.ends_with(".pack") || fname.ends_with(".sarc") {
+                    if let Ok(bytes) = std::fs::read(&full_path) {
+                        let uncompressed = roead::yaz0::decompress(&bytes).unwrap_or(bytes);
+                        if let Ok(sarc) = Sarc::new(&uncompressed) {
+                            if let Some(file) = sarc.files().find(|f| {
+                                f.name().is_some_and(|n| n.ends_with("AIDef_Game.product.sbyml") || n.ends_with("AIDef_Game.product.byml"))
+                            }) {
+                                if let Ok(defs) = parse_ai_defs(file.data()) {
+                                    if !defs.actions.is_empty() {
+                                        let mut write_guard = cache.ai_defs.write().unwrap_or_else(|p| p.into_inner());
+                                        *write_guard = Some(defs.clone());
+                                        return Ok(defs);
                                     }
                                 }
                             }
@@ -184,7 +180,7 @@ pub fn load_actor_aiprog(actor_name: &str, search_dirs: &[PathBuf]) -> Result<Ac
             if let Ok(entries) = std::fs::read_dir(&loose_dir) {
                 for entry in entries.flatten() {
                     let path = entry.path();
-                    if path.extension().map_or(false, |ext| ext == "baiprog") {
+                    if path.extension().is_some_and(|ext| ext == "baiprog") {
                         if let Ok(bytes) = std::fs::read(&path) {
                             let _ = parse_baiprog(&bytes, &mut prog);
                         }
@@ -214,7 +210,7 @@ pub fn load_actor_aiprog(actor_name: &str, search_dirs: &[PathBuf]) -> Result<Ac
                     let uncompressed = roead::yaz0::decompress(&pack_bytes).unwrap_or(pack_bytes);
                     if let Ok(sarc) = Sarc::new(&uncompressed) {
                         for f in sarc.files() {
-                            if f.name().map_or(false, |n| n.ends_with(".baiprog")) {
+                            if f.name().is_some_and(|n| n.ends_with(".baiprog")) {
                                 let _ = parse_baiprog(f.data(), &mut prog);
                             }
                         }
@@ -240,11 +236,11 @@ pub fn load_actor_aiprog(actor_name: &str, search_dirs: &[PathBuf]) -> Result<Ac
                         let uncompressed = roead::yaz0::decompress(&p_bytes).unwrap_or(p_bytes);
                         if let Ok(big_sarc) = Sarc::new(&uncompressed) {
                             let target_sbactorpack = format!("{}.sbactorpack", actor_name);
-                            if let Some(actor_file) = big_sarc.files().find(|f| f.name().map_or(false, |n| n.ends_with(&target_sbactorpack))) {
+                            if let Some(actor_file) = big_sarc.files().find(|f| f.name().is_some_and(|n| n.ends_with(&target_sbactorpack))) {
                                 let actor_uncompressed = roead::yaz0::decompress(actor_file.data()).unwrap_or_else(|_| actor_file.data().to_vec());
                                 if let Ok(actor_sarc) = Sarc::new(&actor_uncompressed) {
                                     for f in actor_sarc.files() {
-                                        if f.name().map_or(false, |n| n.ends_with(".baiprog")) {
+                                        if f.name().is_some_and(|n| n.ends_with(".baiprog")) {
                                             let _ = parse_baiprog(f.data(), &mut prog);
                                         }
                                     }

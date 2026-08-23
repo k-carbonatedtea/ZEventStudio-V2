@@ -1,9 +1,9 @@
 use super::config::LayoutNode;
 use crate::model::graph::Graph;
 use crate::model::node::NodeKind;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
-/// 拓扑分层算法 (Rank Assignment)
+/// 优化版拓扑分层算法 (Cycle-Aware Topological Longest Path + ALAP Compact Layering)
 pub fn assign_ranks(
     comp: &[String],
     graph: &Graph,
@@ -11,6 +11,7 @@ pub fn assign_ranks(
     comp_edges: &[(String, String)],
     in_degrees: &HashMap<String, usize>,
 ) -> HashMap<String, usize> {
+    // 1. 寻找根节点 (EntryPoint > 入度为 0 > 首节点)
     let mut roots: Vec<String> = Vec::new();
     for id in comp {
         if let Some(&idx) = node_indices.get(id) {
@@ -30,9 +31,30 @@ pub fn assign_ranks(
         roots.push(comp[0].clone());
     }
 
+    // 2. 构造邻接表与环路剔除 (DFS Back-edge Filter to ensure strict DAG)
     let mut local_adj: HashMap<String, Vec<String>> = HashMap::new();
     for (u, v) in comp_edges {
         local_adj.entry(u.clone()).or_default().push(v.clone());
+    }
+
+    let mut dag_edges: HashSet<(String, String)> = HashSet::new();
+    let mut color: HashMap<String, u8> = HashMap::new(); // 0: unvisited, 1: visiting (grey), 2: finished (black)
+
+    for r in &roots {
+        if color.get(r).copied().unwrap_or(0) == 0 {
+            dfs_extract_dag(r, &local_adj, &mut color, &mut dag_edges);
+        }
+    }
+    for id in comp {
+        if color.get(id).copied().unwrap_or(0) == 0 {
+            dfs_extract_dag(id, &local_adj, &mut color, &mut dag_edges);
+        }
+    }
+
+    // 3. 构建纯净 DAG 邻接表与最长路径分层
+    let mut dag_adj: HashMap<String, Vec<String>> = HashMap::new();
+    for (u, v) in &dag_edges {
+        dag_adj.entry(u.clone()).or_default().push(v.clone());
     }
 
     let mut ranks: HashMap<String, usize> = HashMap::new();
@@ -42,17 +64,17 @@ pub fn assign_ranks(
 
     let mut queue: VecDeque<String> = VecDeque::from(roots);
     let mut visited_count: HashMap<String, usize> = HashMap::new();
-    let max_iterations = comp.len() * 3;
+    let max_iterations = comp.len() * 4;
 
     while let Some(curr) = queue.pop_front() {
         let curr_rank = *ranks.get(&curr).unwrap_or(&0);
         let count = visited_count.entry(curr.clone()).or_insert(0);
         *count += 1;
         if *count > max_iterations {
-            continue; // 防止环路死循环
+            continue;
         }
 
-        if let Some(targets) = local_adj.get(&curr) {
+        if let Some(targets) = dag_adj.get(&curr) {
             for target in targets {
                 let next_rank = curr_rank + 1;
                 let is_higher = match ranks.get(target) {
@@ -71,16 +93,16 @@ pub fn assign_ranks(
         ranks.entry(id.clone()).or_insert(0);
     }
 
-    // 紧凑分层优化 (Edge-Length Minimization / ALAP 紧缩):
+    // 4. 紧凑分层优化 (ALAP As-Late-As-Possible 紧缩):
     // 避免单分支节点过早悬空，将其紧贴下游消费者下沉，大幅缩短跨层连线
-    for _ in 0..3 {
+    for _ in 0..4 {
         for id in comp {
             if let Some(&idx) = node_indices.get(id) {
                 if graph.nodes[idx].kind == NodeKind::EntryPoint || id.starts_with("ep_") {
                     continue;
                 }
             }
-            if let Some(targets) = local_adj.get(id) {
+            if let Some(targets) = dag_adj.get(id) {
                 if !targets.is_empty() {
                     let min_target_rank = targets
                         .iter()
@@ -100,6 +122,35 @@ pub fn assign_ranks(
     }
 
     ranks
+}
+
+/// DFS 遍历并过滤回路反向边以提取无环 DAG
+fn dfs_extract_dag(
+    u: &str,
+    adj: &HashMap<String, Vec<String>>,
+    color: &mut HashMap<String, u8>,
+    dag_edges: &mut HashSet<(String, String)>,
+) {
+    color.insert(u.to_string(), 1); // 标记为正在访问
+
+    if let Some(neighbors) = adj.get(u) {
+        for v in neighbors {
+            match color.get(v).copied().unwrap_or(0) {
+                0 => {
+                    dag_edges.insert((u.to_string(), v.to_string()));
+                    dfs_extract_dag(v, adj, color, dag_edges);
+                }
+                2 => {
+                    dag_edges.insert((u.to_string(), v.to_string()));
+                }
+                _ => {
+                    // 回边 (Back-edge)，产生环路，不加入 DAG 分层主干
+                }
+            }
+        }
+    }
+
+    color.insert(u.to_string(), 2); // 标记为已完成
 }
 
 /// 虚拟节点插入与分层划分的返回结果

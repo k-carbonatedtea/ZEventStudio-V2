@@ -67,8 +67,8 @@ pub fn render_edges_layer(
                     let view_w: f32 = bounds.size.width.into();
                     let view_h: f32 = bounds.size.height.into();
 
-                    let stroke_w = (1.8 * zoom).clamp(1.2, 3.2);
-                    let active_stroke_w = (stroke_w * 1.6).clamp(2.2, 4.5);
+                    let stroke_w = (1.8 * zoom).clamp(0.8, 3.2);
+                    let active_stroke_w = (stroke_w * 1.6).clamp(1.4, 4.5);
 
                     let active_color = hsla(45.0 / 360.0, 0.98, 0.58, 1.0); // 高亮金黄发光
 
@@ -93,10 +93,10 @@ pub fn render_edges_layer(
                         (NodeKind::Comment, PathBuilder::stroke(px(stroke_w)), PathBuilder::fill(), false),
                     ];
 
-                    let arrow_w = (stroke_w * 3.5).clamp(4.5, 9.0);
-                    let arrow_h = (stroke_w * 3.0).clamp(4.0, 8.0);
-                    let active_arrow_w = (active_stroke_w * 3.2).clamp(6.0, 11.0);
-                    let active_arrow_h = (active_stroke_w * 2.8).clamp(5.0, 10.0);
+                    let arrow_w = (stroke_w * 3.5).clamp(2.0, 9.0);
+                    let arrow_h = (stroke_w * 3.0).clamp(1.5, 8.0);
+                    let active_arrow_w = (active_stroke_w * 3.2).clamp(3.0, 11.0);
+                    let active_arrow_h = (active_stroke_w * 2.8).clamp(2.5, 10.0);
 
                     for (s_id, t_id, _, s_kind, is_dashed, (sx, sy), (ex, ey), waypoints) in &edge_items_clone {
                         let screen_sx = orig_x + pan.0 + sx * zoom;
@@ -266,9 +266,8 @@ pub fn render_edges_layer(
         )
 
 
-        // 2. 连线交互徽章（切刀剪断触发器）
         .children(edge_items.into_iter().filter_map(move |(s_id, t_id, label, _, _, (sx, sy), (ex, ey), _)| {
-            if !knife_mode {
+            if !knife_mode || zoom < 0.35 {
                 return None;
             }
 

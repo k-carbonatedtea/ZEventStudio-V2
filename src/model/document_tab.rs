@@ -78,6 +78,7 @@ impl OpenDocumentTab {
             "byml" | "bgyml" | "sbyml" | "aamp" | "bxml" | "baev" => "⚙️",
             "json" => "{}",
             "bfevfl" | "evfl" => "⚡",
+            "baiprog" | "sbaiprog" => "🧠",
             "yaml" | "yml" => "📜",
             "txt" | "log" => "≡",
             "sarc" | "pack" | "sbeventpack" | "sbactorpack" | "ssarc" => "📦",

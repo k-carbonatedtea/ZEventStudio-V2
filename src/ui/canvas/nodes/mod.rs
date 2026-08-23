@@ -53,8 +53,8 @@ pub fn render_nodes_layer(
         .children(state.graph.nodes.iter().filter_map(|node| {
             let screen_x = pan.0 + node.pos.0 * zoom;
             let screen_y = pan.1 + node.pos.1 * zoom;
-            let node_w = (node.size.0 * zoom).max(16.0);
-            let node_h = (node.size.1 * zoom).max(12.0);
+            let node_w = (node.size.0 * zoom).max(1.0);
+            let node_h = (node.size.1 * zoom).max(1.0);
 
             if screen_x + node_w < view_min_x
                 || screen_x > view_max_x

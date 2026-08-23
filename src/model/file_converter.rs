@@ -27,6 +27,7 @@ pub fn should_compress_yaz0(file_path: &str) -> bool {
             || name.ends_with(".sbxml")
             || name.ends_with(".smsbt")
             || name.ends_with(".sbfevfl")
+            || name.ends_with(".sbaiprog")
     ) || lower.ends_with(".zs")
 }
 

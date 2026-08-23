@@ -132,6 +132,20 @@ pub fn render_event_card(
         });
 
 
+    if z < 0.12 {
+        let (min_bg, min_border) = if ctx.is_selected {
+            (hsla(168.0 / 360.0, 1.0, 0.45, 1.0), hsla(0.0, 0.0, 1.0, 1.0))
+        } else if is_on_active_path {
+            (hsla(38.0 / 360.0, 0.92, 0.50, 1.0), hsla(38.0 / 360.0, 0.92, 0.50, 1.0))
+        } else {
+            (theme.banner_bg, theme.badge_bg)
+        };
+        return card
+            .bg(min_bg)
+            .border_1()
+            .border_color(min_border);
+    }
+
     if z >= 0.45 && !is_unrelated {
         card = card.shadow_md();
     }
@@ -176,27 +190,35 @@ pub fn render_event_card(
                                 ),
                         )
                         // 右侧：节点类型小徽章
-                        .child(
-                            div()
-                                .px(px((4.5 * z).max(1.0)))
-                                .py(px((1.0 * z).max(0.5)))
-                                .rounded_sm()
-                                .bg(theme.badge_bg)
-                                .text_size(px(font_badge * 0.9))
-                                .font_weight(FontWeight::BOLD)
-                                .text_color(rgb(0xFFFFFF))
-                                .child(node.kind.display_name()),
-                        ),
+                        .children(if z >= 0.22 {
+                            Some(
+                                div()
+                                    .px(px((4.5 * z).max(1.0)))
+                                    .py(px((1.0 * z).max(0.5)))
+                                    .rounded_sm()
+                                    .bg(theme.badge_bg)
+                                    .text_size(px(font_badge * 0.9))
+                                    .font_weight(FontWeight::BOLD)
+                                    .text_color(rgb(0xFFFFFF))
+                                    .child(node.kind.display_name()),
+                            )
+                        } else {
+                            None
+                        }),
                 )
                 // 2. 副标题 / 所属 Actor 角色名称
-                .children(node.subtitle.as_ref().map(|sub| {
-                    div()
-                        .pt(px((3.0 * z).max(1.0)))
-                        .font_weight(FontWeight::MEDIUM)
-                        .text_size(px(font_sub))
-                        .text_color(rgb(0x94A3B8)) // 蓝灰白 Text Secondary
-                        .child(sub.clone())
-                }))
+                .children(if z >= 0.25 {
+                    node.subtitle.as_ref().map(|sub| {
+                        div()
+                            .pt(px((3.0 * z).max(1.0)))
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_size(px(font_sub))
+                            .text_color(rgb(0x94A3B8)) // 蓝灰白 Text Secondary
+                            .child(sub.clone())
+                    })
+                } else {
+                    None
+                })
                 // 3. 核心高频业务参数胶囊 / 完整参数列表
                 .children(if ctx.expand_all {
                     render_full_parameters(state, &node.properties, z)

@@ -20,6 +20,7 @@ pub struct CoordinateAssignmentParams<'a> {
     pub max_rank: usize,
     pub node_indices: &'a HashMap<String, usize>,
     pub comp_start_x: f32,
+    pub comp_start_y: f32,
     pub config: &'a LayoutConfig,
     pub edge_dummy_map: &'a HashMap<(String, String), Vec<String>>,
 }
@@ -31,8 +32,9 @@ pub fn layout_component(
     node_indices: &HashMap<String, usize>,
     directed_adj: &HashMap<String, Vec<String>>,
     comp_start_x: f32,
+    comp_start_y: f32,
     config: &LayoutConfig,
-) -> f32 {
+) -> (f32, f32) {
     let comp_set: HashSet<String> = comp.iter().cloned().collect();
 
     // 1. 提取分量内部有向边与节点尺寸
@@ -77,6 +79,7 @@ pub fn layout_component(
         max_rank: augment_res.max_rank,
         node_indices,
         comp_start_x,
+        comp_start_y,
         config,
         edge_dummy_map: &augment_res.edge_dummy_map,
     };
@@ -138,9 +141,9 @@ fn extract_component_graph(
 fn apply_coordinates(
     graph: &mut Graph,
     params: &CoordinateAssignmentParams,
-) -> f32 {
+) -> (f32, f32) {
     let mut layer_y: Vec<f32> = vec![0.0; params.max_rank + 1];
-    let mut current_y = params.config.start_y;
+    let mut current_y = params.comp_start_y;
 
     for (r, y_val) in layer_y.iter_mut().enumerate().take(params.max_rank + 1) {
         *y_val = current_y;
@@ -150,7 +153,6 @@ fn apply_coordinates(
             .fold(0.0f32, |a, b| a.max(b));
         current_y += max_h + params.config.layer_spacing_y;
     }
-
 
     let mut min_x = f32::INFINITY;
     let mut max_x = f32::NEG_INFINITY;
@@ -201,8 +203,7 @@ fn apply_coordinates(
         }
     }
 
-    (max_x - min_x).max(240.0)
+    let comp_w = (max_x - min_x).max(240.0);
+    let comp_h = (current_y - params.comp_start_y).max(120.0);
+    (comp_w, comp_h)
 }
-
-
-
