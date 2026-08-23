@@ -3,15 +3,16 @@ pub mod config;
 pub mod crossings;
 pub mod ranks;
 pub mod sugiyama;
+pub mod tree_layout;
 
 pub use config::LayoutConfig;
 
 use crate::model::graph::Graph;
 use crate::model::node::NodeKind;
 use std::collections::{HashMap, HashSet, VecDeque};
-use sugiyama::layout_component;
+use tree_layout::layout_tree_component;
 
-/// 纯 Rust 实现的高性能 Sugiyama DAG 自动排版引擎 (配合 Brandes-Köpf 节点居中与对齐算法)
+/// 纯 Rust 实现的高性能行为树/流程图自动排版引擎 (参考 Plasticity 行为树主干展开机制与 Sugiyama DAG 结合)
 /// 保证父子节点垂直直线对齐、Fork-Join 分支对称居中、长连线不交叉、各独立流程自适应多列网格排版。
 pub fn auto_layout_graph(graph: &mut Graph) {
     auto_layout_graph_with_config(graph, &LayoutConfig::default());
@@ -51,7 +52,7 @@ pub fn auto_layout_graph_with_config(graph: &mut Graph, config: &LayoutConfig) {
     }
 
     // 4. 对连通子图实施 2D 自适应多列布局
-    let (first_w, first_h) = layout_component(
+    let (first_w, first_h) = layout_tree_component(
         &components[0],
         graph,
         &node_indices,
@@ -71,7 +72,7 @@ pub fn auto_layout_graph_with_config(graph: &mut Graph, config: &LayoutConfig) {
     let mut max_w_in_col: f32 = 0.0;
 
     for comp in &components[1..] {
-        let (comp_w, comp_h) = layout_component(
+        let (comp_w, comp_h) = layout_tree_component(
             comp,
             graph,
             &node_indices,

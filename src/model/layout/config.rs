@@ -20,9 +20,9 @@ impl Default for LayoutConfig {
         Self {
             start_x: 80.0,
             start_y: 80.0,
-            node_spacing_x: 120.0,
-            layer_spacing_y: 180.0,
-            component_spacing_x: 200.0,
+            node_spacing_x: 80.0,
+            layer_spacing_y: 220.0,
+            component_spacing_x: 180.0,
             component_spacing_y: 160.0,
         }
     }

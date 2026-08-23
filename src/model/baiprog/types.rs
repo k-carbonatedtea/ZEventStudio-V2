@@ -63,6 +63,7 @@ pub struct BaiProgram {
     pub queries: Vec<BaiQueryDef>,
 }
 
+#[allow(dead_code)]
 impl BaiProgram {
     /// 新建空 BAI 程序
     pub fn new() -> Self {

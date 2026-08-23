@@ -315,6 +315,10 @@ impl Graph {
                 }
             }
 
+            if comp.len() < 2 && group_title.is_empty() {
+                continue;
+            }
+
             if group_title.is_empty() {
                 group_title = format!("📦 分支流 ({})", comp.first().unwrap_or(&"Scope".to_string()));
             }

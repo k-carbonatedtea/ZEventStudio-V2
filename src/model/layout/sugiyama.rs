@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use super::brandes_kopf::brandes_kopf_coordinates;
 use super::config::{LayoutConfig, LayoutNode};
 use super::crossings::{compute_port_biases, reduce_crossings};

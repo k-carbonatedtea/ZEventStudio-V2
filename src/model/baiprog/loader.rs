@@ -52,13 +52,14 @@ pub fn load_baiprog_from_bytes(bytes: &[u8], file_name: &str) -> Result<Graph, S
 /// 将 BaiProgram 转换为 GPUI 可渲染的 Graph 节点网络
 pub fn baiprog_to_graph(prog: &BaiProgram, file_name: &str) -> Graph {
     let mut graph = Graph::new(format!("🧠 {} (BAIProg)", file_name));
-    graph.description = format!(
-        "任天堂 AI Program 程序: {} (包含 {} 个 AI 节点, {} 个 Action 节点, {} 个 Behavior 修饰器)",
-        file_name,
-        prog.num_ai(),
-        prog.num_actions(),
-        prog.behaviors.len()
-    );
+
+    // 将全局 Behavior 与 Query 元数据编码存储到 graph.description 中，无需在画布上生成孤立的假节点
+    let meta_json = serde_json::json!({
+        "file_name": file_name,
+        "behaviors": prog.behaviors,
+        "queries": prog.queries,
+    });
+    graph.description = format!("BAI_PROGRAM_METADATA:{}", meta_json);
 
     let num_ai = prog.num_ai() as u32;
 
@@ -66,7 +67,7 @@ pub fn baiprog_to_graph(prog: &BaiProgram, file_name: &str) -> Graph {
     for ai in &prog.ai_nodes {
         let node_id = format!("ai_{}", ai.id_index);
         let title = if !ai.def.name.is_empty() {
-            ai.def.name.clone()
+            super::dict::format_bilingual_title(&ai.def.name)
         } else {
             format!("AI_{}", ai.id_index)
         };
@@ -100,7 +101,7 @@ pub fn baiprog_to_graph(prog: &BaiProgram, file_name: &str) -> Graph {
     for act in &prog.action_nodes {
         let node_id = format!("action_{}", act.id_index);
         let title = if !act.def.name.is_empty() {
-            act.def.name.clone()
+            super::dict::format_bilingual_title(&act.def.name)
         } else {
             format!("Action_{}", act.id_index)
         };
@@ -157,24 +158,6 @@ pub fn baiprog_to_graph(prog: &BaiProgram, file_name: &str) -> Graph {
             );
         }
     }
-
-    // 5. 存储全局 Behavior 与 Query 元数据节点以支持 100% 还原
-    let mut meta_node = NodeData::new("__baiprog_meta__", "AI Program Metadata", NodeKind::Comment, (0.0, 0.0));
-    if let Ok(beh_json) = serde_json::to_string(&prog.behaviors) {
-        meta_node.properties.push(PropertyItem {
-            key: "BehaviorsJson".to_string(),
-            val: beh_json,
-            val_type: "json".to_string(),
-        });
-    }
-    if let Ok(q_json) = serde_json::to_string(&prog.queries) {
-        meta_node.properties.push(PropertyItem {
-            key: "QueriesJson".to_string(),
-            val: q_json,
-            val_type: "json".to_string(),
-        });
-    }
-    graph.add_node(meta_node);
 
     graph
 }

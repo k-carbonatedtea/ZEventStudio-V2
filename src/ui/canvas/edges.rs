@@ -319,21 +319,34 @@ fn draw_routed_curve(builder: &mut PathBuilder, pts: &[(f32, f32)], zoom: f32) {
     if pts.len() == 2 {
         let (sx, sy) = pts[0];
         let (ex, ey) = pts[1];
-        let dy = (ey - sy).abs().max(36.0 * zoom);
-        builder.cubic_bezier_to(
-            point(px(ex), px(ey)),
-            point(px(sx), px(sy + dy * 0.45)),
-            point(px(ex), px(ey - dy * 0.45)),
-        );
+        if ey >= sy {
+            let dy = (ey - sy).max(28.0 * zoom);
+            let ctrl1_y = sy + dy * 0.5;
+            let ctrl2_y = ey - dy * 0.5;
+            builder.cubic_bezier_to(
+                point(px(ex), px(ey)),
+                point(px(sx), px(ctrl1_y)),
+                point(px(ex), px(ctrl2_y)),
+            );
+        } else {
+            let offset_x = if ex >= sx { 36.0 * zoom } else { -36.0 * zoom };
+            builder.cubic_bezier_to(
+                point(px(ex), px(ey)),
+                point(px(sx + offset_x), px(sy + 36.0 * zoom)),
+                point(px(ex + offset_x), px(ey - 36.0 * zoom)),
+            );
+        }
     } else {
         for i in 0..pts.len() - 1 {
             let (x1, y1) = pts[i];
             let (x2, y2) = pts[i + 1];
-            let dy = (y2 - y1).abs().max(24.0 * zoom);
+            let dy = (y2 - y1).abs().max(18.0 * zoom);
+            let c1y = y1 + (if y2 >= y1 { dy * 0.5 } else { -dy * 0.5 });
+            let c2y = y2 - (if y2 >= y1 { dy * 0.5 } else { -dy * 0.5 });
             builder.cubic_bezier_to(
                 point(px(x2), px(y2)),
-                point(px(x1), px(y1 + dy * 0.45)),
-                point(px(x2), px(y2 - dy * 0.45)),
+                point(px(x1), px(c1y)),
+                point(px(x2), px(c2y)),
             );
         }
     }

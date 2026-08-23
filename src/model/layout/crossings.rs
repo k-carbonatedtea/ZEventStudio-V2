@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::model::graph::Graph;
 use std::collections::HashMap;
 
@@ -46,7 +48,6 @@ pub fn compute_port_biases(
             }
         }
 
-
         if let Some(&b) = orig_in_bias.get(&(u.clone(), v.clone())) {
             in_biases.insert((u.clone(), v.clone()), b);
         }
@@ -55,7 +56,7 @@ pub fn compute_port_biases(
     (out_biases, in_biases)
 }
 
-/// 重心扫描交叉最小化 (引脚感知质心排版算法 Port-Aware Barycenter Crossing Reduction)
+/// 重心扫描交叉最小化 (子树分支聚类与引脚顺序强保序算法)
 pub fn reduce_crossings(
     mut layers: Vec<Vec<String>>,
     max_rank: usize,
@@ -64,9 +65,9 @@ pub fn reduce_crossings(
     out_biases: &HashMap<(String, String), f32>,
     in_biases: &HashMap<(String, String), f32>,
 ) -> Vec<Vec<String>> {
-    for iter in 0..12 {
+    for iter in 0..10 {
         if iter % 2 == 0 {
-            // 自顶向下扫描 (Top-to-Bottom): 子节点依据父节点坐标 + 出口引脚偏移计算质心
+            // 自顶向下扫描 (Top-to-Bottom): 保持同父分支连续聚类与引脚顺序排列
             for r in 1..=max_rank {
                 let prev_layer = &layers[r - 1];
                 let pos_map: HashMap<&str, f32> = prev_layer
@@ -81,18 +82,30 @@ pub fn reduce_crossings(
                     .map(|(orig_idx, id)| {
                         if let Some(preds) = aug_pred.get(id) {
                             if !preds.is_empty() {
-                                let sum: f32 = preds
-                                    .iter()
-                                    .filter_map(|p| {
-                                        let base_pos = pos_map.get(p.as_str()).copied()?;
-                                        let bias = out_biases.get(&(p.clone(), id.clone())).copied().unwrap_or(0.0);
-                                        Some(base_pos + bias * 0.8)
-                                    })
-                                    .sum();
-                                return (id.clone(), sum / (preds.len() as f32));
+                                // 取主父节点的索引作为主排序键，引脚偏移作为微调
+                                let mut min_parent_pos = f32::INFINITY;
+                                let mut primary_bias = 0.0;
+                                let mut total_pos = 0.0;
+
+                                for p in preds {
+                                    if let Some(&p_pos) = pos_map.get(p.as_str()) {
+                                        if p_pos < min_parent_pos {
+                                            min_parent_pos = p_pos;
+                                            primary_bias = out_biases.get(&(p.clone(), id.clone())).copied().unwrap_or(0.0);
+                                        }
+                                        let b = out_biases.get(&(p.clone(), id.clone())).copied().unwrap_or(0.0);
+                                        total_pos += p_pos + b * 0.8;
+                                    }
+                                }
+
+                                if min_parent_pos.is_finite() {
+                                    let avg_pos = total_pos / (preds.len() as f32);
+                                    let score = min_parent_pos * 100.0 + primary_bias * 10.0 + avg_pos;
+                                    return (id.clone(), score);
+                                }
                             }
                         }
-                        (id.clone(), orig_idx as f32)
+                        (id.clone(), orig_idx as f32 * 100.0)
                     })
                     .collect();
 
@@ -100,7 +113,7 @@ pub fn reduce_crossings(
                 layers[r] = scored.into_iter().map(|(id, _)| id).collect();
             }
         } else {
-            // 自底向上扫描 (Bottom-to-Top): 父节点依据子节点坐标 + 入口引脚偏移计算质心
+            // 自底向上扫描 (Bottom-to-Top): 父节点依据子节点群重心对齐
             for r in (0..max_rank).rev() {
                 let next_layer = &layers[r + 1];
                 let pos_map: HashMap<&str, f32> = next_layer

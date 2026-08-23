@@ -1,8 +1,11 @@
+pub mod dict;
 pub mod loader;
 pub mod parser;
 pub mod types;
 pub mod writer;
 
+#[allow(unused_imports)]
+pub use dict::format_bilingual_title;
 pub use loader::load_baiprog_from_bytes;
 pub use writer::save_baiprog_to_bytes;
 
@@ -25,8 +28,8 @@ mod tests {
         let bytes = fs::read(path).expect("Read baiprog.txt");
         let graph = load_baiprog_from_bytes(&bytes, "Lynel.baiprog").expect("Load baiprog to graph");
 
-        // 验证节点总数: 416 AI + 335 Action + 16 Demo Actions + 1 Meta Node = 768 节点
-        assert_eq!(graph.nodes.len(), 768);
+        // 验证节点总数: 416 AI + 335 Action + 16 Demo Actions = 767 节点 (纯净无假节点)
+        assert_eq!(graph.nodes.len(), 767);
         // 验证连线总数: 1123 ChildIdx 连线 + 16 Demo 连线 = 1139 条
         assert_eq!(graph.edges.len(), 1139);
 

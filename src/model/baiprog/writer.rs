@@ -19,25 +19,27 @@ pub fn save_baiprog_to_bytes(graph: &Graph, format_is_text: bool) -> Result<Vec<
 pub fn graph_to_baiprog(graph: &Graph) -> BaiProgram {
     let mut prog = BaiProgram::new();
 
-    // 1. 区分 AI 节点与 Action 节点，读取元数据
+    // 1. 优先从 graph.description 中还原全局 Behavior 与 Query 元数据
+    if let Some(meta_str) = graph.description.strip_prefix("BAI_PROGRAM_METADATA:") {
+        if let Ok(meta_val) = serde_json::from_str::<serde_json::Value>(meta_str) {
+            if let Some(beh_val) = meta_val.get("behaviors") {
+                if let Ok(beh_list) = serde_json::from_value::<Vec<BaiBehaviorDef>>(beh_val.clone()) {
+                    prog.behaviors = beh_list;
+                }
+            }
+            if let Some(q_val) = meta_val.get("queries") {
+                if let Ok(q_list) = serde_json::from_value::<Vec<BaiQueryDef>>(q_val.clone()) {
+                    prog.queries = q_list;
+                }
+            }
+        }
+    }
+
+    // 2. 区分 AI 节点与 Action 节点
     let mut ai_node_data = Vec::new();
     let mut act_node_data = Vec::new();
 
     for node in &graph.nodes {
-        if node.id == "__baiprog_meta__" {
-            for p in &node.properties {
-                if p.key == "BehaviorsJson" {
-                    if let Ok(behaviors) = serde_json::from_str::<Vec<BaiBehaviorDef>>(&p.val) {
-                        prog.behaviors = behaviors;
-                    }
-                } else if p.key == "QueriesJson" {
-                    if let Ok(queries) = serde_json::from_str::<Vec<BaiQueryDef>>(&p.val) {
-                        prog.queries = queries;
-                    }
-                }
-            }
-            continue;
-        }
         if node.id.starts_with("ep_demo_") {
             continue;
         }
@@ -252,8 +254,14 @@ fn create_sinst_object(params: &[crate::model::PropertyItem]) -> ParameterObject
 
 /// 从节点属性中提取 Def
 fn extract_def_from_node(node: &NodeData) -> BaiDef {
+    let raw_name = if let Some(idx) = node.title.find(" (") {
+        node.title[..idx].trim().to_string()
+    } else {
+        node.title.clone()
+    };
+
     let mut def = BaiDef {
-        name: node.title.clone(),
+        name: raw_name,
         class_name: String::new(),
         group_name: String::new(),
     };

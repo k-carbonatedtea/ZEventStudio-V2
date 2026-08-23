@@ -1,7 +1,9 @@
+#![allow(dead_code)]
+
 use super::config::LayoutNode;
 use std::collections::HashMap;
 
-/// Brandes-Köpf 风格的多轮对称中位数水平坐标计算与松弛优化
+/// 层次化子树中位数水平坐标对齐与对称松弛算法
 pub fn brandes_kopf_coordinates(
     layers: &[Vec<String>],
     nodes: &HashMap<String, LayoutNode>,
@@ -27,40 +29,45 @@ pub fn brandes_kopf_coordinates(
         }
     }
 
-    // 2. 迭代进行弹簧/重心松弛与对称居中 (Centering & Alignment Passes)
-    for _ in 0..10 {
-        // 自顶向下对齐 (Top-to-Bottom: Align with parents)
-        for layer in layers.iter().take(max_rank).skip(1) {
-            for id in layer {
-                align_with_neighbors(id, preds, &mut coords);
-            }
-            enforce_bidirectional_spacing(layer, nodes, &mut coords, node_spacing_x);
-        }
-
-        // 自底向上对齐 (Bottom-to-Top: Align with children)
+    // 2. 迭代进行自顶向下展开与自底向上父节点对称居中
+    for _ in 0..8 {
+        // 自底向上 (Bottom-to-Top): 父节点居中于子节点群中点
         for layer in layers.iter().take(max_rank.saturating_sub(1)).rev() {
             for id in layer {
-                align_with_neighbors(id, succs, &mut coords);
+                if let Some(children) = succs.get(id) {
+                    let child_xs: Vec<f32> = children
+                        .iter()
+                        .filter_map(|c| coords.get(c).copied())
+                        .collect();
+                    if !child_xs.is_empty() {
+                        let min_c = child_xs.iter().copied().fold(f32::INFINITY, f32::min);
+                        let max_c = child_xs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+                        coords.insert(id.to_string(), (min_c + max_c) / 2.0);
+                    }
+                }
+            }
+            enforce_bidirectional_spacing(layer, nodes, &mut coords, node_spacing_x);
+        }
+
+        // 自顶向下 (Top-to-Bottom): 子节点依据父节点对齐
+        for layer in layers.iter().take(max_rank).skip(1) {
+            for id in layer {
+                if let Some(parents) = preds.get(id) {
+                    let parent_xs: Vec<f32> = parents
+                        .iter()
+                        .filter_map(|p| coords.get(p).copied())
+                        .collect();
+                    if !parent_xs.is_empty() {
+                        let sum: f32 = parent_xs.iter().sum();
+                        coords.insert(id.to_string(), sum / (parent_xs.len() as f32));
+                    }
+                }
             }
             enforce_bidirectional_spacing(layer, nodes, &mut coords, node_spacing_x);
         }
     }
 
-    // 3. 对称居中微调：确保分叉与汇合点处于分支包围盒中心
-    for layer in layers {
-        for id in layer {
-            let has_fork = succs.get(id).map(|s| s.len() > 1).unwrap_or(false);
-            if has_fork {
-                center_fork_node(id, succs, &mut coords);
-            }
-            let has_join = preds.get(id).map(|p| p.len() > 1).unwrap_or(false);
-            if has_join {
-                center_join_node(id, preds, &mut coords);
-            }
-        }
-    }
-
-    // 4. 入口点与顶层主干全局居中
+    // 3. 入口主干居中对齐
     let mut all_min = f32::INFINITY;
     let mut all_max = f32::NEG_INFINITY;
     for (id, &x) in coords.iter() {
@@ -81,65 +88,12 @@ pub fn brandes_kopf_coordinates(
         }
     }
 
-    // 5. 最终层内间距双向无偏保障
+    // 4. 最终层内间距双向无偏保障
     for layer in layers {
         enforce_bidirectional_spacing(layer, nodes, &mut coords, node_spacing_x);
     }
 
     coords
-}
-
-/// 辅助函数：将节点对齐到其邻居节点群的平均 X 坐标
-fn align_with_neighbors(
-    id: &str,
-    neighbors_map: &HashMap<String, Vec<String>>,
-    coords: &mut HashMap<String, f32>,
-) {
-    if let Some(list) = neighbors_map.get(id) {
-        if !list.is_empty() {
-            let sum: f32 = list.iter().filter_map(|p| coords.get(p).copied()).sum();
-            let target_x = sum / (list.len() as f32);
-            coords.insert(id.to_string(), target_x);
-        }
-    }
-}
-
-/// 辅助函数：将分支节点对称居中于其子节点包围盒中心
-fn center_fork_node(
-    id: &str,
-    succs: &HashMap<String, Vec<String>>,
-    coords: &mut HashMap<String, f32>,
-) {
-    if let Some(children) = succs.get(id) {
-        let child_xs: Vec<f32> = children
-            .iter()
-            .filter_map(|c| coords.get(c).copied())
-            .collect();
-        if !child_xs.is_empty() {
-            let min_c = child_xs.iter().copied().fold(f32::INFINITY, f32::min);
-            let max_c = child_xs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-            coords.insert(id.to_string(), (min_c + max_c) / 2.0);
-        }
-    }
-}
-
-/// 辅助函数：将多入度汇聚节点对称居中于其父节点包围盒中心
-fn center_join_node(
-    id: &str,
-    preds: &HashMap<String, Vec<String>>,
-    coords: &mut HashMap<String, f32>,
-) {
-    if let Some(parents) = preds.get(id) {
-        let parent_xs: Vec<f32> = parents
-            .iter()
-            .filter_map(|p| coords.get(p).copied())
-            .collect();
-        if !parent_xs.is_empty() {
-            let min_p = parent_xs.iter().copied().fold(f32::INFINITY, f32::min);
-            let max_p = parent_xs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-            coords.insert(id.to_string(), (min_p + max_p) / 2.0);
-        }
-    }
 }
 
 /// 双向无偏层内间距强制保障 (Left-to-Right + Right-to-Left Averaging)
