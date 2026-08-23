@@ -11,6 +11,7 @@ pub fn render_code_editor_header(
     model: &Entity<AppState>,
     editor_state: Option<&Entity<EditorState>>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let line_count = code_state.content.lines().count();
     let char_count = code_state.content.len();
     let file_path = code_state.file_path.clone();
@@ -23,13 +24,19 @@ pub fn render_code_editor_header(
     let ed_revert = editor_state.cloned();
     let original_content = code_state.original_content.clone();
 
+    let save_btn_fg = if is_modified {
+        if pal.is_dark { rgb(0x0F1117) } else { rgb(0xFFFFFF) }
+    } else {
+        pal.text_primary
+    };
+
     div()
         .h(px(40.0))
         .w_full()
         .px_4()
-        .bg(hsla(240.0 / 360.0, 0.06, 0.10, 0.95))
+        .bg(pal.panel_surface)
         .border_b_1()
-        .border_color(hsla(240.0 / 360.0, 0.06, 0.18, 1.0))
+        .border_color(pal.panel_border)
         .flex()
         .items_center()
         .justify_between()
@@ -49,15 +56,15 @@ pub fn render_code_editor_header(
                         .px_2()
                         .py_0p5()
                         .rounded_md()
-                        .bg(hsla(215.0 / 360.0, 0.50, 0.25, 0.9))
+                        .bg(pal.card_surface)
                         .border_1()
-                        .border_color(hsla(215.0 / 360.0, 0.70, 0.45, 1.0))
+                        .border_color(pal.primary_accent)
                         .child(div().text_size(px(12.0)).child(format_icon))
                         .child(
                             div()
                                 .font_weight(FontWeight::BOLD)
                                 .text_size(px(11.0))
-                                .text_color(hsla(215.0 / 360.0, 0.90, 0.85, 1.0))
+                                .text_color(pal.primary_accent)
                                 .child(format_name),
                         ),
                 )
@@ -67,19 +74,19 @@ pub fn render_code_editor_header(
                         .px_2()
                         .py_0p5()
                         .rounded_md()
-                        .bg(hsla(270.0 / 360.0, 0.35, 0.20, 0.9))
+                        .bg(pal.card_surface)
                         .border_1()
-                        .border_color(hsla(270.0 / 360.0, 0.55, 0.40, 1.0))
+                        .border_color(pal.secondary_accent)
                         .text_size(px(10.5))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(hsla(270.0 / 360.0, 0.85, 0.80, 1.0))
+                        .text_color(pal.secondary_accent)
                         .child(endian_label),
                 )
                 // 路径
                 .child(
                     div()
                         .text_size(px(11.5))
-                        .text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0))
+                        .text_color(pal.text_secondary)
                         .overflow_hidden()
                         .child(file_path),
                 )
@@ -92,20 +99,20 @@ pub fn render_code_editor_header(
                         .px_2()
                         .py_0p5()
                         .rounded_md()
-                        .bg(hsla(45.0 / 360.0, 0.95, 0.25, 0.9))
+                        .bg(pal.card_surface)
                         .border_1()
-                        .border_color(hsla(45.0 / 360.0, 0.95, 0.55, 1.0))
+                        .border_color(pal.secondary_accent)
                         .child(
                             div()
                                 .size(px(6.0))
                                 .rounded_full()
-                                .bg(hsla(45.0 / 360.0, 0.95, 0.60, 1.0)),
+                                .bg(pal.secondary_accent),
                         )
                         .child(
                             div()
                                 .text_size(px(10.5))
                                 .font_weight(FontWeight::BOLD)
-                                .text_color(hsla(45.0 / 360.0, 0.95, 0.75, 1.0))
+                                .text_color(pal.secondary_accent)
                                 .child(state.t("code_editor.modified_label")),
                         )
                 })),
@@ -120,7 +127,7 @@ pub fn render_code_editor_header(
                 .child(
                     div()
                         .text_size(px(11.0))
-                        .text_color(hsla(240.0 / 360.0, 0.05, 0.50, 1.0))
+                        .text_color(pal.text_secondary)
                         .child(format!("{} {}, {} {}", line_count, state.t("code_editor.lines"), char_count, state.t("code_editor.chars"))),
                 )
                 // 重置修改按钮 (仅在已修改时高亮可用)
@@ -129,14 +136,14 @@ pub fn render_code_editor_header(
                         .px_2p5()
                         .py_1()
                         .rounded_md()
-                        .bg(hsla(0.0, 0.50, 0.20, 0.8))
+                        .bg(pal.card_surface)
                         .border_1()
-                        .border_color(hsla(0.0, 0.65, 0.40, 1.0))
-                        .hover(|s| s.bg(hsla(0.0, 0.65, 0.30, 1.0)))
+                        .border_color(rgb(0xEF4444))
+                        .hover(|s| s.bg(rgb(0xEF4444)).text_color(rgb(0xFFFFFF)))
                         .cursor_pointer()
                         .text_size(px(11.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(rgb(0xffffff))
+                        .text_color(rgb(0xEF4444))
                         .on_mouse_down(MouseButton::Left, move |_, window, cx| {
                             if let Some(ref ed) = ed_revert {
                                 let orig = original_content.clone();
@@ -158,27 +165,27 @@ pub fn render_code_editor_header(
                         .py_1()
                         .rounded_md()
                         .bg(if is_modified {
-                            hsla(145.0 / 360.0, 0.65, 0.25, 1.0)
+                            pal.primary_accent
                         } else {
-                            hsla(240.0 / 360.0, 0.06, 0.18, 0.8)
+                            pal.card_surface
                         })
                         .border_1()
                         .border_color(if is_modified {
-                            hsla(145.0 / 360.0, 0.85, 0.45, 1.0)
+                            pal.primary_accent
                         } else {
-                            hsla(240.0 / 360.0, 0.06, 0.25, 1.0)
+                            pal.card_border
                         })
-                        .hover(|s| {
+                        .hover(move |s| {
                             if is_modified {
-                                s.bg(hsla(145.0 / 360.0, 0.75, 0.32, 1.0))
+                                s.opacity(0.85)
                             } else {
-                                s.bg(hsla(240.0 / 360.0, 0.06, 0.24, 1.0))
+                                s.bg(pal.card_hover)
                             }
                         })
                         .cursor_pointer()
                         .text_size(px(11.5))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(rgb(0xffffff))
+                        .text_color(save_btn_fg)
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                             model_save.update(cx, |st, cx| {
                                 st.save_active_document();

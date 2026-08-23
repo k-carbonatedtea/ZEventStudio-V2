@@ -41,16 +41,23 @@ impl AppState {
         gpui_theme.colors.title_bar = pal.panel_surface.into();
         gpui_theme.colors.title_bar_border = pal.panel_border.into();
 
-        // 统一代码编辑器高亮风格
-        let mut style = gpui_theme.highlight_theme.style.clone();
+        // 统一代码编辑器高亮风格 (从对应明暗默认主题派生，确保完整的语法着色)
+        let base_hl = if pal.is_dark {
+            gpui_component::highlighter::HighlightTheme::default_dark()
+        } else {
+            gpui_component::highlighter::HighlightTheme::default_light()
+        };
+
+        let mut style = base_hl.style.clone();
         style.editor_background = Some(pal.app_bg.into());
+        style.editor_foreground = Some(pal.text_primary.into());
         style.editor_gutter_background = Some(pal.panel_surface.into());
         style.editor_active_line = Some(pal.card_surface.into());
         style.editor_line_number = Some(pal.text_secondary.into());
         style.editor_active_line_number = Some(pal.primary_accent.into());
 
         gpui_theme.highlight_theme = std::sync::Arc::new(gpui_component::highlighter::HighlightTheme {
-            name: gpui_theme.highlight_theme.name.clone(),
+            name: format!("{}-Custom", pal.name),
             appearance: if pal.is_dark {
                 gpui_component::ThemeMode::Dark
             } else {
@@ -58,6 +65,8 @@ impl AppState {
             },
             style,
         });
+
+        gpui_component::Theme::sync_base(cx);
 
         self.toast = Some(Toast::success(format!("🎨 已切换主题: {}", self.t(theme.i18n_key()))));
     }

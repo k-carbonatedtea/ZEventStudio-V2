@@ -14,6 +14,7 @@ pub fn render_code_editor_view(
     model: &Entity<AppState>,
     editor_state: Option<&Entity<EditorState>>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let active_id = state.active_tab_id.as_deref().unwrap_or("");
     let active_tab = state.open_tabs.iter().find(|t| t.id == active_id);
 
@@ -24,7 +25,7 @@ pub fn render_code_editor_view(
                 .flex_col()
                 .size_full()
                 .overflow_hidden()
-                .bg(hsla(240.0 / 360.0, 0.06, 0.07, 1.0))
+                .bg(pal.app_bg)
                 .child(render_code_editor_header(code_state, tab.is_modified, state, model, editor_state))
                 .child(render_editor_area(code_state, state, model, editor_state))
                 .into_any_element();
@@ -37,8 +38,8 @@ pub fn render_code_editor_view(
         .items_center()
         .justify_center()
         .size_full()
-        .bg(hsla(240.0 / 360.0, 0.06, 0.07, 1.0))
-        .text_color(hsla(240.0 / 360.0, 0.05, 0.50, 1.0))
+        .bg(pal.app_bg)
+        .text_color(pal.text_secondary)
         .child(state.t("code_editor.empty_prompt"))
         .into_any_element()
 }

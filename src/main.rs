@@ -17,13 +17,28 @@ fn main() {
 
         // 统一注入全局设计系统调色板规范 (Design System Theme Tokens)
         let pal = ui::theme::AppTheme::RelicCyan.palette();
+        let base_hl = if pal.is_dark {
+            gpui_component::highlighter::HighlightTheme::default_dark()
+        } else {
+            gpui_component::highlighter::HighlightTheme::default_light()
+        };
+
+        let mut style = base_hl.style.clone();
+        style.editor_background = Some(pal.app_bg.into());
+        style.editor_foreground = Some(pal.text_primary.into());
+        style.editor_gutter_background = Some(pal.panel_surface.into());
+        style.editor_active_line = Some(pal.card_surface.into());
+        style.editor_line_number = Some(pal.text_secondary.into());
+        style.editor_active_line_number = Some(pal.primary_accent.into());
+
         let theme = Theme::global_mut(cx);
+        theme.mode = if pal.is_dark { ThemeMode::Dark } else { ThemeMode::Light };
         theme.colors.background = pal.app_bg.into();
         theme.colors.foreground = pal.text_primary.into();
         theme.colors.popover = pal.panel_surface.into();
         theme.colors.popover_foreground = pal.text_primary.into();
         theme.colors.primary = pal.primary_accent.into();
-        theme.colors.primary_foreground = rgb(0x0F1117).into();
+        theme.colors.primary_foreground = if pal.is_dark { rgb(0x0F1117).into() } else { rgb(0xFFFFFF).into() };
         theme.colors.secondary = pal.card_surface.into();
         theme.colors.secondary_foreground = pal.text_primary.into();
         theme.colors.muted = pal.card_surface.into();
@@ -35,19 +50,13 @@ fn main() {
         theme.colors.title_bar = pal.panel_surface.into();
         theme.colors.title_bar_border = pal.panel_border.into();
 
-        // 统一代码编辑器背景色、行号槽 (Gutter) 与激活行高亮
-        let mut style = theme.highlight_theme.style.clone();
-        style.editor_background = Some(pal.app_bg.into());
-        style.editor_gutter_background = Some(pal.panel_surface.into());
-        style.editor_active_line = Some(pal.card_surface.into());
-        style.editor_line_number = Some(pal.text_secondary.into());
-        style.editor_active_line_number = Some(pal.primary_accent.into());
-
         theme.highlight_theme = std::sync::Arc::new(gpui_component::highlighter::HighlightTheme {
-            name: theme.highlight_theme.name.clone(),
-            appearance: ThemeMode::Dark,
+            name: "ZEventStudio-RelicCyan".to_string(),
+            appearance: if pal.is_dark { ThemeMode::Dark } else { ThemeMode::Light },
             style,
         });
+
+        Theme::sync_base(cx);
 
         let window_options = WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
