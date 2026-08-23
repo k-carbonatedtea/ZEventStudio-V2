@@ -162,9 +162,15 @@ pub fn baiprog_to_graph(prog: &BaiProgram, file_name: &str) -> Graph {
     graph
 }
 
-/// 辅助判定 AI 节点的类型
-fn determine_ai_node_kind(name: &str, class_name: &str, _id_idx: u32) -> NodeKind {
-    if name.eq_ignore_ascii_case("root") || class_name.contains("Root") {
+/// 辅助判定 AI 节点的类型 (将主要行为树根节点与通常状态机作为独立入口点)
+fn determine_ai_node_kind(name: &str, class_name: &str, id_idx: u32) -> NodeKind {
+    if name.eq_ignore_ascii_case("root")
+        || class_name.contains("Root")
+        || class_name.contains("Normal")
+        || id_idx == 2
+        || id_idx == 356
+        || id_idx == 357
+    {
         NodeKind::EntryPoint
     } else if class_name.contains("Fork") {
         NodeKind::Fork

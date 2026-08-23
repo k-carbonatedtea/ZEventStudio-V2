@@ -12,8 +12,8 @@ use crate::model::node::NodeKind;
 use std::collections::{HashMap, HashSet, VecDeque};
 use tree_layout::layout_tree_component;
 
-/// 纯 Rust 实现的高性能行为树/流程图自动排版引擎 (参考 Plasticity 行为树主干展开机制与 Sugiyama DAG 结合)
-/// 保证父子节点垂直直线对齐、Fork-Join 分支对称居中、长连线不交叉、各独立流程自适应多列网格排版。
+/// 纯 Rust 实现的高性能行为树/流程图自动排版引擎 (向下优先纵向级联排版)
+/// 保证父子节点垂直直线对齐、主逻辑体系（AI_2 Root -> AI_356 通常 -> AI_357 通常 -> 过场动画）自顶向下规整流动。
 pub fn auto_layout_graph(graph: &mut Graph) {
     auto_layout_graph_with_config(graph, &LayoutConfig::default());
 }
@@ -33,63 +33,92 @@ pub fn auto_layout_graph_with_config(graph: &mut Graph, config: &LayoutConfig) {
     // 1. 构建全图邻接表与无向连通分量邻接表
     let (directed_adj, undirected_adj) = build_adjacency_maps(graph, &node_indices);
 
-    // 2. 划分连通子图 (Connected Components)
-    let mut components = find_connected_components(graph, &node_indices, &undirected_adj);
+    // 2. 按核心入口点边界划分独立行为树组件 (EntryPoint-Aware Partitioning)
+    let mut components = find_connected_components(graph, &node_indices, &directed_adj, &undirected_adj);
 
-    // 3. 排序连通子图 (主干大图排最前，独立小分支紧随其后)
+    // 3. 排序连通子图：遵循自顶向下逻辑执行流 (AI_2 Root -> AI_356 生命周期 -> AI_357 战斗状态机 -> Demo)
     components.sort_by(|a, b| {
-        let a_has_ep = a.iter().any(|id| id.eq_ignore_ascii_case("ai_2") || id.starts_with("ep_"));
-        let b_has_ep = b.iter().any(|id| id.eq_ignore_ascii_case("ai_2") || id.starts_with("ep_"));
-        match (a_has_ep, b_has_ep) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => b.len().cmp(&a.len()),
-        }
+        let a_score = get_comp_priority(a);
+        let b_score = get_comp_priority(b);
+        a_score.cmp(&b_score).then_with(|| b.len().cmp(&a.len()))
     });
 
     if components.is_empty() {
         return;
     }
 
-    // 4. 对连通子图实施 2D 自适应多列布局
-    let (first_w, first_h) = layout_tree_component(
-        &components[0],
-        graph,
-        &node_indices,
-        &directed_adj,
-        config.start_x,
-        config.start_y,
-        config,
-    );
-
-    if components.len() == 1 {
-        return;
-    }
-
-    let max_col_height = first_h.max(1600.0);
-    let mut col_x = config.start_x + first_w + config.component_spacing_x;
+    // 4. 对连通子图实施向下优先纵向级联布局 (Downward-Prioritized Vertical Cascade)
     let mut cur_y = config.start_y;
-    let mut max_w_in_col: f32 = 0.0;
+    let main_x = config.start_x;
 
-    for comp in &components[1..] {
-        let (comp_w, comp_h) = layout_tree_component(
-            comp,
+    let mut demo_components = Vec::new();
+
+    for comp in components {
+        let is_demo = comp.iter().any(|id| id.starts_with("ep_"));
+        if is_demo {
+            demo_components.push(comp);
+            continue;
+        }
+
+        let (_comp_w, comp_h) = layout_tree_component(
+            &comp,
             graph,
             &node_indices,
             &directed_adj,
-            col_x,
+            main_x,
             cur_y,
             config,
         );
 
-        max_w_in_col = max_w_in_col.max(comp_w);
-        cur_y += comp_h + config.component_spacing_y;
+        cur_y += comp_h + config.component_spacing_y * 1.5;
+    }
 
-        if cur_y >= max_col_height {
-            col_x += max_w_in_col + config.component_spacing_x;
-            cur_y = config.start_y;
-            max_w_in_col = 0.0;
+    // 5. 对所有过场动画 (Demo Actions) 实施下方整齐多列网格排版
+    if !demo_components.is_empty() {
+        let demo_cols = 4;
+        let col_spacing = config.component_spacing_x * 1.2;
+        let row_spacing = config.component_spacing_y;
+        let mut row_max_h: f32 = 0.0;
+        let mut col_idx = 0;
+        let mut col_x = main_x;
+
+        for demo_comp in demo_components {
+            let (dw, dh) = layout_tree_component(
+                &demo_comp,
+                graph,
+                &node_indices,
+                &directed_adj,
+                col_x,
+                cur_y,
+                config,
+            );
+
+            row_max_h = row_max_h.max(dh);
+            col_x += dw.max(260.0) + col_spacing;
+            col_idx += 1;
+
+            if col_idx >= demo_cols {
+                col_idx = 0;
+                col_x = main_x;
+                cur_y += row_max_h + row_spacing;
+                row_max_h = 0.0;
+            }
         }
+    }
+}
+
+/// 获取组件的自顶向下优先次序
+fn get_comp_priority(comp: &[String]) -> usize {
+    if comp.iter().any(|id| id.eq_ignore_ascii_case("ai_2")) {
+        0 // 顶层主分发器
+    } else if comp.iter().any(|id| id.eq_ignore_ascii_case("ai_356")) {
+        1 // 生命周期与底层反应机制
+    } else if comp.iter().any(|id| id.eq_ignore_ascii_case("ai_357")) {
+        2 // 主行为与战斗状态机
+    } else if comp.iter().any(|id| id.starts_with("ep_")) {
+        3 // 过场动画 Demo 入口
+    } else {
+        4 // 其余连通分支
     }
 }
 
@@ -127,47 +156,86 @@ fn build_adjacency_maps(
     (directed_adj, undirected_adj)
 }
 
-/// 划分无向连通分量 (Connected Components)
+/// 核心入口点感知分量划分 (EntryPoint-Aware Component Partitioning)
 fn find_connected_components(
     graph: &Graph,
-    node_indices: &HashMap<String, usize>,
+    _node_indices: &HashMap<String, usize>,
+    directed_adj: &HashMap<String, Vec<String>>,
     undirected_adj: &HashMap<String, HashSet<String>>,
 ) -> Vec<Vec<String>> {
-    let mut visited_comp: HashSet<String> = HashSet::new();
+    let mut visited: HashSet<String> = HashSet::new();
     let mut components: Vec<Vec<String>> = Vec::new();
 
-    let mut ordered_start_nodes: Vec<String> = graph.nodes.iter().map(|n| n.id.clone()).collect();
-    ordered_start_nodes.sort_by_key(|id| {
-        if let Some(&idx) = node_indices.get(id) {
-            if graph.nodes[idx].kind == NodeKind::EntryPoint || id.starts_with("ep_") {
-                0
-            } else {
-                1
-            }
-        } else {
+    // 1. 提取并排序所有入口节点 (EntryPoint)
+    let mut entry_nodes: Vec<String> = graph
+        .nodes
+        .iter()
+        .filter(|n| n.kind == NodeKind::EntryPoint || n.id.starts_with("ep_"))
+        .map(|n| n.id.clone())
+        .collect();
+
+    entry_nodes.sort_by_key(|id| {
+        if id.eq_ignore_ascii_case("ai_2") {
+            0
+        } else if id.eq_ignore_ascii_case("ai_356") {
+            1
+        } else if id.eq_ignore_ascii_case("ai_357") {
             2
+        } else {
+            3
         }
     });
 
-    for node_id in ordered_start_nodes {
-        if !visited_comp.contains(&node_id) {
+    let entry_set: HashSet<String> = entry_nodes.iter().cloned().collect();
+
+    // 2. 为每个 EntryPoint 独立提取其专属下游子树 (不越过其他 EntryPoint)
+    for ep in entry_nodes {
+        if visited.contains(&ep) {
+            continue;
+        }
+        let mut comp = Vec::new();
+        let mut q = VecDeque::new();
+        visited.insert(ep.clone());
+        q.push_back(ep);
+
+        while let Some(curr) = q.pop_front() {
+            comp.push(curr.clone());
+            if let Some(targets) = directed_adj.get(&curr) {
+                for tgt in targets {
+                    if !entry_set.contains(tgt) && !visited.contains(tgt) {
+                        visited.insert(tgt.clone());
+                        q.push_back(tgt.clone());
+                    }
+                }
+            }
+        }
+        if !comp.is_empty() {
+            components.push(comp);
+        }
+    }
+
+    // 3. 处理其余未被入口点直接覆盖的游离弱连通组件
+    for node in &graph.nodes {
+        if !visited.contains(&node.id) {
             let mut comp = Vec::new();
             let mut q = VecDeque::new();
-            visited_comp.insert(node_id.clone());
-            q.push_back(node_id);
+            visited.insert(node.id.clone());
+            q.push_back(node.id.clone());
 
             while let Some(curr) = q.pop_front() {
                 comp.push(curr.clone());
                 if let Some(neighbors) = undirected_adj.get(&curr) {
                     for nxt in neighbors {
-                        if !visited_comp.contains(nxt) {
-                            visited_comp.insert(nxt.clone());
+                        if !visited.contains(nxt) {
+                            visited.insert(nxt.clone());
                             q.push_back(nxt.clone());
                         }
                     }
                 }
             }
-            components.push(comp);
+            if !comp.is_empty() {
+                components.push(comp);
+            }
         }
     }
 

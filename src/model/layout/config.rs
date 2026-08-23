@@ -1,29 +1,29 @@
-/// 布局配置参数 (与原版 Dagre / Sugiyama 排版规范保持一致)
+/// 布局配置参数 (紧凑向下流动排版规范)
 #[derive(Debug, Clone)]
 pub struct LayoutConfig {
     /// 画布起始 X 坐标
     pub start_x: f32,
     /// 画布起始 Y 坐标
     pub start_y: f32,
-    /// 同层相邻节点的水平间距 (nodesep: 120.0)
+    /// 同层相邻节点的水平间距 (紧凑 36.0px)
     pub node_spacing_x: f32,
-    /// 相邻层级之间的垂直间距 (ranksep: 180.0)
+    /// 相邻层级之间的垂直间距 (紧凑 48.0px)
     pub layer_spacing_y: f32,
-    /// 独立连通子图 (如多个 EntryPoint 流) 之间的水平间距 (200.0)
+    /// 独立连通子图之间的水平间距 (60.0px)
     pub component_spacing_x: f32,
-    /// 独立连通子图在多行多列排版时的垂直间距 (160.0)
+    /// 独立连通子图之间的垂直间距 (80.0px)
     pub component_spacing_y: f32,
 }
 
 impl Default for LayoutConfig {
     fn default() -> Self {
         Self {
-            start_x: 80.0,
-            start_y: 80.0,
-            node_spacing_x: 80.0,
-            layer_spacing_y: 220.0,
-            component_spacing_x: 180.0,
-            component_spacing_y: 160.0,
+            start_x: 60.0,
+            start_y: 60.0,
+            node_spacing_x: 36.0,
+            layer_spacing_y: 48.0,
+            component_spacing_x: 60.0,
+            component_spacing_y: 80.0,
         }
     }
 }

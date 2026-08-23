@@ -1,7 +1,10 @@
 use gpui::*;
-use crate::model::{NodeKind, PortDirection};
-use crate::ui::state::{AppState, DragState};
+use crate::model::graph::Graph;
+use crate::model::node::NodeKind;
+use crate::ui::state::AppState;
+use std::collections::HashSet;
 
+/// 渲染高性能批量连线图层 (采用现代正交折线/曼哈顿走廊拓扑与 GPU 批量渲染)
 pub fn render_edges_layer(
     state: &AppState,
     model: &Entity<AppState>,
@@ -9,59 +12,38 @@ pub fn render_edges_layer(
     let pan = state.pan;
     let zoom = state.zoom;
     let knife_mode = state.knife_mode;
-
-    // 收集所有连线坐标、源节点类型与虚线状态
-    let mut edge_items = Vec::new();
-    for edge in &state.graph.edges {
-        if let (Some(s_node), Some(t_node)) = (
-            state.graph.find_node(&edge.source_node_id),
-            state.graph.find_node(&edge.target_node_id),
-        ) {
-            let s_offset = s_node.get_port_offset(&edge.source_port_id, PortDirection::Output);
-            let t_offset = t_node.get_port_offset(&edge.target_port_id, PortDirection::Input);
-
-            let sx = s_node.pos.0 + s_offset.0;
-            let sy = s_node.pos.1 + s_offset.1;
-            let ex = t_node.pos.0 + t_offset.0;
-            let ey = t_node.pos.1 + t_offset.1;
-
-            let is_dashed = edge.is_dashed || t_node.kind == NodeKind::Join;
-
-            edge_items.push((
-                edge.source_node_id.clone(),
-                edge.target_node_id.clone(),
-                edge.label.clone(),
-                s_node.kind.clone(),
-                is_dashed,
-                (sx, sy),
-                (ex, ey),
-                edge.waypoints.clone(),
-            ));
-        }
-    }
-
-    let active_node_id = state.selected_node_id.as_deref().or(state.hovered_node_id.as_deref());
-    let active_edges = active_node_id.map(|id| state.graph.get_active_path_edges(id)).unwrap_or_default();
-    let is_tracing = active_node_id.is_some() && !active_edges.is_empty();
-
-    let live_connection = if let DragState::Connecting { source_pos, current_mouse, direction, .. } = &state.drag_state {
-        Some((*source_pos, *current_mouse, *direction))
-    } else {
-        None
+    let connecting_state = match &state.drag_state {
+        crate::ui::state::DragState::Connecting {
+            source_pos,
+            current_mouse,
+            direction,
+            ..
+        } => Some((*source_pos, *current_mouse, *direction)),
+        _ => None,
     };
 
+    // 1. 提取所有已连接连线的几何端点与属性
+    let edge_items = extract_edge_items(&state.graph);
 
+    // 2. 识别高亮活动链路 (Active Path Tracing)
+    let active_edges = if let Some(selected_id) = &state.selected_node_id {
+        state.graph.get_active_path_edges(selected_id)
+    } else {
+        HashSet::new()
+    };
+    let is_tracing = !active_edges.is_empty();
 
     let edge_items_clone = edge_items.clone();
+    let live_connection = connecting_state;
 
     div()
         .absolute()
         .inset_0()
-        // 1. GPU 原生硬件加速批处理 Canvas (支持航点走廊路由 Waypoint Corridor Routing)
+        // 1. 核心连线批量路径绘制容器 (GPU Batch Path Painter)
         .child(
             canvas(
-                |_bounds, _window, _cx| {},
-                move |bounds, _, window, _cx| {
+                move |bounds, _, _| bounds,
+                move |bounds, _, window, _| {
                     let orig_x: f32 = bounds.origin.x.into();
                     let orig_y: f32 = bounds.origin.y.into();
                     let view_w: f32 = bounds.size.width.into();
@@ -123,10 +105,7 @@ pub fn render_edges_layer(
                         }
                         screen_pts.push((screen_ex, screen_ey));
 
-                        if max_x < orig_x - 60.0
-                            || min_x > orig_x + view_w + 60.0
-                            || max_y < orig_y - 60.0
-                            || min_y > orig_y + view_h + 60.0
+                        if max_x < -100.0 || min_x > view_w + 100.0 || max_y < -100.0 || min_y > view_h + 100.0
                         {
                             continue;
                         }
@@ -135,7 +114,7 @@ pub fn render_edges_layer(
 
                         if is_on_active_path {
                             has_active = true;
-                            draw_routed_curve(&mut batch_active, &screen_pts, zoom);
+                            draw_orthogonal_step_line(&mut batch_active, &screen_pts, zoom);
 
                             batch_active_arrows.move_to(point(px(screen_ex), px(screen_ey)));
                             batch_active_arrows.line_to(point(px(screen_ex - active_arrow_w * 0.5), px(screen_ey - active_arrow_h)));
@@ -143,7 +122,7 @@ pub fn render_edges_layer(
                             batch_active_arrows.close();
                         } else if *is_dashed {
                             has_dashed = true;
-                            draw_routed_curve(&mut batch_dashed, &screen_pts, zoom);
+                            draw_orthogonal_step_line(&mut batch_dashed, &screen_pts, zoom);
 
                             batch_dashed_arrows.move_to(point(px(screen_ex), px(screen_ey)));
                             batch_dashed_arrows.line_to(point(px(screen_ex - arrow_w * 0.5), px(screen_ey - arrow_h)));
@@ -151,7 +130,7 @@ pub fn render_edges_layer(
                             batch_dashed_arrows.close();
                         } else if let Some((_, stroke_builder, arrow_builder, has_items)) = kind_paths.iter_mut().find(|(k, _, _, _)| k == s_kind) {
                             *has_items = true;
-                            draw_routed_curve(stroke_builder, &screen_pts, zoom);
+                            draw_orthogonal_step_line(stroke_builder, &screen_pts, zoom);
 
                             arrow_builder.move_to(point(px(screen_ex), px(screen_ey)));
                             arrow_builder.line_to(point(px(screen_ex - arrow_w * 0.5), px(screen_ey - arrow_h)));
@@ -159,7 +138,6 @@ pub fn render_edges_layer(
                             arrow_builder.close();
                         }
                     }
-
 
                     // 单次提交 GPU 批量路径渲染：按不同节点类型专属颜色渲染
                     for (kind, stroke_builder, arrow_builder, has_items) in kind_paths {
@@ -215,7 +193,7 @@ pub fn render_edges_layer(
                         }
                     }
 
-                    // 实时拖拽连线 (精准吸附引脚中心至鼠标光标尖端)
+                    // 实时拖拽连线 (正交阶梯折线跟随鼠标)
                     if let Some((source_pos, current_mouse, direction)) = live_connection {
                         let src_sx = orig_x + pan.0 + source_pos.0 * zoom;
                         let src_sy = orig_y + pan.1 + source_pos.1 * zoom;
@@ -227,17 +205,8 @@ pub fn render_edges_layer(
                             crate::model::PortDirection::Input => (mouse_sx, mouse_sy, src_sx, src_sy),
                         };
 
-                        let dy = (screen_ey - screen_sy).abs().max(36.0 * zoom);
-                        let ctrl1 = (screen_sx, screen_sy + dy * 0.45);
-                        let ctrl2 = (screen_ex, screen_ey - dy * 0.45);
-
                         let mut live_builder = PathBuilder::stroke(px(stroke_w * 1.35));
-                        live_builder.move_to(point(px(screen_sx), px(screen_sy)));
-                        live_builder.cubic_bezier_to(
-                            point(px(screen_ex), px(screen_ey)),
-                            point(px(ctrl1.0), px(ctrl1.1)),
-                            point(px(ctrl2.0), px(ctrl2.1)),
-                        );
+                        draw_orthogonal_step_line(&mut live_builder, &[(screen_sx, screen_sy), (screen_ex, screen_ey)], zoom);
 
                         if let Ok(p) = live_builder.build() {
                             window.paint_path(p, hsla(45.0 / 360.0, 0.98, 0.60, 0.98));
@@ -265,7 +234,7 @@ pub fn render_edges_layer(
             .size_full(),
         )
 
-
+        // 2. 连线交互徽章（切刀剪断触发器）
         .children(edge_items.into_iter().filter_map(move |(s_id, t_id, label, _, _, (sx, sy), (ex, ey), _)| {
             if !knife_mode || zoom < 0.35 {
                 return None;
@@ -310,46 +279,150 @@ pub fn render_edges_layer(
         }))
 }
 
-/// 绘制支持多航点平滑弯曲的走廊连线 (Waypoint Routed Smooth Curve)
-fn draw_routed_curve(builder: &mut PathBuilder, pts: &[(f32, f32)], zoom: f32) {
+/// 绘制带圆角过渡的正交折线 / 阶梯回路连线 (Orthogonal Manhattan / Step Line with Rounded Chamfers)
+fn draw_orthogonal_step_line(builder: &mut PathBuilder, pts: &[(f32, f32)], zoom: f32) {
     if pts.is_empty() {
         return;
     }
     builder.move_to(point(px(pts[0].0), px(pts[0].1)));
+
     if pts.len() == 2 {
         let (sx, sy) = pts[0];
         let (ex, ey) = pts[1];
-        if ey >= sy {
-            let dy = (ey - sy).max(28.0 * zoom);
-            let ctrl1_y = sy + dy * 0.5;
-            let ctrl2_y = ey - dy * 0.5;
+
+        // 1. 同 X 轴垂直纯直线：直接一笔直落
+        if (sx - ex).abs() < 1.5 {
+            builder.line_to(point(px(ex), px(ey)));
+            return;
+        }
+
+        // 2. 正向下行正交折线 (Vertical -> Horizontal -> Vertical)
+        if ey >= sy + 12.0 * zoom {
+            let mid_y = (sy + ey) / 2.0;
+            let dx = ex - sx;
+            let dir_x = if dx > 0.0 { 1.0 } else { -1.0 };
+            let r = ((ey - sy) * 0.35).min(dx.abs() * 0.45).min(10.0 * zoom).max(0.0);
+
+            builder.line_to(point(px(sx), px(mid_y - r)));
             builder.cubic_bezier_to(
-                point(px(ex), px(ey)),
-                point(px(sx), px(ctrl1_y)),
-                point(px(ex), px(ctrl2_y)),
+                point(px(sx + dir_x * r), px(mid_y)),
+                point(px(sx), px(mid_y)),
+                point(px(sx + dir_x * r * 0.55), px(mid_y)),
             );
+            builder.line_to(point(px(ex - dir_x * r), px(mid_y)));
+            builder.cubic_bezier_to(
+                point(px(ex), px(mid_y + r)),
+                point(px(ex), px(mid_y)),
+                point(px(ex), px(mid_y + r * 0.55)),
+            );
+            builder.line_to(point(px(ex), px(ey)));
         } else {
-            let offset_x = if ex >= sx { 36.0 * zoom } else { -36.0 * zoom };
+            // 3. 反向/侧向回路正交绕行
+            let side_offset = if ex >= sx { 48.0 * zoom } else { -48.0 * zoom };
+            let side_x = (if ex >= sx { sx.max(ex) } else { sx.min(ex) }) + side_offset;
+            let r = (8.0 * zoom).clamp(0.0, 10.0);
+            let dir_out = if side_x > sx { 1.0 } else { -1.0 };
+
+            let drop_y = sy + 24.0 * zoom;
+            let enter_y = ey - 24.0 * zoom;
+
+            builder.line_to(point(px(sx), px(drop_y - r)));
             builder.cubic_bezier_to(
-                point(px(ex), px(ey)),
-                point(px(sx + offset_x), px(sy + 36.0 * zoom)),
-                point(px(ex + offset_x), px(ey - 36.0 * zoom)),
+                point(px(sx + dir_out * r), px(drop_y)),
+                point(px(sx), px(drop_y)),
+                point(px(sx + dir_out * r * 0.55), px(drop_y)),
             );
+            builder.line_to(point(px(side_x - dir_out * r), px(drop_y)));
+            builder.cubic_bezier_to(
+                point(px(side_x), px(drop_y + (if enter_y >= drop_y { r } else { -r }))),
+                point(px(side_x), px(drop_y)),
+                point(px(side_x), px(drop_y + (if enter_y >= drop_y { r * 0.55 } else { -r * 0.55 }))),
+            );
+            builder.line_to(point(px(side_x), px(enter_y - (if enter_y >= drop_y { r } else { -r }))));
+            builder.cubic_bezier_to(
+                point(px(side_x - dir_out * r), px(enter_y)),
+                point(px(side_x), px(enter_y)),
+                point(px(side_x - dir_out * r * 0.55), px(enter_y)),
+            );
+            builder.line_to(point(px(ex + dir_out * r), px(enter_y)));
+            builder.cubic_bezier_to(
+                point(px(ex), px(enter_y + r)),
+                point(px(ex), px(enter_y)),
+                point(px(ex), px(enter_y + r * 0.55)),
+            );
+            builder.line_to(point(px(ex), px(ey)));
         }
     } else {
+        // 多航点正交折线
         for i in 0..pts.len() - 1 {
             let (x1, y1) = pts[i];
             let (x2, y2) = pts[i + 1];
-            let dy = (y2 - y1).abs().max(18.0 * zoom);
-            let c1y = y1 + (if y2 >= y1 { dy * 0.5 } else { -dy * 0.5 });
-            let c2y = y2 - (if y2 >= y1 { dy * 0.5 } else { -dy * 0.5 });
-            builder.cubic_bezier_to(
-                point(px(x2), px(y2)),
-                point(px(x1), px(c1y)),
-                point(px(x2), px(c2y)),
-            );
+            if (x1 - x2).abs() < 1.5 {
+                builder.line_to(point(px(x2), px(y2)));
+            } else {
+                let mid_y = (y1 + y2) / 2.0;
+                let dx = x2 - x1;
+                let dir_x = if dx > 0.0 { 1.0 } else { -1.0 };
+                let r = ((y2 - y1).abs() * 0.35).min(dx.abs() * 0.45).min(8.0 * zoom).max(0.0);
+                builder.line_to(point(px(x1), px(mid_y - r)));
+                builder.cubic_bezier_to(
+                    point(px(x1 + dir_x * r), px(mid_y)),
+                    point(px(x1), px(mid_y)),
+                    point(px(x1 + dir_x * r * 0.55), px(mid_y)),
+                );
+                builder.line_to(point(px(x2 - dir_x * r), px(mid_y)));
+                builder.cubic_bezier_to(
+                    point(px(x2), px(mid_y + (if y2 >= y1 { r } else { -r }))),
+                    point(px(x2), px(mid_y)),
+                    point(px(x2), px(mid_y + (if y2 >= y1 { r * 0.55 } else { -r * 0.55 }))),
+                );
+                builder.line_to(point(px(x2), px(y2)));
+            }
         }
     }
 }
 
+type EdgeItem = (
+    String,
+    String,
+    Option<String>,
+    NodeKind,
+    bool,
+    (f32, f32),
+    (f32, f32),
+    Vec<(f32, f32)>,
+);
 
+/// 提取图谱中所有边的数据
+fn extract_edge_items(graph: &Graph) -> Vec<EdgeItem> {
+    graph
+        .edges
+        .iter()
+        .filter_map(|edge| {
+            let s_node = graph.find_node(&edge.source_node_id)?;
+            let t_node = graph.find_node(&edge.target_node_id)?;
+
+            let is_dashed = t_node.kind == NodeKind::Join
+                && graph.edges.iter().filter(|e| e.target_node_id == t_node.id).count() > 1;
+
+            let s_port_offset = s_node.get_port_offset(&edge.source_port_id, crate::model::PortDirection::Output);
+            let t_port_offset = t_node.get_port_offset(&edge.target_port_id, crate::model::PortDirection::Input);
+
+            let sx = s_node.pos.0 + s_port_offset.0;
+            let sy = s_node.pos.1 + s_port_offset.1;
+            let ex = t_node.pos.0 + t_port_offset.0;
+            let ey = t_node.pos.1 + t_port_offset.1;
+
+            Some((
+                edge.source_node_id.clone(),
+                edge.target_node_id.clone(),
+                edge.label.clone(),
+                s_node.kind.clone(),
+                is_dashed,
+                (sx, sy),
+                (ex, ey),
+                edge.waypoints.clone(),
+            ))
+        })
+        .collect()
+}
