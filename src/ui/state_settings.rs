@@ -51,6 +51,7 @@ impl AppState {
     /// 关闭首选项设置弹窗（放弃未保存的草稿修改）
     pub fn close_settings(&mut self) {
         self.settings_modal_open = false;
+        self.active_settings_field = crate::ui::state::ActiveSettingsField::None;
     }
 
     /// 保存并应用偏好设置与游戏路径
@@ -67,6 +68,7 @@ impl AppState {
             self.toast = Some(Toast::success("💾 偏好设置已成功保存并持久化！"));
         }
         self.settings_modal_open = false;
+        self.active_settings_field = crate::ui::state::ActiveSettingsField::None;
     }
 
     /// 从 BCML 自动同步游戏、补丁与 DLC 路径

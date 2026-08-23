@@ -132,15 +132,17 @@ fn render_wiiu_game_dir_card(state: &AppState, model: &Entity<AppState>) -> impl
         state.t("settings.wiiu_game_dir"),
         state.t("settings.wiiu_game_dir_desc"),
         &path_val,
-        "E:\\Botw_Dump\\Games\\The Legend of Zelda-Breath of the Wild\\content",
+        "C:\\Game\\BOTW\\content",
+        crate::ui::state::ActiveSettingsField::WiiuGameDir,
         state,
+        model,
         move |cx| {
-            browse_wiiu_folder(&m, "game_dir", "选择 Wii U 本体 content 目录", cx);
+            browse_wiiu_folder(&m, "game_dir", "选择 Wii U 游戏本体目录", cx);
         },
     )
 }
 
-/// 渲染 Wii U 补丁 Content 目录卡片
+/// 渲染 Wii U 更新数据目录输入与浏览卡片
 fn render_wiiu_update_dir_card(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
     let path_val = state.settings_draft.wiiu.update_dir.clone();
     let m = model.clone();
@@ -149,15 +151,17 @@ fn render_wiiu_update_dir_card(state: &AppState, model: &Entity<AppState>) -> im
         state.t("settings.wiiu_update_dir"),
         state.t("settings.wiiu_update_dir_desc"),
         &path_val,
-        "E:\\Botw_Dump\\MLC\\usr\title\\0005000E\\101C9300\\content",
+        "C:\\Game\\BOTW_Update\\content",
+        crate::ui::state::ActiveSettingsField::WiiuUpdateDir,
         state,
+        model,
         move |cx| {
-            browse_wiiu_folder(&m, "update_dir", "选择 Wii U 补丁 content 目录", cx);
+            browse_wiiu_folder(&m, "update_dir", "选择 Wii U 游戏更新目录", cx);
         },
     )
 }
 
-/// 渲染 Wii U DLC Content 目录卡片
+/// 渲染 Wii U DLC 目录输入与浏览卡片
 fn render_wiiu_dlc_dir_card(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
     let path_val = state.settings_draft.wiiu.dlc_dir.clone();
     let m = model.clone();
@@ -166,15 +170,17 @@ fn render_wiiu_dlc_dir_card(state: &AppState, model: &Entity<AppState>) -> impl 
         state.t("settings.wiiu_dlc_dir"),
         state.t("settings.wiiu_dlc_dir_desc"),
         &path_val,
-        "E:\\Botw_Dump\\MLC\\usr\\title\\0005000c\\101c9300\\content\\0010",
+        "C:\\Game\\BOTW_DLC\\content",
+        crate::ui::state::ActiveSettingsField::WiiuDlcDir,
         state,
+        model,
         move |cx| {
-            browse_wiiu_folder(&m, "dlc_dir", "选择 Wii U DLC content 目录", cx);
+            browse_wiiu_folder(&m, "dlc_dir", "选择 Wii U 游戏 DLC 目录", cx);
         },
     )
 }
 
-/// 渲染 Wii U 模组导出路径卡片
+/// 渲染 Cemu 模组导出目录卡片
 fn render_wiiu_export_dir_card(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
     let path_val = state.settings_draft.wiiu.export_dir.clone();
     let m = model.clone();
@@ -183,10 +189,12 @@ fn render_wiiu_export_dir_card(state: &AppState, model: &Entity<AppState>) -> im
         state.t("settings.wiiu_export_dir"),
         state.t("settings.wiiu_export_dir_desc"),
         &path_val,
-        "C:\\Users\\xxxx\\Documents\\EventEditor\\Wiiu",
+        "E:\\Cemu\\graphicPacks\\BreathOfTheWild_Mods\\content",
+        crate::ui::state::ActiveSettingsField::WiiuExportDir,
         state,
+        model,
         move |cx| {
-            browse_wiiu_folder(&m, "export_dir", "选择 Wii U 模组导出路径", cx);
+            browse_wiiu_folder(&m, "export_dir", "选择 Cemu 模组导出路径", cx);
         },
     )
 }

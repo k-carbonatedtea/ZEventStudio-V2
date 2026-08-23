@@ -130,7 +130,9 @@ fn render_switch_game_dir_card(state: &AppState, model: &Entity<AppState>) -> im
         state.t("settings.switch_game_dir_desc"),
         &path_val,
         "C:\\Game\\BOTW\\01007EF00011E000\\romfs",
+        crate::ui::state::ActiveSettingsField::SwitchGameDir,
         state,
+        model,
         move |cx| {
             browse_switch_folder(&m, "game_dir", "选择 Switch RomFS 根目录", cx);
         },
@@ -147,7 +149,9 @@ fn render_switch_dlc_dir_card(state: &AppState, model: &Entity<AppState>) -> imp
         state.t("settings.switch_dlc_dir_desc"),
         &path_val,
         "C:\\Game\\BOTW\\01007EF00011F001\\romfs",
+        crate::ui::state::ActiveSettingsField::SwitchDlcDir,
         state,
+        model,
         move |cx| {
             browse_switch_folder(&m, "dlc_dir", "选择 Switch DLC RomFS 目录", cx);
         },
@@ -164,20 +168,23 @@ fn render_switch_export_dir_card(state: &AppState, model: &Entity<AppState>) -> 
         state.t("settings.switch_export_dir_desc"),
         &path_val,
         "E:\\Atmosphere\\contents\\01007EF00011E000\\romfs",
+        crate::ui::state::ActiveSettingsField::SwitchExportDir,
         state,
+        model,
         move |cx| {
             browse_switch_folder(&m, "export_dir", "选择 Switch 模组导出路径", cx);
         },
     )
 }
 
-/// 通用路径输入与浏览按钮行
 pub fn render_path_field<F>(
     title: &str,
     description: &str,
     current_val: &str,
     placeholder: &'static str,
+    field_id: crate::ui::state::ActiveSettingsField,
     state: &AppState,
+    model: &Entity<AppState>,
     on_browse: F,
 ) -> impl IntoElement
 where
@@ -185,6 +192,8 @@ where
 {
     let pal = state.theme();
     let is_empty = current_val.trim().is_empty();
+    let is_active = state.active_settings_field == field_id;
+    let m = model.clone();
 
     div()
         .p_4()
@@ -227,15 +236,30 @@ where
                         .rounded_lg()
                         .bg(pal.app_bg)
                         .border_1()
-                        .border_color(pal.panel_border)
+                        .border_color(if is_active { pal.primary_accent } else { pal.panel_border })
+                        .cursor_text()
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            cx.stop_propagation();
+                            m.update(cx, |st, cx| {
+                                st.active_settings_field = field_id;
+                                cx.notify();
+                            });
+                        })
                         .flex()
                         .items_center()
                         .overflow_hidden()
                         .child(
                             div()
+                                .flex()
+                                .items_center()
                                 .text_size(px(11.5))
-                                .text_color(if is_empty { pal.text_secondary.opacity(0.6) } else { pal.text_primary })
-                                .child(if is_empty { placeholder.to_string() } else { current_val.to_string() }),
+                                .text_color(if is_empty && !is_active { pal.text_secondary.opacity(0.6) } else { pal.text_primary })
+                                .child(if is_empty && !is_active { placeholder.to_string() } else { current_val.to_string() })
+                                .children(if is_active {
+                                    Some(crate::ui::components::text_input::render_blinking_cursor(pal.primary_accent.into()))
+                                } else {
+                                    None
+                                }),
                         ),
                 )
                 // 浏览文件夹选择按钮

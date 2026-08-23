@@ -61,6 +61,68 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
         return false;
     }
 
+    // 6.1. 首选项设置弹窗文本框输入拦截
+    if state.settings_modal_open && state.active_settings_field != crate::ui::state::ActiveSettingsField::None {
+        use crate::ui::state::ActiveSettingsField;
+        let mut should_notify = false;
+        
+        // 当点击文本框之外的地方或按下 Escape / Enter 时取消焦点
+        if event.keystroke.key == "escape" || event.keystroke.key == "enter" {
+            state.active_settings_field = ActiveSettingsField::None;
+            return true;
+        }
+
+        match state.active_settings_field {
+            ActiveSettingsField::LlmBaseUrl => {
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.llm.base_url, event);
+                should_notify = changed;
+            }
+            ActiveSettingsField::LlmModelName => {
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.llm.model_name, event);
+                should_notify = changed;
+            }
+            ActiveSettingsField::LlmApiKey => {
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.llm.api_key, event);
+                should_notify = changed;
+            }
+            ActiveSettingsField::SwitchGameDir => {
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.switch.game_dir, event);
+                should_notify = changed;
+            }
+            ActiveSettingsField::SwitchDlcDir => {
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.switch.dlc_dir, event);
+                should_notify = changed;
+            }
+            ActiveSettingsField::SwitchExportDir => {
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.switch.export_dir, event);
+                should_notify = changed;
+            }
+            ActiveSettingsField::WiiuGameDir => {
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.wiiu.game_dir, event);
+                should_notify = changed;
+            }
+            ActiveSettingsField::WiiuUpdateDir => {
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.wiiu.update_dir, event);
+                should_notify = changed;
+            }
+            ActiveSettingsField::WiiuDlcDir => {
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.wiiu.dlc_dir, event);
+                should_notify = changed;
+            }
+            ActiveSettingsField::WiiuExportDir => {
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.wiiu.export_dir, event);
+                should_notify = changed;
+            }
+            ActiveSettingsField::AiDumpDir => {
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.custom_ai_dump_dir, event);
+                should_notify = changed;
+            }
+            ActiveSettingsField::None => {}
+        }
+        
+        return should_notify;
+    }
+
     // 6. 节点属性与分支编辑模态框键盘输入拦截
     if let Some(ref mut modal) = state.active_node_editor_modal {
         let mut should_notify = false;

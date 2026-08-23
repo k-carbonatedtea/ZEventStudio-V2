@@ -48,8 +48,17 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
         .on_scroll_wheel(|_, _, cx| {
             cx.stop_propagation();
         })
-        .on_mouse_down(MouseButton::Left, |_, _, cx| {
-            cx.stop_propagation();
+        .on_mouse_down(MouseButton::Left, {
+            let m_bg = model.clone();
+            move |_, _, cx| {
+                cx.stop_propagation();
+                m_bg.update(cx, |st, cx| {
+                    if st.active_settings_field != crate::ui::state::ActiveSettingsField::None {
+                        st.active_settings_field = crate::ui::state::ActiveSettingsField::None;
+                        cx.notify();
+                    }
+                });
+            }
         })
         .on_mouse_down(MouseButton::Right, |_, _, cx| {
             cx.stop_propagation();
@@ -323,6 +332,9 @@ fn render_settings_category_sidebar(
                     cx.stop_propagation();
                     m.update(cx, |st, cx| {
                         st.settings_active_tab = tab;
+                        if st.active_settings_field != crate::ui::state::ActiveSettingsField::None {
+                            st.active_settings_field = crate::ui::state::ActiveSettingsField::None;
+                        }
                         cx.notify();
                     });
                 })

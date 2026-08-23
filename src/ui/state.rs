@@ -75,6 +75,23 @@ pub struct UnsavedChangesModalState {
 }
 
 #[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ActiveSettingsField {
+    #[default]
+    None,
+    LlmBaseUrl,
+    LlmModelName,
+    LlmApiKey,
+    SwitchGameDir,
+    SwitchDlcDir,
+    SwitchExportDir,
+    WiiuGameDir,
+    WiiuUpdateDir,
+    WiiuDlcDir,
+    WiiuExportDir,
+    AiDumpDir,
+}
+
 pub struct AppState {
     pub graph: Graph,
     pub pan: (f32, f32),
@@ -140,6 +157,7 @@ pub struct AppState {
     pub is_resizing_settings: bool,
     pub settings_resize_start: Option<((f32, f32), (f32, f32))>,
     pub settings_active_tab: crate::ui::state_settings::SettingsTab,
+    pub active_settings_field: ActiveSettingsField,
     pub grid_style: crate::ui::state_settings::GridStyle,
     pub edge_curve_style: crate::ui::state_settings::EdgeCurveStyle,
     pub target_engine: crate::ui::state_settings::TargetEngine,
@@ -148,6 +166,9 @@ pub struct AppState {
 
     // 资源管理器与项目目录/封包状态
     pub project_path: Option<String>,
+    
+    // 游戏 AI 定义缓存 (用于自动填充事件参数)
+    pub ai_cache_manager: crate::model::ai_def::AiCacheManager,
     pub project_name: Option<String>,
     pub file_tree: Vec<crate::model::FileNode>,
     pub expanded_tree_paths: std::collections::HashSet<String>,
@@ -230,12 +251,14 @@ impl AppState {
             is_resizing_settings: false,
             settings_resize_start: None,
             settings_active_tab: crate::ui::state_settings::SettingsTab::General,
+            active_settings_field: ActiveSettingsField::None,
             grid_style: crate::ui::state_settings::GridStyle::Dots,
             edge_curve_style: crate::ui::state_settings::EdgeCurveStyle::Bezier,
             target_engine: crate::ui::state_settings::TargetEngine::BotW,
             auto_backup: true,
             show_perf_stats: true,
             project_path: None,
+            ai_cache_manager: Default::default(),
             project_name: None,
             file_tree: Vec::new(),
             expanded_tree_paths: std::collections::HashSet::new(),
@@ -245,6 +268,68 @@ impl AppState {
 
         state.fit_view();
         state
+    }
+
+    pub fn autofill_node_parameters(&mut self, node_id: &str) {
+        let (actor_name, action_query_name, is_query) = {
+            if let Some(node) = self.graph.find_node(node_id) {
+                let is_q = node.kind == crate::model::NodeKind::Query;
+                if node.kind != crate::model::NodeKind::Action && !is_q {
+                    return;
+                }
+                
+                let actor = node.properties.iter().find(|p| p.key == "ActorName").map(|p| p.val.clone()).unwrap_or_default();
+                let name = node.properties.iter().find(|p| p.key == "Name").map(|p| p.val.clone()).unwrap_or_default();
+                
+                if actor.is_empty() || name.is_empty() {
+                    self.toast = Some(Toast::error("节点缺少角色名或动作名"));
+                    return;
+                }
+                (actor, name, is_q)
+            } else {
+                return;
+            }
+        };
+
+        // 获取搜索目录
+        let search_dirs = crate::model::ai_def::build_search_dirs(
+            Some(&self.game_paths.switch.game_dir),
+            None,
+            Some(&self.game_paths.switch.dlc_dir),
+            None,
+            Some(&self.game_paths.custom_ai_dump_dir),
+        );
+
+        match crate::model::ai_def::get_autofill_parameters(&actor_name, &action_query_name, is_query, &search_dirs) {
+            Ok(params) => {
+                if let Some(node) = self.graph.find_node_mut(node_id) {
+                    // 只添加不存在的参数
+                    let mut added_count = 0;
+                    for (k, v) in params {
+                        if !node.properties.iter().any(|p| p.key == k) {
+                            if let Some(obj) = v.as_object() {
+                                if let Some((t, val)) = obj.iter().next() {
+                                    node.properties.push(crate::model::PropertyItem {
+                                        val_type: t.clone(),
+                                        key: k.clone(),
+                                        val: if let Some(s) = val.as_str() { s.to_string() } else { val.to_string() },
+                                    });
+                                    added_count += 1;
+                                }
+                            }
+                        }
+                    }
+                    if added_count > 0 {
+                        self.toast = Some(Toast::success(&format!("已自动填充 {} 个参数", added_count)));
+                    } else {
+                        self.toast = Some(Toast::success("参数已全部完整，无需填充"));
+                    }
+                }
+            }
+            Err(e) => {
+                self.toast = Some(Toast::error(&format!("自动填充失败: {}", e)));
+            }
+        }
     }
 
     pub fn set_sidebar_width(&mut self, width: f32) {

@@ -153,6 +153,36 @@ pub fn render_node_detail(
                         })),
                 ),
         )
+        // 3.5. 自动填充参数按钮 (仅 Action / Query 可见)
+        .children(
+            if node.kind == crate::model::NodeKind::Action || node.kind == crate::model::NodeKind::Query {
+                let n_id = node.id.clone();
+                let model_autofill = model.clone();
+                Some(
+                    div()
+                        .py_1p5()
+                        .rounded_lg()
+                        .bg(hsla(215.0 / 360.0, 0.45, 0.32, 1.0))
+                        .hover(|s| s.bg(hsla(215.0 / 360.0, 0.55, 0.40, 1.0)))
+                        .cursor_pointer()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .text_size(px(11.5))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(rgb(0xFFFFFF))
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            model_autofill.update(cx, |st, cx| {
+                                st.autofill_node_parameters(&n_id);
+                                cx.notify();
+                            });
+                        })
+                        .child("✨ 自动填充游戏参数 (Auto-fill)"),
+                )
+            } else {
+                None
+            }
+        )
         // 4. EVFL 参数属性列表
         .child(render_prop_list(state, &node.properties))
         // 5. 删除节点按钮

@@ -14,12 +14,53 @@ pub fn render_llm_pane(state: &AppState, model: &Entity<AppState>) -> impl IntoE
         .gap_4()
         .overflow_y_scroll()
         .p_1()
-        // 1. LLM 启用开关
+        // 1. 本地 AI 定义文件夹 (Game AI Parameter Dump Dir)
+        .child(render_ai_dump_dir_card(state, model))
+        // 2. LLM 启用开关
         .child(render_llm_enable_card(state, model))
-        // 2. 服务提供商选择
+        // 3. 服务提供商选择
         .child(render_llm_provider_card(state, model))
-        // 3. 模型参数输入
+        // 4. 模型参数输入
         .child(render_llm_params_card(state, model))
+}
+
+pub fn browse_ai_dump_folder(model: &Entity<AppState>, cx: &mut App) {
+    let m = model.clone();
+    cx.spawn(async move |cx| {
+        let handle = rfd::AsyncFileDialog::new()
+            .set_title("选择包含 .sbyml / .baiprog 的 AI 参数导出目录")
+            .pick_folder()
+            .await;
+
+        if let Some(folder) = handle {
+            let path_str = folder.path().to_string_lossy().to_string();
+            cx.update(|cx| {
+                m.update(cx, |st, cx| {
+                    st.settings_draft.custom_ai_dump_dir = path_str;
+                    cx.notify();
+                });
+            });
+        }
+    })
+    .detach();
+}
+
+fn render_ai_dump_dir_card(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
+    let path_val = state.settings_draft.custom_ai_dump_dir.clone();
+    let m = model.clone();
+
+    crate::ui::settings::switch_pane::render_path_field(
+        "游戏 AI 参数目录 (Game AI Directory)",
+        "自定义覆盖查找字典: 用于优先搜索并解析 .sbyml / .baiprog 事件属性定义。若留空将回退在 Switch/Wii U 游戏目录下搜索",
+        &path_val,
+        "D:\\Game_Dump\\content\\Pack\\Bootup.pack (extracted)",
+        crate::ui::state::ActiveSettingsField::AiDumpDir,
+        state,
+        model,
+        move |cx| {
+            browse_ai_dump_folder(&m, cx);
+        },
+    )
 }
 
 fn render_llm_enable_card(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
@@ -195,9 +236,10 @@ fn render_llm_provider_card(state: &AppState, model: &Entity<AppState>) -> impl 
         )
 }
 
-fn render_llm_params_card(state: &AppState, _model: &Entity<AppState>) -> impl IntoElement {
+fn render_llm_params_card(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
     let pal = state.theme();
     let llm = &state.settings_draft.llm;
+    let m = model.clone();
 
     div()
         .p_4()
@@ -226,7 +268,9 @@ fn render_llm_params_card(state: &AppState, _model: &Entity<AppState>) -> impl I
                         .text_color(pal.text_secondary)
                         .child(state.t("settings.llm_base_url_desc")),
                 )
-                .child(
+                .child({
+                    let is_active = state.active_settings_field == crate::ui::state::ActiveSettingsField::LlmBaseUrl;
+                    let m_clone = m.clone();
                     div()
                         .mt_1()
                         .px_3()
@@ -234,11 +278,26 @@ fn render_llm_params_card(state: &AppState, _model: &Entity<AppState>) -> impl I
                         .rounded_md()
                         .bg(pal.panel_surface)
                         .border_1()
-                        .border_color(pal.panel_border)
+                        .border_color(if is_active { pal.primary_accent } else { pal.panel_border })
+                        .cursor_text()
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            cx.stop_propagation();
+                            m_clone.update(cx, |st, cx| {
+                                st.active_settings_field = crate::ui::state::ActiveSettingsField::LlmBaseUrl;
+                                cx.notify();
+                            });
+                        })
                         .text_size(px(12.0))
                         .text_color(pal.text_primary)
-                        .child(llm.base_url.clone()),
-                ),
+                        .flex()
+                        .items_center()
+                        .child(llm.base_url.clone())
+                        .children(if is_active {
+                            Some(crate::ui::components::text_input::render_blinking_cursor(pal.primary_accent.into()))
+                        } else {
+                            None
+                        })
+                }),
         )
         .child(
             div()
@@ -258,7 +317,9 @@ fn render_llm_params_card(state: &AppState, _model: &Entity<AppState>) -> impl I
                         .text_color(pal.text_secondary)
                         .child(state.t("settings.llm_model_name_desc")),
                 )
-                .child(
+                .child({
+                    let is_active = state.active_settings_field == crate::ui::state::ActiveSettingsField::LlmModelName;
+                    let m_clone = m.clone();
                     div()
                         .mt_1()
                         .px_3()
@@ -266,11 +327,26 @@ fn render_llm_params_card(state: &AppState, _model: &Entity<AppState>) -> impl I
                         .rounded_md()
                         .bg(pal.panel_surface)
                         .border_1()
-                        .border_color(pal.panel_border)
+                        .border_color(if is_active { pal.primary_accent } else { pal.panel_border })
+                        .cursor_text()
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            cx.stop_propagation();
+                            m_clone.update(cx, |st, cx| {
+                                st.active_settings_field = crate::ui::state::ActiveSettingsField::LlmModelName;
+                                cx.notify();
+                            });
+                        })
                         .text_size(px(12.0))
                         .text_color(pal.text_primary)
-                        .child(llm.model_name.clone()),
-                ),
+                        .flex()
+                        .items_center()
+                        .child(llm.model_name.clone())
+                        .children(if is_active {
+                            Some(crate::ui::components::text_input::render_blinking_cursor(pal.primary_accent.into()))
+                        } else {
+                            None
+                        })
+                }),
         )
         .child(
             div()
@@ -290,7 +366,9 @@ fn render_llm_params_card(state: &AppState, _model: &Entity<AppState>) -> impl I
                         .text_color(pal.text_secondary)
                         .child(state.t("settings.llm_api_key_desc")),
                 )
-                .child(
+                .child({
+                    let is_active = state.active_settings_field == crate::ui::state::ActiveSettingsField::LlmApiKey;
+                    let m_clone = m.clone();
                     div()
                         .mt_1()
                         .px_3()
@@ -298,14 +376,29 @@ fn render_llm_params_card(state: &AppState, _model: &Entity<AppState>) -> impl I
                         .rounded_md()
                         .bg(pal.panel_surface)
                         .border_1()
-                        .border_color(pal.panel_border)
+                        .border_color(if is_active { pal.primary_accent } else { pal.panel_border })
+                        .cursor_text()
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            cx.stop_propagation();
+                            m_clone.update(cx, |st, cx| {
+                                st.active_settings_field = crate::ui::state::ActiveSettingsField::LlmApiKey;
+                                cx.notify();
+                            });
+                        })
                         .text_size(px(12.0))
                         .text_color(pal.text_primary)
-                        .child(if llm.api_key.is_empty() {
-                            "****************"
+                        .flex()
+                        .items_center()
+                        .child(if llm.api_key.is_empty() && !is_active {
+                            "****************".to_string()
                         } else {
-                            "****************"
-                        }),
-                ),
+                            llm.api_key.clone()
+                        })
+                        .children(if is_active {
+                            Some(crate::ui::components::text_input::render_blinking_cursor(pal.primary_accent.into()))
+                        } else {
+                            None
+                        })
+                }),
         )
 }

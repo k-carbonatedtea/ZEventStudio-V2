@@ -15,6 +15,7 @@ pub fn render_node_context_menu(
     let model_above = model.clone();
     let model_below = model.clone();
     let model_delete = model.clone();
+    let model_autofill = model.clone();
     let n_id = node_id.to_string();
 
     let (screen_x, screen_y) = (
@@ -124,8 +125,35 @@ pub fn render_node_context_menu(
                                 .child(state.t("context_menu.edit_node")),
                         ),
                 )
-                // 1. 在上方插入前驱节点
 
+                // 0.5. 自动填充参数 (Auto-fill Parameters)
+                .child(
+                    div()
+                        .px_2p5()
+                        .py_1p5()
+                        .rounded_lg()
+                        .cursor_pointer()
+                        .hover(|s| s.bg(hsla(215.0 / 360.0, 0.45, 0.32, 1.0)))
+                        .on_mouse_down(MouseButton::Left, {
+                            let n_id = n_id.clone();
+                            move |_, _, cx| {
+                                cx.stop_propagation();
+                                model_autofill.update(cx, |st, cx| {
+                                    st.node_context_menu = None;
+                                    st.autofill_node_parameters(&n_id);
+                                    cx.notify();
+                                });
+                            }
+                        })
+                        .child(
+                            div()
+                                .text_size(px(12.0))
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(rgb(0xffffff))
+                                .child("✨ 自动填充参数"),
+                        ),
+                )
+                // 1. 在上方插入前驱节点
                 .child(
                     div()
                         .px_2p5()

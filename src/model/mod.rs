@@ -13,6 +13,7 @@ pub mod node;
 pub mod port;
 pub mod sarc_writer;
 pub mod settings;
+pub mod ai_def;
 
 #[allow(unused_imports)]
 pub use bcml::{import_bcml_paths, BcmlImportResult};
