@@ -206,20 +206,31 @@ impl Render for AppView {
                                 div()
                                     .flex_1()
                                     .flex()
-                                    .flex_col()
                                     .size_full()
                                     .overflow_hidden()
-                                    // 顶部多文档/多文件标签栏 (Document Tab Bar)
-                                    .child(crate::ui::render_document_tab_bar(state, &self.model))
+                                    // 中间主工作区列 (顶部文档Tab + 流程图画布 + 底部切换栏)
                                     .child(
                                         div()
                                             .flex_1()
                                             .flex()
+                                            .flex_col()
                                             .size_full()
                                             .overflow_hidden()
-                                            .child(render_flow_canvas(state, &self.model))
-                                            .child(render_inspector(state, &self.model)),
-                                    ),
+                                            // 顶部多文档/多文件标签栏 (Document Tab Bar)
+                                            .child(crate::ui::render_document_tab_bar(state, &self.model))
+                                            // 流程图画布主体
+                                            .child(
+                                                div()
+                                                    .flex_1()
+                                                    .size_full()
+                                                    .overflow_hidden()
+                                                    .child(render_flow_canvas(state, &self.model)),
+                                            )
+                                            // 流程图窗口底部的模式切换菜单栏
+                                            .child(render_bottom_tabs(state, &self.model)),
+                                    )
+                                    // 右侧属性与拓扑检查器
+                                    .child(render_inspector(state, &self.model)),
                             )
                             .into_any_element(),
 
@@ -238,31 +249,65 @@ impl Render for AppView {
                                     .overflow_hidden()
                                     // 顶部多文档/多文件标签栏 (Document Tab Bar)
                                     .child(crate::ui::render_document_tab_bar(state, &self.model))
+                                    // 代码编辑器主体
                                     .child(
                                         div()
                                             .flex_1()
                                             .size_full()
                                             .overflow_hidden()
                                             .child(render_code_editor_view(state, &self.model, self.code_editor.as_ref())),
-                                    ),
+                                    )
+                                    // 代码编辑器窗口底部的模式切换菜单栏
+                                    .child(render_bottom_tabs(state, &self.model)),
                             )
                             .into_any_element(),
 
-                        AppWorkspaceTab::Actors => {
-                            render_actor_manager_view(state, &self.model).into_any_element()
-                        }
-                        AppWorkspaceTab::Events => {
-                            render_event_manager_view(state, &self.model).into_any_element()
-                        }
-                        AppWorkspaceTab::Json => {
-                            render_json_viewer_view(state, &self.model).into_any_element()
-                        }
+                        AppWorkspaceTab::Actors => div()
+                            .flex()
+                            .flex_col()
+                            .size_full()
+                            .overflow_hidden()
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .size_full()
+                                    .overflow_hidden()
+                                    .child(render_actor_manager_view(state, &self.model)),
+                            )
+                            .child(render_bottom_tabs(state, &self.model))
+                            .into_any_element(),
+
+                        AppWorkspaceTab::Events => div()
+                            .flex()
+                            .flex_col()
+                            .size_full()
+                            .overflow_hidden()
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .size_full()
+                                    .overflow_hidden()
+                                    .child(render_event_manager_view(state, &self.model)),
+                            )
+                            .child(render_bottom_tabs(state, &self.model))
+                            .into_any_element(),
+
+                        AppWorkspaceTab::Json => div()
+                            .flex()
+                            .flex_col()
+                            .size_full()
+                            .overflow_hidden()
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .size_full()
+                                    .overflow_hidden()
+                                    .child(render_json_viewer_view(state, &self.model)),
+                            )
+                            .child(render_bottom_tabs(state, &self.model))
+                            .into_any_element(),
                     }),
             )
-            // 底部工作区选项卡栏
-            .children((current_tab != AppWorkspaceTab::Welcome).then(|| {
-                render_bottom_tabs(state, &self.model)
-            }))
             // Floating Toast notification
             .children(visible_toast.map(|t| {
                 div()
