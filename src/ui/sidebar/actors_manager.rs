@@ -7,6 +7,7 @@ pub fn render_actors_manager(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let search_val = state.search_query.to_lowercase();
     let actors = state.graph.get_actors_summary();
 
@@ -40,12 +41,12 @@ pub fn render_actors_manager(
                 .px_1()
                 .pb_1()
                 .border_b_1()
-                .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
+                .border_color(pal.panel_border)
                 .child(
                     div()
                         .font_weight(FontWeight::BOLD)
                         .text_size(px(12.0))
-                        .text_color(rgb(0xffffff))
+                        .text_color(pal.text_primary)
                         .child(state.t("sidebar.actors_title")),
                 )
                 .child(
@@ -53,10 +54,10 @@ pub fn render_actors_manager(
                         .px_2()
                         .py_0p5()
                         .rounded_full()
-                        .bg(hsla(271.0 / 360.0, 0.40, 0.25, 0.9))
+                        .bg(pal.card_surface)
                         .text_size(px(10.5))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(hsla(271.0 / 360.0, 0.85, 0.75, 1.0))
+                        .text_color(pal.primary_accent)
                         .child(format!("{} Actors", total_count)),
                 ),
         )
@@ -74,7 +75,7 @@ pub fn render_actors_manager(
                         div()
                             .p_4()
                             .text_size(px(11.5))
-                            .text_color(hsla(240.0 / 360.0, 0.05, 0.55, 1.0))
+                            .text_color(pal.text_secondary)
                             .flex()
                             .items_center()
                             .justify_center()
@@ -108,12 +109,12 @@ pub fn render_actors_manager(
                             div()
                                 .p_2p5()
                                 .rounded_lg()
-                                .bg(hsla(240.0 / 360.0, 0.06, 0.11, 1.0))
+                                .bg(pal.card_surface)
                                 .border_1()
-                                .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
-                                .hover(|s| {
-                                    s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
-                                        .border_color(hsla(271.0 / 360.0, 0.60, 0.55, 1.0))
+                                .border_color(pal.card_border)
+                                .hover(move |s| {
+                                    s.bg(pal.card_hover)
+                                        .border_color(pal.primary_accent)
                                 })
 
                                 .child(
@@ -131,7 +132,7 @@ pub fn render_actors_manager(
                                                     div()
                                                         .font_weight(FontWeight::BOLD)
                                                         .text_size(px(12.5))
-                                                        .text_color(rgb(0xffffff))
+                                                        .text_color(pal.text_primary)
                                                         .child(actor.name.clone()),
                                                 ),
                                         )
@@ -140,10 +141,10 @@ pub fn render_actors_manager(
                                                 .px_1p5()
                                                 .py_0p5()
                                                 .rounded_md()
-                                                .bg(hsla(215.0 / 360.0, 0.30, 0.22, 1.0))
+                                                .bg(pal.card_hover)
                                                 .text_size(px(9.5))
                                                 .font_weight(FontWeight::MEDIUM)
-                                                .text_color(hsla(45.0 / 360.0, 0.95, 0.65, 1.0))
+                                                .text_color(pal.primary_accent)
                                                 .child(format!("{} nodes", ref_count)),
                                         ),
                                 )

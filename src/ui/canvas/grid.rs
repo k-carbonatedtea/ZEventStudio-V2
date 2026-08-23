@@ -4,6 +4,7 @@ pub fn draw_canvas_grid(
     bounds: Bounds<Pixels>,
     pan: (f32, f32),
     zoom: f32,
+    theme: crate::ui::theme::ThemePalette,
     window: &mut Window,
 ) {
     let orig_x: f32 = bounds.origin.x.into();
@@ -16,8 +17,7 @@ pub fn draw_canvas_grid(
     }
 
     // 自适应网格间距 (Adaptive Grid LOD)：
-    // 无论视图缩小还是放大，屏幕点阵间隙始终稳定在 [24.0, 56.0] 像素之间，
-    // 彻底解决视图缩小 (zoom out) 时点阵数量暴增 40 倍引发的严重卡顿与掉帧。
+    // 无论视图缩小还是放大，屏幕点阵间隙始终稳定在 [24.0, 56.0] 像素之间
     let base_spacing = 32.0;
     let mut grid_step = base_spacing * zoom;
     while grid_step < 24.0 {
@@ -27,8 +27,21 @@ pub fn draw_canvas_grid(
         grid_step /= 2.0;
     }
 
-    let dot_color = rgba(0x94a3b820);
-    let major_dot_color = rgba(0x00e5ba35);
+    let dot_alpha = if theme.is_dark { 0.15 } else { 0.25 };
+    let major_alpha = if theme.is_dark { 0.25 } else { 0.35 };
+
+    let dot_color = Rgba {
+        r: theme.text_secondary.r,
+        g: theme.text_secondary.g,
+        b: theme.text_secondary.b,
+        a: dot_alpha,
+    };
+    let major_dot_color = Rgba {
+        r: theme.primary_accent.r,
+        g: theme.primary_accent.g,
+        b: theme.primary_accent.b,
+        a: major_alpha,
+    };
 
     let start_x = ((pan.0 % grid_step) + grid_step) % grid_step + orig_x;
     let start_y = ((pan.1 % grid_step) + grid_step) % grid_step + orig_y;

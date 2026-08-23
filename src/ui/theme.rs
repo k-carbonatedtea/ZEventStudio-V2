@@ -1,98 +1,159 @@
 use gpui::*;
+use serde::{Deserialize, Serialize};
 
-/// ZEvent Studio 统一设计系统调色板规范 (Design System Theme Tokens)
-///
-/// UI 层级 / 元素       | 颜色名称   | HEX 色值   | 使用场景说明
-/// --------------------|-----------|------------|--------------------------------------------
-/// App Background      | 深石墨黑   | #0F1117    | 最底层背景、画布空白区
-/// Panel Surface       | 蓝灰表面   | #161922    | 左侧边栏、顶部菜单栏、右侧属性面板、顶部工具栏
-/// Card / Hover        | 浅层蓝灰   | #1E2330    | 欢迎页卡片底色、列表项 Hover 态、容器底色
-/// Primary Accent      | 遗迹青蓝   | #00E5BA    | 核心选中高亮、连线、主要按钮、聚焦边框
-/// Secondary Accent    | 琥珀金     | #F59E0B    | 节点标题指示、修改提示、Logo 闪电
-/// Text Primary        | 亮白灰     | #F1F5F9    | 一级标题、选中文字
-/// Text Secondary      | 蓝灰白     | #94A3B8    | 副标题、快捷键提示、路径文字
+/// 应用程序支持的内置主题风格枚举
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum AppTheme {
+    /// 遗迹青蓝 (默认深石墨黑与古老青绿)
+    #[default]
+    RelicCyan,
+    /// 旷野黄昏 (暮光琥珀金与暖棕黑沉浸风格)
+    TwilightAmber,
+    /// 希卡科技 (高对比度科技黑与天蓝发光)
+    SheikahSlate,
+    /// 暗夜紫微 (深紫与霓虹粉紫点缀)
+    MidnightPurple,
+    /// 苔原深绿 (克洛格森林与清新翡翠绿)
+    EmeraldForest,
+    /// 极简晨曦 (明亮浅色冷灰纸感模式)
+    NordicLight,
+}
+
+impl AppTheme {
+    /// 返回所有可用的内置主题列表
+    pub const ALL: [AppTheme; 6] = [
+        AppTheme::RelicCyan,
+        AppTheme::TwilightAmber,
+        AppTheme::SheikahSlate,
+        AppTheme::MidnightPurple,
+        AppTheme::EmeraldForest,
+        AppTheme::NordicLight,
+    ];
+
+    /// 获取主题对应的多语言键值
+    pub fn i18n_key(&self) -> &'static str {
+        match self {
+            AppTheme::RelicCyan => "theme.relic_cyan",
+            AppTheme::TwilightAmber => "theme.twilight_amber",
+            AppTheme::SheikahSlate => "theme.sheikah_slate",
+            AppTheme::MidnightPurple => "theme.midnight_purple",
+            AppTheme::EmeraldForest => "theme.emerald_forest",
+            AppTheme::NordicLight => "theme.nordic_light",
+        }
+    }
+
+    /// 获取当前主题的完整调色板规范
+    pub fn palette(&self) -> ThemePalette {
+        match self {
+            AppTheme::RelicCyan => ThemePalette {
+                name: "Relic Cyan",
+                is_dark: true,
+                app_bg: rgb(0x0F1117),
+                panel_surface: rgb(0x161922),
+                card_surface: rgb(0x1E2330),
+                card_hover: rgb(0x252C3D),
+                primary_accent: rgb(0x00E5BA),
+                primary_accent_hover: rgb(0x33EBCA),
+                secondary_accent: rgb(0xF59E0B),
+                text_primary: rgb(0xF1F5F9),
+                text_secondary: rgb(0x94A3B8),
+                panel_border: rgb(0x232838),
+                card_border: rgb(0x2D3548),
+            },
+            AppTheme::TwilightAmber => ThemePalette {
+                name: "Twilight Amber",
+                is_dark: true,
+                app_bg: rgb(0x12100E),
+                panel_surface: rgb(0x1A1614),
+                card_surface: rgb(0x241E1A),
+                card_hover: rgb(0x302722),
+                primary_accent: rgb(0xF59E0B),
+                primary_accent_hover: rgb(0xFBBF24),
+                secondary_accent: rgb(0xFB7185),
+                text_primary: rgb(0xFAFAF9),
+                text_secondary: rgb(0xA8A29E),
+                panel_border: rgb(0x2E2520),
+                card_border: rgb(0x3D302A),
+            },
+            AppTheme::SheikahSlate => ThemePalette {
+                name: "Sheikah Slate",
+                is_dark: true,
+                app_bg: rgb(0x0B0E14),
+                panel_surface: rgb(0x111622),
+                card_surface: rgb(0x182030),
+                card_hover: rgb(0x202B40),
+                primary_accent: rgb(0x00C4FF),
+                primary_accent_hover: rgb(0x38BDF8),
+                secondary_accent: rgb(0x38BDF8),
+                text_primary: rgb(0xF8FAFC),
+                text_secondary: rgb(0x64748B),
+                panel_border: rgb(0x1E293B),
+                card_border: rgb(0x283548),
+            },
+            AppTheme::MidnightPurple => ThemePalette {
+                name: "Midnight Purple",
+                is_dark: true,
+                app_bg: rgb(0x0F0E17),
+                panel_surface: rgb(0x161424),
+                card_surface: rgb(0x201D33),
+                card_hover: rgb(0x2B2745),
+                primary_accent: rgb(0xA855F7),
+                primary_accent_hover: rgb(0xC084FC),
+                secondary_accent: rgb(0xEC4899),
+                text_primary: rgb(0xF3F4F6),
+                text_secondary: rgb(0x9CA3AF),
+                panel_border: rgb(0x2B2640),
+                card_border: rgb(0x3B3456),
+            },
+            AppTheme::EmeraldForest => ThemePalette {
+                name: "Emerald Forest",
+                is_dark: true,
+                app_bg: rgb(0x0B1311),
+                panel_surface: rgb(0x101C19),
+                card_surface: rgb(0x162824),
+                card_hover: rgb(0x1E3630),
+                primary_accent: rgb(0x10B981),
+                primary_accent_hover: rgb(0x34D399),
+                secondary_accent: rgb(0x84CC16),
+                text_primary: rgb(0xF0FDF4),
+                text_secondary: rgb(0x6EE7B7),
+                panel_border: rgb(0x1F3832),
+                card_border: rgb(0x2B4C44),
+            },
+            AppTheme::NordicLight => ThemePalette {
+                name: "Nordic Light",
+                is_dark: false,
+                app_bg: rgb(0xF8FAFC),
+                panel_surface: rgb(0xFFFFFF),
+                card_surface: rgb(0xF1F5F9),
+                card_hover: rgb(0xE2E8F0),
+                primary_accent: rgb(0x0284C7),
+                primary_accent_hover: rgb(0x0369A1),
+                secondary_accent: rgb(0xD97706),
+                text_primary: rgb(0x0F172A),
+                text_secondary: rgb(0x64748B),
+                panel_border: rgb(0xE2E8F0),
+                card_border: rgb(0xCBD5E1),
+            },
+        }
+    }
+}
+
+/// 完整主题调色板规范 (Theme Palette Definition)
 #[allow(dead_code)]
-pub struct ThemeColors;
-
-#[allow(dead_code)]
-impl ThemeColors {
-    /// App Background: 深石墨黑 #0F1117 - 最底层背景、画布空白区
-    pub const APP_BG: Rgba = Rgba {
-        r: 15.0 / 255.0,
-        g: 17.0 / 255.0,
-        b: 23.0 / 255.0,
-        a: 1.0,
-    };
-
-    /// Panel Surface: 蓝灰表面 #161922 - 左侧边栏、顶部菜单栏、右侧属性面板、顶部工具栏
-    pub const PANEL_SURFACE: Rgba = Rgba {
-        r: 22.0 / 255.0,
-        g: 25.0 / 255.0,
-        b: 34.0 / 255.0,
-        a: 1.0,
-    };
-
-    /// Card / Hover: 浅层蓝灰 #1E2330 - 欢迎页卡片底色、列表项 Hover 态
-    pub const CARD_SURFACE: Rgba = Rgba {
-        r: 30.0 / 255.0,
-        g: 35.0 / 255.0,
-        b: 48.0 / 255.0,
-        a: 1.0,
-    };
-
-    /// Primary Accent: 遗迹青蓝 #00E5BA - 核心选中高亮、连线、主要按钮、聚焦边框
-    pub const ACCENT_PRIMARY: Rgba = Rgba {
-        r: 0.0 / 255.0,
-        g: 229.0 / 255.0,
-        b: 186.0 / 255.0,
-        a: 1.0,
-    };
-
-    /// Primary Accent Alternate: 遗迹天蓝 #00C4FF
-    pub const ACCENT_CYAN: Rgba = Rgba {
-        r: 0.0 / 255.0,
-        g: 196.0 / 255.0,
-        b: 1.0,
-        a: 1.0,
-    };
-
-    /// Secondary Accent: 琥珀金 #F59E0B - 节点标题指示、修改提示、Logo 闪电
-    pub const ACCENT_AMBER: Rgba = Rgba {
-        r: 245.0 / 255.0,
-        g: 158.0 / 255.0,
-        b: 11.0 / 255.0,
-        a: 1.0,
-    };
-
-    /// Text Primary: 亮白灰 #F1F5F9 - 一级标题、选中文字
-    pub const TEXT_PRIMARY: Rgba = Rgba {
-        r: 241.0 / 255.0,
-        g: 245.0 / 255.0,
-        b: 249.0 / 255.0,
-        a: 1.0,
-    };
-
-    /// Text Secondary: 蓝灰白 #94A3B8 - 副标题、快捷键提示、路径文字
-    pub const TEXT_SECONDARY: Rgba = Rgba {
-        r: 148.0 / 255.0,
-        g: 163.0 / 255.0,
-        b: 184.0 / 255.0,
-        a: 1.0,
-    };
-
-    /// Panel Border: 蓝灰边框 #232838
-    pub const PANEL_BORDER: Rgba = Rgba {
-        r: 35.0 / 255.0,
-        g: 40.0 / 255.0,
-        b: 56.0 / 255.0,
-        a: 1.0,
-    };
-
-    /// Card Border: 卡片浅边框 #2D3548
-    pub const CARD_BORDER: Rgba = Rgba {
-        r: 45.0 / 255.0,
-        g: 53.0 / 255.0,
-        b: 72.0 / 255.0,
-        a: 1.0,
-    };
+#[derive(Debug, Clone, Copy)]
+pub struct ThemePalette {
+    pub name: &'static str,
+    pub is_dark: bool,
+    pub app_bg: Rgba,
+    pub panel_surface: Rgba,
+    pub card_surface: Rgba,
+    pub card_hover: Rgba,
+    pub primary_accent: Rgba,
+    pub primary_accent_hover: Rgba,
+    pub secondary_accent: Rgba,
+    pub text_primary: Rgba,
+    pub text_secondary: Rgba,
+    pub panel_border: Rgba,
+    pub card_border: Rgba,
 }

@@ -54,6 +54,16 @@ pub fn get_zh(key: &str) -> &str {
         "menu.about_info" => "ZEvent Studio - GPU 加速 EVFL 节点流与剧情逻辑编辑器",
         "menu.shortcuts_info" => "快捷键: Ctrl+S 保存 | Ctrl+N 新建 | Ctrl+O 打开 | 滚轮缩放 | 拖拽平移 | 双击新建节点",
 
+        // ---------------- 主题风格 (Theme) ----------------
+        "menu.themes" => "🎨 主题风格",
+        "theme.title" => "🎨 主题风格",
+        "theme.relic_cyan" => "遗迹青蓝 (默认)",
+        "theme.twilight_amber" => "旷野黄昏",
+        "theme.sheikah_slate" => "希卡科技",
+        "theme.midnight_purple" => "暗夜紫微",
+        "theme.emerald_forest" => "苔原深绿",
+        "theme.nordic_light" => "极简晨曦 (浅色)",
+
         // ---------------- 顶部工具栏 (Toolbar) ----------------
         "toolbar.auto_layout" => "自动排版",
         "toolbar.expand_params" => "展开参数",

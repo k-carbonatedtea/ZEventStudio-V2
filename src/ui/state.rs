@@ -115,6 +115,7 @@ pub struct AppState {
     pub frame_time_ms: f32,
     pub show_welcome_on_startup: bool,
     pub lang: crate::i18n::Language,
+    pub current_theme: crate::ui::theme::AppTheme,
 
     // 资源管理器与项目目录/封包状态
     pub project_path: Option<String>,
@@ -151,10 +152,6 @@ impl AppState {
             welcome_tab: WelcomeTab::QuickStart,
             open_tabs: Vec::new(),
             active_tab_id: None,
-
-
-
-
             recent_projects: Vec::new(),
             selected_actor_idx: 0,
             is_adding_actor: false,
@@ -187,6 +184,7 @@ impl AppState {
             frame_time_ms: 1.0,
             show_welcome_on_startup: true,
             lang: crate::i18n::Language::Zh,
+            current_theme: crate::ui::theme::AppTheme::default(),
             project_path: None,
             project_name: None,
             file_tree: Vec::new(),

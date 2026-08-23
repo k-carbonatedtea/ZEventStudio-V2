@@ -12,6 +12,7 @@ pub fn render_inspector(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let selected_node = state
         .selected_node_id
         .as_ref()
@@ -28,9 +29,9 @@ pub fn render_inspector(
         .h_full()
         .flex()
         .flex_col()
-        .bg(rgb(0x161922)) // 蓝灰表面 Panel Surface
+        .bg(pal.panel_surface) // 蓝灰表面 Panel Surface
         .border_l_1()
-        .border_color(rgb(0x232838))
+        .border_color(pal.panel_border)
         // 1. 顶部 Header
         .child(
             div()
@@ -40,12 +41,12 @@ pub fn render_inspector(
                 .px_4()
                 .py_3()
                 .border_b_1()
-                .border_color(rgb(0x232838))
+                .border_color(pal.panel_border)
                 .child(
                     div()
                         .font_weight(FontWeight::BOLD)
                         .text_size(px(13.0))
-                        .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
+                        .text_color(pal.text_primary) // 亮白灰 Text Primary
                         .child(format!("⚙️ {}", state.t("inspector.title"))),
                 )
                 .child(
@@ -54,10 +55,10 @@ pub fn render_inspector(
                         .px_2()
                         .py_0p5()
                         .rounded_sm()
-                        .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
+                        .bg(pal.card_surface) // 浅层蓝灰 Card / Hover
                         .border_1()
-                        .border_color(rgb(0x2D3548))
-                        .text_color(rgb(0x00E5BA)) // 遗迹青蓝 Primary Accent
+                        .border_color(pal.card_border)
+                        .text_color(pal.primary_accent) // 遗迹青蓝 Primary Accent
                         .child(header_status_text),
                 ),
         )

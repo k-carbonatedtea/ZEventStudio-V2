@@ -9,6 +9,7 @@ pub fn render_node_detail(
     node: &NodeData,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let model_del = model.clone();
     let (h, s, l) = node.kind.header_color();
 
@@ -37,21 +38,21 @@ pub fn render_node_detail(
                             div()
                                 .font_weight(FontWeight::BOLD)
                                 .text_size(px(13.0))
-                                .text_color(rgb(0xffffff))
+                                .text_color(pal.text_primary)
                                 .child(node.title.clone()),
                         ),
                 )
                 .child(
                     div()
                         .text_size(px(10.5))
-                        .text_color(hsla(215.0 / 360.0, 0.25, 0.65, 1.0))
+                        .text_color(pal.text_secondary)
                         .child(format!("{}: {}", state.t("inspector.node_id"), node.id)),
                 )
                 .children(node.subtitle.as_ref().map(|sub| {
                     div()
                         .text_size(px(10.5))
                         .font_weight(FontWeight::MEDIUM)
-                        .text_color(hsla(45.0 / 360.0, 0.85, 0.65, 1.0))
+                        .text_color(pal.secondary_accent)
                         .child(format!("Actor / Scope: {}", sub))
                 })),
         )
@@ -65,7 +66,7 @@ pub fn render_node_detail(
                     div()
                         .text_size(px(11.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(rgb(0xF1F5F9))
+                        .text_color(pal.text_primary)
                         .child(state.t("inspector.position")),
                 )
                 .child(
@@ -78,11 +79,11 @@ pub fn render_node_detail(
                                 .px_2p5()
                                 .py_1()
                                 .rounded_md()
-                                .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
+                                .bg(pal.card_surface) // 浅层蓝灰 Card / Hover
                                 .border_1()
-                                .border_color(rgb(0x2D3548))
+                                .border_color(pal.card_border)
                                 .text_size(px(11.0))
-                                .text_color(rgb(0xF1F5F9))
+                                .text_color(pal.text_primary)
                                 .child(format!("X: {:.1}", node.pos.0)),
                         )
                         .child(
@@ -91,11 +92,11 @@ pub fn render_node_detail(
                                 .px_2p5()
                                 .py_1()
                                 .rounded_md()
-                                .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
+                                .bg(pal.card_surface) // 浅层蓝灰 Card / Hover
                                 .border_1()
-                                .border_color(rgb(0x2D3548))
+                                .border_color(pal.card_border)
                                 .text_size(px(11.0))
-                                .text_color(rgb(0xF1F5F9))
+                                .text_color(pal.text_primary)
                                 .child(format!("Y: {:.1}", node.pos.1)),
                         ),
                 ),
@@ -110,7 +111,7 @@ pub fn render_node_detail(
                     div()
                         .text_size(px(11.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(rgb(0xF1F5F9))
+                        .text_color(pal.text_primary)
                         .child(format!(
                             "{} ({}: {} / {}: {})",
                             state.t("inspector.ports_summary"),
@@ -131,11 +132,11 @@ pub fn render_node_detail(
                                 .px_2()
                                 .py_1()
                                 .rounded_md()
-                                .bg(rgba(0x00e5ba18))
+                                .bg(pal.card_surface)
                                 .border_1()
-                                .border_color(rgba(0x00e5ba40))
+                                .border_color(pal.primary_accent)
                                 .text_size(px(10.5))
-                                .text_color(rgb(0x00E5BA)) // 遗迹青蓝 Primary Accent
+                                .text_color(pal.primary_accent) // 遗迹青蓝 Primary Accent
                                 .child(format!("{}: {}", state.t("inspector.port_in"), p.name))
                         }))
                         .children(node.outputs.iter().map(|p| {
@@ -143,11 +144,11 @@ pub fn render_node_detail(
                                 .px_2()
                                 .py_1()
                                 .rounded_md()
-                                .bg(rgba(0xf59e0b18))
+                                .bg(pal.card_surface)
                                 .border_1()
-                                .border_color(rgba(0xf59e0b40))
+                                .border_color(pal.secondary_accent)
                                 .text_size(px(10.5))
-                                .text_color(rgb(0xF59E0B)) // 琥珀金 Secondary Accent
+                                .text_color(pal.secondary_accent) // 琥珀金 Secondary Accent
                                 .child(format!("{}: {}", state.t("inspector.port_out"), p.name))
                         })),
                 ),

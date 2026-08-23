@@ -13,6 +13,7 @@ pub fn render_toolbar(
     frame_time: f32,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     div()
         .h(px(48.0))
         .w_full()
@@ -20,9 +21,9 @@ pub fn render_toolbar(
         .items_center()
         .justify_between()
         .px_4()
-        .bg(rgb(0x161922))
+        .bg(pal.panel_surface)
         .border_b_1()
-        .border_color(rgb(0x232838))
+        .border_color(pal.panel_border)
         .shadow_md()
         // Left: Logo & Active Graph Tag
         .child(render_branding(state))

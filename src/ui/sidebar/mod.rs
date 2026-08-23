@@ -23,6 +23,7 @@ pub enum SidebarTab {
 
 /// 渲染左侧导航侧边栏 (支持资源文件/流程入口/事件列表/角色管理/组件库)
 pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
+    let pal = state.theme();
     let active_tab = state.active_sidebar_tab;
     let search_val = state.search_query.clone();
 
@@ -38,17 +39,17 @@ pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoEl
         .h_full()
         .flex()
         .flex_col()
-        .bg(rgb(0x161922)) // 蓝灰表面 Panel Surface
+        .bg(pal.panel_surface)
         .border_r_1()
-        .border_color(rgb(0x232838))
+        .border_color(pal.panel_border)
         .overflow_hidden()
         // 顶部 Tab 选项卡栏
         .child(
             div()
                 .flex()
                 .border_b_1()
-                .border_color(rgb(0x232838))
-                .bg(rgb(0x161922))
+                .border_color(pal.panel_border)
+                .bg(pal.panel_surface)
                 .p_1()
                 .gap_1()
                 // 0. 资源
@@ -56,6 +57,7 @@ pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoEl
                     state.t("sidebar.tab_files"),
                     active_tab == SidebarTab::Files,
                     SidebarTab::Files,
+                    state,
                     &model_tab_fl,
                 ))
                 // 1. 入口
@@ -63,6 +65,7 @@ pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoEl
                     state.t("sidebar.tab_entry_points"),
                     active_tab == SidebarTab::EntryPoints,
                     SidebarTab::EntryPoints,
+                    state,
                     &model_tab_ep,
                 ))
                 // 2. 事件
@@ -70,6 +73,7 @@ pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoEl
                     state.t("sidebar.tab_events"),
                     active_tab == SidebarTab::Events,
                     SidebarTab::Events,
+                    state,
                     &model_tab_ev,
                 ))
                 // 3. 角色
@@ -77,6 +81,7 @@ pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoEl
                     state.t("sidebar.tab_actors"),
                     active_tab == SidebarTab::Actors,
                     SidebarTab::Actors,
+                    state,
                     &model_tab_act,
                 ))
                 // 4. 组件
@@ -84,6 +89,7 @@ pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoEl
                     state.t("sidebar.tab_palette"),
                     active_tab == SidebarTab::Palette,
                     SidebarTab::Palette,
+                    state,
                     &model_tab_pal,
                 )),
         )
@@ -107,18 +113,18 @@ pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoEl
                             .px_2p5()
                             .py_1()
                             .rounded_lg()
-                            .bg(rgb(0x0F1117))
+                            .bg(pal.app_bg)
                             .border_1()
-                            .border_color(rgb(0x232838))
+                            .border_color(pal.panel_border)
                             .child(div().text_size(px(11.0)).child("🔍"))
                             .child(
                                 div()
                                     .flex_1()
                                     .text_size(px(11.0))
                                     .text_color(if search_val.is_empty() {
-                                        rgb(0x94A3B8)
+                                        pal.text_secondary
                                     } else {
-                                        rgb(0xF1F5F9)
+                                        pal.text_primary
                                     })
                                     .child(if search_val.is_empty() {
                                         placeholder.to_string()
@@ -154,15 +160,17 @@ fn render_tab_btn(
     title: &'static str,
     is_active: bool,
     target_tab: SidebarTab,
+    state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let model_click = model.clone();
     div()
         .flex_1()
         .py_1p5()
         .rounded_md()
         .bg(if is_active {
-            rgb(0x1E2330) // 浅层蓝灰 Card / Hover
+            pal.card_surface // 浅层蓝灰 Card / Hover
         } else {
             rgba(0x00000000)
         })
@@ -173,15 +181,15 @@ fn render_tab_btn(
             FontWeight::NORMAL
         })
         .text_color(if is_active {
-            rgb(0x00E5BA) // 遗迹青蓝 Primary Accent
+            pal.primary_accent // 遗迹青蓝 Primary Accent
         } else {
-            rgb(0x94A3B8) // 蓝灰白 Text Secondary
+            pal.text_secondary // 蓝灰白 Text Secondary
         })
         .flex()
         .items_center()
         .justify_center()
         .cursor_pointer()
-        .hover(|s| s.bg(rgb(0x1E2330)).text_color(rgb(0xF1F5F9)))
+        .hover(|s| s.bg(pal.card_surface).text_color(pal.text_primary))
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             model_click.update(cx, |st, cx| {
                 st.active_sidebar_tab = target_tab;
@@ -196,6 +204,7 @@ pub fn render_sidebar_resize_handle(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let is_resizing = state.is_resizing_sidebar;
     let model_down = model.clone();
 
@@ -206,11 +215,11 @@ pub fn render_sidebar_resize_handle(
         .flex_shrink_0()
         .cursor_col_resize()
         .bg(if is_resizing {
-            rgb(0x00E5BA) // 遗迹青蓝 Primary Accent
+            pal.primary_accent // 遗迹青蓝 Primary Accent
         } else {
-            rgb(0x232838) // 蓝灰边框
+            pal.panel_border // 蓝灰边框
         })
-        .hover(|s| s.bg(rgb(0x00E5BA)))
+        .hover(|s| s.bg(pal.primary_accent))
         .on_mouse_down(MouseButton::Left, move |_e, _, cx| {
             cx.stop_propagation();
             model_down.update(cx, |st, cx| {

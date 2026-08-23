@@ -7,6 +7,7 @@ pub fn render_node_palette(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let node_items = vec![
         (
             NodeKind::Action,
@@ -81,12 +82,12 @@ pub fn render_node_palette(
             div()
                 .p_2p5()
                 .rounded_lg()
-                .bg(hsla(240.0 / 360.0, 0.06, 0.11, 1.0))
+                .bg(pal.card_surface)
                 .border_1()
-                .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
-                .hover(|s| {
-                    s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
-                        .border_color(hsla(145.0 / 360.0, 0.6, 0.45, 1.0))
+                .border_color(pal.card_border)
+                .hover(move |s| {
+                    s.bg(pal.card_hover)
+                        .border_color(pal.primary_accent)
                 })
                 .cursor_pointer()
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
@@ -102,17 +103,16 @@ pub fn render_node_palette(
                     div()
                         .font_weight(FontWeight::SEMIBOLD)
                         .text_size(px(12.0))
-                        .text_color(rgb(0xffffff))
+                        .text_color(pal.text_primary)
                         .child(title.to_string()),
                 )
                 .child(
                     div()
                         .mt_0p5()
                         .text_size(px(10.0))
-                        .text_color(hsla(240.0 / 360.0, 0.05, 0.65, 1.0))
+                        .text_color(pal.text_secondary)
                         .child(desc.to_string()),
                 )
         }))
-
 }
 

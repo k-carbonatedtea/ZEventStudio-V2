@@ -9,19 +9,20 @@ pub fn render_welcome_main_content(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     div()
         .flex_1()
         .h_full()
-        .bg(rgb(0x0F1117)) // 深石墨黑 App Background
+        .bg(pal.app_bg) // 动态背景色
         .flex()
         .flex_col()
         // 顶部编辑器选项卡栏 (Tab Strip)
         .child(
             div()
                 .h(px(36.0))
-                .bg(rgb(0x161922)) // 蓝灰表面 Panel Surface
+                .bg(pal.panel_surface) // 蓝灰表面 Panel Surface
                 .border_b_1()
-                .border_color(rgb(0x232838))
+                .border_color(pal.panel_border)
                 .flex()
                 .items_center()
                 .px_2()
@@ -29,15 +30,15 @@ pub fn render_welcome_main_content(
                     div()
                         .h(px(35.0))
                         .px_3()
-                        .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
+                        .bg(pal.card_surface) // 浅层蓝灰 Card / Hover
                         .border_t_2()
-                        .border_color(rgb(0x00E5BA)) // 遗迹青蓝 Primary Accent
+                        .border_color(pal.primary_accent) // 遗迹青蓝 Primary Accent
                         .flex()
                         .items_center()
                         .gap_2()
                         .text_size(px(12.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
+                        .text_color(pal.text_primary) // 亮白灰 Text Primary
                         .child("📜")
                         .child(state.t("tab.welcome")),
                 ),
@@ -63,13 +64,13 @@ pub fn render_welcome_main_content(
                             div()
                                 .font_weight(FontWeight::BOLD)
                                 .text_size(px(26.0))
-                                .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
+                                .text_color(pal.text_primary) // 亮白灰 Text Primary
                                 .child(state.t("empty.title")),
                         )
                         .child(
                             div()
                                 .text_size(px(13.0))
-                                .text_color(rgb(0x94A3B8)) // 蓝灰白 Text Secondary
+                                .text_color(pal.text_secondary) // 蓝灰白 Text Secondary
                                 .child(state.t("empty.subtitle")),
                         ),
                 )
@@ -107,6 +108,7 @@ fn render_start_actions_section(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let model_new = model.clone();
     let model_file = model.clone();
     let model_folder = model.clone();
@@ -119,19 +121,19 @@ fn render_start_actions_section(
             div()
                 .font_weight(FontWeight::BOLD)
                 .text_size(px(14.0))
-                .text_color(rgb(0xF1F5F9))
+                .text_color(pal.text_primary)
                 .child(state.t("welcome.start_section")),
         )
-        .child(render_link_action("📄", state.t("empty.newFlow"), Some("Ctrl+N"), move |cx| {
+        .child(render_link_action("📄", state.t("empty.newFlow"), Some("Ctrl+N"), state, move |cx| {
             model_new.update(cx, |st, cx| {
                 st.new_blank_flow();
                 cx.notify();
             });
         }))
-        .child(render_link_action("📂", state.t("empty.openFile"), Some("Ctrl+O"), move |cx| {
+        .child(render_link_action("📂", state.t("empty.openFile"), Some("Ctrl+O"), state, move |cx| {
             pick_and_load_file(&model_file, cx);
         }))
-        .child(render_link_action("🗂️", state.t("empty.openMod"), None, move |cx| {
+        .child(render_link_action("🗂️", state.t("empty.openMod"), None, state, move |cx| {
             pick_and_load_mod_folder(&model_folder, cx);
         }))
 }
@@ -140,11 +142,13 @@ fn render_link_action<F>(
     icon_str: &'static str,
     label: &str,
     shortcut: Option<&'static str>,
+    state: &AppState,
     on_click: F,
 ) -> impl IntoElement
 where
     F: Fn(&mut App) + 'static,
 {
+    let pal = state.theme();
     let label_str = label.to_string();
 
     div()
@@ -152,7 +156,7 @@ where
         .items_center()
         .justify_between()
         .py_1()
-        .hover(|s| s.text_color(rgb(0x00E5BA)))
+        .hover(move |s| s.text_color(pal.primary_accent))
         .cursor_pointer()
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             on_click(cx);
@@ -166,14 +170,14 @@ where
                 .child(
                     div()
                         .text_size(px(12.5))
-                        .text_color(rgb(0xF1F5F9))
+                        .text_color(pal.text_primary)
                         .child(label_str),
                 ),
         )
         .children(shortcut.map(|sc| {
             div()
                 .text_size(px(11.0))
-                .text_color(rgb(0x94A3B8))
+                .text_color(pal.text_secondary)
                 .child(sc)
         }))
 }
@@ -182,6 +186,7 @@ fn render_recent_files_section(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let recent_count = state.recent_projects.len();
     let model_clear = model.clone();
 
@@ -198,7 +203,7 @@ fn render_recent_files_section(
                     div()
                         .font_weight(FontWeight::BOLD)
                         .text_size(px(14.0))
-                        .text_color(rgb(0xF1F5F9))
+                        .text_color(pal.text_primary)
                         .child(state.t("welcome.recent_section")),
                 )
                 .children(if recent_count > 0 {
@@ -225,22 +230,24 @@ fn render_recent_files_section(
                 div()
                     .py_2()
                     .text_size(px(11.5))
-                    .text_color(rgb(0x94A3B8))
+                    .text_color(pal.text_secondary)
                     .child(state.t("empty.noRecentProjects")),
             )
         } else {
             None
         })
         .children(state.recent_projects.iter().take(5).enumerate().map(|(idx, item)| {
-            render_vs_recent_row(item, idx, model)
+            render_vs_recent_row(item, idx, state, model)
         }))
 }
 
 fn render_vs_recent_row(
     item: &RecentProjectItem,
     idx: usize,
+    state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let model_open = model.clone();
     let model_del = model.clone();
     let item_clone = item.clone();
@@ -252,7 +259,7 @@ fn render_vs_recent_row(
         .py_1p5()
         .px_2()
         .rounded_md()
-        .hover(|s| s.bg(rgb(0x1E2330))) // 浅层蓝灰 Card / Hover
+        .hover(move |s| s.bg(pal.card_hover))
         .cursor_pointer()
 
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
@@ -273,8 +280,8 @@ fn render_vs_recent_row(
                 .flex()
                 .flex_col()
                 .gap_0p5()
-                .child(div().text_size(px(12.0)).font_weight(FontWeight::BOLD).text_color(rgb(0x00E5BA)).child(item.name.clone()))
-                .child(div().text_size(px(10.5)).text_color(rgb(0x94A3B8)).child(item.path.clone())),
+                .child(div().text_size(px(12.0)).font_weight(FontWeight::BOLD).text_color(pal.primary_accent).child(item.name.clone()))
+                .child(div().text_size(px(10.5)).text_color(pal.text_secondary).child(item.path.clone())),
         )
         .child(
             div()
@@ -286,7 +293,7 @@ fn render_vs_recent_row(
                 .items_center()
                 .justify_center()
                 .cursor_pointer()
-                .text_color(rgb(0x94A3B8))
+                .text_color(pal.text_secondary)
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     cx.stop_propagation();
                     model_del.update(cx, |st, cx| {

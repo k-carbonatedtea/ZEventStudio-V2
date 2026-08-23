@@ -15,6 +15,7 @@ use view_menu::render_view_menu;
 
 /// 渲染顶部现代化玻璃拟态标题栏与菜单栏 (App Icon + File/Edit/Select/View/Help + Centered Title + Window Controls)
 pub fn render_title_bar(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
+    let pal = state.theme();
     let active_doc_name = state
         .active_tab_id
         .as_ref()
@@ -23,8 +24,8 @@ pub fn render_title_bar(state: &AppState, model: &Entity<AppState>) -> impl Into
         .unwrap_or_else(|| "ZEvent Studio - GPU-Accelerated Nodeflow Editor".to_string());
 
     TitleBar::new()
-        .bg(rgb(0x161922))
-        .border_color(rgb(0x232838))
+        .bg(pal.panel_surface)
+        .border_color(pal.panel_border)
         // 1. 左侧区域: 应用程序标识 (Logo) + 顶部核心菜单栏 (文件 / 编辑 / 选择 / 查看 / 帮助)
         .child(
             div()
@@ -43,22 +44,22 @@ pub fn render_title_bar(state: &AppState, model: &Entity<AppState>) -> impl Into
                             div()
                                 .size(px(18.0))
                                 .rounded_md()
-                                .bg(rgba(0x00e5ba18))
+                                .bg(pal.card_surface)
                                 .border_1()
-                                .border_color(rgba(0x00e5ba40))
+                                .border_color(pal.card_border)
                                 .flex()
                                 .items_center()
                                 .justify_center()
                                 .text_size(px(10.5))
                                 .font_weight(FontWeight::BOLD)
-                                .text_color(rgb(0xF59E0B))
+                                .text_color(pal.secondary_accent)
                                 .child("⚡"),
                         )
                         .child(
                             div()
                                 .text_size(px(12.0))
                                 .font_weight(FontWeight::BOLD)
-                                .text_color(rgb(0xF1F5F9))
+                                .text_color(pal.text_primary)
                                 .child("ZEvent"),
                         ),
                 )
@@ -79,7 +80,7 @@ pub fn render_title_bar(state: &AppState, model: &Entity<AppState>) -> impl Into
                 .child(
                     div()
                         .text_size(px(11.5))
-                        .text_color(rgb(0x94A3B8))
+                        .text_color(pal.text_secondary)
                         .child(active_doc_name),
                 ),
         )

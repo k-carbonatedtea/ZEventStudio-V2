@@ -16,37 +16,32 @@ fn main() {
         Theme::change(ThemeMode::Dark, None, cx);
 
         // 统一注入全局设计系统调色板规范 (Design System Theme Tokens)
+        let pal = ui::theme::AppTheme::RelicCyan.palette();
         let theme = Theme::global_mut(cx);
-        theme.colors.background = rgb(0x0F1117).into();
-        theme.colors.foreground = rgb(0xF1F5F9).into();
-        theme.colors.popover = rgb(0x161922).into();
-        theme.colors.popover_foreground = rgb(0xF1F5F9).into();
-        theme.colors.primary = rgb(0x00E5BA).into();
+        theme.colors.background = pal.app_bg.into();
+        theme.colors.foreground = pal.text_primary.into();
+        theme.colors.popover = pal.panel_surface.into();
+        theme.colors.popover_foreground = pal.text_primary.into();
+        theme.colors.primary = pal.primary_accent.into();
         theme.colors.primary_foreground = rgb(0x0F1117).into();
-        theme.colors.secondary = rgb(0x1E2330).into();
-        theme.colors.secondary_foreground = rgb(0xF1F5F9).into();
-        theme.colors.muted = rgb(0x1E2330).into();
-        theme.colors.muted_foreground = rgb(0x94A3B8).into();
-        theme.colors.accent = rgb(0x1E2330).into();
-        theme.colors.accent_foreground = rgb(0xF1F5F9).into();
-        theme.colors.border = rgb(0x232838).into();
-        theme.colors.input = rgb(0x232838).into();
-        theme.colors.title_bar = rgb(0x161922).into();
-        theme.colors.title_bar_border = rgb(0x232838).into();
+        theme.colors.secondary = pal.card_surface.into();
+        theme.colors.secondary_foreground = pal.text_primary.into();
+        theme.colors.muted = pal.card_surface.into();
+        theme.colors.muted_foreground = pal.text_secondary.into();
+        theme.colors.accent = pal.card_surface.into();
+        theme.colors.accent_foreground = pal.text_primary.into();
+        theme.colors.border = pal.panel_border.into();
+        theme.colors.input = pal.panel_border.into();
+        theme.colors.title_bar = pal.panel_surface.into();
+        theme.colors.title_bar_border = pal.panel_border.into();
 
         // 统一代码编辑器背景色、行号槽 (Gutter) 与激活行高亮
         let mut style = theme.highlight_theme.style.clone();
-        let editor_bg = rgb(0x0F1117); // 深石墨黑 App Background
-        let gutter_bg = rgb(0x161922); // 蓝灰表面 Panel Surface
-        let active_line = rgb(0x1E2330); // 浅层蓝灰 Card / Hover
-        let line_number = rgb(0x94A3B8); // 蓝灰白 Text Secondary
-        let active_line_number = rgb(0x00E5BA); // 遗迹青蓝 Primary Accent
-
-        style.editor_background = Some(editor_bg.into());
-        style.editor_gutter_background = Some(gutter_bg.into());
-        style.editor_active_line = Some(active_line.into());
-        style.editor_line_number = Some(line_number.into());
-        style.editor_active_line_number = Some(active_line_number.into());
+        style.editor_background = Some(pal.app_bg.into());
+        style.editor_gutter_background = Some(pal.panel_surface.into());
+        style.editor_active_line = Some(pal.card_surface.into());
+        style.editor_line_number = Some(pal.text_secondary.into());
+        style.editor_active_line_number = Some(pal.primary_accent.into());
 
         theme.highlight_theme = std::sync::Arc::new(gpui_component::highlighter::HighlightTheme {
             name: theme.highlight_theme.name.clone(),

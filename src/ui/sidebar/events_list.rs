@@ -7,6 +7,7 @@ pub fn render_events_list(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let search_val = state.search_query.to_lowercase();
     let selected_id = state.selected_node_id.clone();
 
@@ -43,12 +44,12 @@ pub fn render_events_list(
                 .px_1()
                 .pb_1()
                 .border_b_1()
-                .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
+                .border_color(pal.panel_border)
                 .child(
                     div()
                         .font_weight(FontWeight::BOLD)
                         .text_size(px(12.0))
-                        .text_color(rgb(0xffffff))
+                        .text_color(pal.text_primary)
                         .child(state.t("sidebar.events_title")),
                 )
                 .child(
@@ -56,10 +57,10 @@ pub fn render_events_list(
                         .px_2()
                         .py_0p5()
                         .rounded_full()
-                        .bg(hsla(240.0 / 360.0, 0.06, 0.18, 1.0))
+                        .bg(pal.card_surface)
                         .text_size(px(10.5))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(hsla(45.0 / 360.0, 0.95, 0.65, 1.0))
+                        .text_color(pal.primary_accent)
                         .child(format!("{} items", total_count)),
                 ),
         )
@@ -77,7 +78,7 @@ pub fn render_events_list(
                         div()
                             .p_4()
                             .text_size(px(11.5))
-                            .text_color(hsla(240.0 / 360.0, 0.05, 0.55, 1.0))
+                            .text_color(pal.text_secondary)
                             .flex()
                             .items_center()
                             .justify_center()
@@ -101,19 +102,19 @@ pub fn render_events_list(
                                 .p_2()
                                 .rounded_lg()
                                 .bg(if is_active {
-                                    hsla(215.0 / 360.0, 0.50, 0.24, 1.0)
+                                    pal.card_hover
                                 } else {
-                                    hsla(240.0 / 360.0, 0.06, 0.11, 1.0)
+                                    pal.card_surface
                                 })
                                 .border_1()
                                 .border_color(if is_active {
-                                    hsla(45.0 / 360.0, 0.98, 0.60, 1.0)
+                                    pal.primary_accent
                                 } else {
-                                    hsla(240.0 / 360.0, 0.06, 0.20, 1.0)
+                                    pal.card_border
                                 })
-                                .hover(|s| {
-                                    s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
-                                        .border_color(hsla(240.0 / 360.0, 0.06, 0.30, 1.0))
+                                .hover(move |s| {
+                                    s.bg(pal.card_hover)
+                                        .border_color(pal.primary_accent)
                                 })
                                 .cursor_pointer()
 
@@ -146,9 +147,9 @@ pub fn render_events_list(
                                                         .font_weight(FontWeight::BOLD)
                                                         .text_size(px(12.0))
                                                         .text_color(if is_active {
-                                                            hsla(45.0 / 360.0, 0.98, 0.65, 1.0)
+                                                            pal.primary_accent
                                                         } else {
-                                                            hsla(0.0, 0.0, 1.0, 1.0)
+                                                            pal.text_primary
                                                         })
                                                         .child(node.title.clone()),
                                                 ),
@@ -204,14 +205,14 @@ pub fn render_events_list(
                                 )
                                 .children(subtitle.map(|sub| {
                                     div()
-                                        .mt_1()
-                                        .text_size(px(10.0))
-                                        .text_color(hsla(215.0 / 360.0, 0.20, 0.65, 1.0))
+                                        .pt_1()
+                                        .text_size(px(10.5))
+                                        .text_color(pal.text_secondary)
                                         .child(sub)
                                 }))
                                 .into_any_element()
                         })
-                        .collect()
+                        .collect::<Vec<_>>()
                 }),
         )
 }

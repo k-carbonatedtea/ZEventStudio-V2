@@ -23,13 +23,14 @@ pub fn render_flow_canvas(
     let model_mouse_up = model.clone();
     let model_scroll = model.clone();
 
+    let theme = state.theme();
     div()
         .id("flow_canvas")
         .relative()
         .flex_1()
         .size_full()
         .overflow_hidden()
-        .bg(rgb(0x0F1117)) // 深石墨黑 App Background
+        .bg(theme.app_bg)
         .cursor(match &drag_state {
             DragState::PanCanvas { .. } => CursorStyle::ClosedHand,
             DragState::Connecting { .. } => CursorStyle::Crosshair,
@@ -235,7 +236,7 @@ pub fn render_flow_canvas(
             canvas(
                 |_bounds, _window, _cx| {},
                 move |bounds, _, window, _cx| {
-                    draw_canvas_grid(bounds, pan, zoom, window);
+                    draw_canvas_grid(bounds, pan, zoom, theme, window);
                 },
             )
             .size_full(),

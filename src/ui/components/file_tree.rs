@@ -41,13 +41,13 @@ fn render_file_tree_node(
     selected_path: &str,
     filter: &str,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let is_container = node.is_dir || node.is_sarc;
     let is_expanded = state.expanded_tree_paths.contains(&node.path) || !filter.is_empty();
     let is_selected = selected_path == node.path;
     let is_modified = !is_container && state.is_file_modified(&node.path);
     let path_clone = node.path.clone();
     let model_click = model.clone();
-
 
     let pad_left = (level * 12 + 8) as f32;
 
@@ -66,15 +66,15 @@ fn render_file_tree_node(
                 .rounded_md()
                 .cursor_pointer()
                 .bg(if is_selected {
-                    rgb(0x1E2330) // 浅层蓝灰 Card / Hover
+                    pal.card_surface // 浅层蓝灰 Card / Hover
                 } else {
                     rgba(0x00000000)
                 })
-                .hover(|s| {
+                .hover(move |s| {
                     if is_selected {
-                        s.bg(rgb(0x252C3D))
+                        s.bg(pal.card_hover)
                     } else {
-                        s.bg(rgb(0x1E2330))
+                        s.bg(pal.card_surface)
                     }
                 })
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
@@ -101,7 +101,7 @@ fn render_file_tree_node(
                             div()
                                 .w(px(12.0))
                                 .text_size(px(10.0))
-                                .text_color(rgb(0x94A3B8))
+                                .text_color(pal.text_secondary)
                                 .flex()
                                 .items_center()
                                 .justify_center()
@@ -134,13 +134,13 @@ fn render_file_tree_node(
                                             FontWeight::NORMAL
                                         })
                                         .text_color(if is_modified {
-                                            rgb(0xF59E0B) // 琥珀金：已被修改
+                                            pal.secondary_accent // 琥珀金：已被修改
                                         } else if is_selected {
-                                            rgb(0x00E5BA) // 遗迹青蓝：当前选中
+                                            pal.primary_accent // 遗迹青蓝：当前选中
                                         } else if is_container {
-                                            rgb(0xF1F5F9) // 亮白灰：目录
+                                            pal.text_primary // 亮白灰：目录
                                         } else {
-                                            rgb(0x94A3B8) // 蓝灰白：普通文件
+                                            pal.text_secondary // 蓝灰白：普通文件
                                         })
                                         .overflow_hidden()
                                         .whitespace_nowrap()
@@ -149,7 +149,7 @@ fn render_file_tree_node(
                                 .children(is_modified.then(|| {
                                     div()
                                         .text_size(px(8.0))
-                                        .text_color(rgb(0xF59E0B))
+                                        .text_color(pal.secondary_accent)
                                         .child("●")
                                 })),
                         ),

@@ -1,4 +1,4 @@
-use gpui::*;
+﻿use gpui::*;
 use crate::ui::components::render_file_tree;
 use crate::ui::state::AppState;
 use crate::ui::views::welcome::quick_tab::{pick_and_load_file, pick_and_load_mod_folder, pick_and_load_pack_file};
@@ -8,6 +8,7 @@ pub fn render_welcome_sidebar(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let model_folder = model.clone();
     let model_pack = model.clone();
     let model_file = model.clone();
@@ -25,9 +26,9 @@ pub fn render_welcome_sidebar(
         .w(px(state.sidebar_width))
         .flex_shrink_0()
         .h_full()
-        .bg(rgb(0x161922)) // 蓝灰表面 Panel Surface
+        .bg(pal.panel_surface) // 蓝灰表面 Panel Surface
         .border_r_1()
-        .border_color(rgb(0x232838))
+        .border_color(pal.panel_border)
         .overflow_hidden()
         .flex()
         .flex_col()
@@ -41,13 +42,13 @@ pub fn render_welcome_sidebar(
                 .items_center()
                 .justify_between()
                 .border_b_1()
-                .border_color(rgb(0x232838))
-                .bg(rgb(0x161922))
+                .border_color(pal.panel_border)
+                .bg(pal.panel_surface)
                 .child(
                     div()
                         .text_size(px(11.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
+                        .text_color(pal.text_primary) // 亮白灰 Text Primary
                         .child(state.t("welcome.explorer")),
                 )
                 .child(
@@ -63,8 +64,8 @@ pub fn render_welcome_sidebar(
                                 .rounded_md()
                                 .cursor_pointer()
                                 .text_size(px(11.0))
-                                .text_color(rgb(0x94A3B8))
-                                .hover(|s| s.bg(rgb(0x1E2330)).text_color(rgb(0xF1F5F9)))
+                                .text_color(pal.text_secondary)
+                                .hover(move |s| s.bg(pal.card_hover).text_color(pal.text_primary))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     model_new.update(cx, |st, cx| {
                                         st.new_blank_flow();
@@ -81,8 +82,8 @@ pub fn render_welcome_sidebar(
                                 .rounded_md()
                                 .cursor_pointer()
                                 .text_size(px(11.0))
-                                .text_color(rgb(0x94A3B8))
-                                .hover(|s| s.bg(rgb(0x1E2330)).text_color(rgb(0xF1F5F9)))
+                                .text_color(pal.text_secondary)
+                                .hover(move |s| s.bg(pal.card_hover).text_color(pal.text_primary))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     model_refresh.update(cx, |st, cx| {
                                         st.reload_project();
@@ -99,8 +100,8 @@ pub fn render_welcome_sidebar(
                                 .rounded_md()
                                 .cursor_pointer()
                                 .text_size(px(11.0))
-                                .text_color(rgb(0x94A3B8))
-                                .hover(|s| s.bg(rgb(0x1E2330)).text_color(rgb(0xF1F5F9)))
+                                .text_color(pal.text_secondary)
+                                .hover(move |s| s.bg(pal.card_hover).text_color(pal.text_primary))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     model_collapse.update(cx, |st, cx| {
                                         st.collapse_all_tree_paths();
@@ -124,13 +125,13 @@ pub fn render_welcome_sidebar(
                     div()
                         .px_3()
                         .py_1p5()
-                        .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
+                        .bg(pal.card_surface) // 浅层蓝灰 Card / Hover
                         .flex()
                         .items_center()
                         .gap_1p5()
                         .text_size(px(11.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(rgb(0xF1F5F9))
+                        .text_color(pal.text_primary)
                         .child("⌄")
                         .child(project_name),
                 )
@@ -149,7 +150,7 @@ pub fn render_welcome_sidebar(
                         .child(
                             div()
                                 .text_size(px(11.5))
-                                .text_color(rgb(0x94A3B8))
+                                .text_color(pal.text_secondary)
                                 .child(state.t("welcome.no_folder_hint")),
                         )
                         // 打开文件夹大按钮
@@ -159,7 +160,7 @@ pub fn render_welcome_sidebar(
                                 .py_2()
                                 .px_3()
                                 .rounded_md()
-                                .bg(rgb(0x00E5BA)) // 遗迹青蓝 Primary Accent
+                                .bg(pal.primary_accent) // 遗迹青蓝 Primary Accent
                                 .hover(|s| s.opacity(0.90))
                                 .cursor_pointer()
                                 .flex()
@@ -168,7 +169,7 @@ pub fn render_welcome_sidebar(
                                 .gap_2()
                                 .text_size(px(12.0))
                                 .font_weight(FontWeight::BOLD)
-                                .text_color(rgb(0x0F1117)) // 深石墨黑 App Background (高对比度文字)
+                                .text_color(if pal.is_dark { rgb(0x0F1117) } else { rgb(0xFFFFFF) })
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_mod_folder(&model_folder, cx);
                                 })
@@ -178,7 +179,7 @@ pub fn render_welcome_sidebar(
                         .child(
                             div()
                                 .text_size(px(10.5))
-                                .text_color(rgb(0x94A3B8))
+                                .text_color(pal.text_secondary)
                                 .child(state.t("welcome.open_folder_desc")),
                         )
                         // 打开 SARC 封包按钮
@@ -188,17 +189,17 @@ pub fn render_welcome_sidebar(
                                 .py_1p5()
                                 .px_3()
                                 .rounded_md()
-                                .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
+                                .bg(pal.card_surface) // 浅层蓝灰 Card / Hover
                                 .border_1()
-                                .border_color(rgb(0x2D3548))
-                                .hover(|s| s.bg(rgb(0x252C3D)).border_color(rgb(0x00E5BA)))
+                                .border_color(pal.card_border)
+                                .hover(move |s| s.bg(pal.card_hover).border_color(pal.primary_accent))
                                 .cursor_pointer()
                                 .flex()
                                 .items_center()
                                 .justify_center()
                                 .gap_2()
                                 .text_size(px(11.5))
-                                .text_color(rgb(0xF1F5F9))
+                                .text_color(pal.text_primary)
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_pack_file(&model_pack, cx);
                                 })
@@ -212,17 +213,17 @@ pub fn render_welcome_sidebar(
                                 .py_1p5()
                                 .px_3()
                                 .rounded_md()
-                                .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
+                                .bg(pal.card_surface) // 浅层蓝灰 Card / Hover
                                 .border_1()
-                                .border_color(rgb(0x2D3548))
-                                .hover(|s| s.bg(rgb(0x252C3D)).border_color(rgb(0x00E5BA)))
+                                .border_color(pal.card_border)
+                                .hover(move |s| s.bg(pal.card_hover).border_color(pal.primary_accent))
                                 .cursor_pointer()
                                 .flex()
                                 .items_center()
                                 .justify_center()
                                 .gap_2()
                                 .text_size(px(11.5))
-                                .text_color(rgb(0xF1F5F9))
+                                .text_color(pal.text_primary)
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_file(&model_file, cx);
                                 })
@@ -232,6 +233,4 @@ pub fn render_welcome_sidebar(
                         .into_any_element()
                 }),
         )
-
 }
-

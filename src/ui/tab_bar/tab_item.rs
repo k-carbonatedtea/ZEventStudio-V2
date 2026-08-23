@@ -6,8 +6,10 @@ use crate::ui::state::AppState;
 pub fn render_tab_item(
     tab: &OpenDocumentTab,
     is_active: bool,
+    state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let tab_id = tab.id.clone();
     let tab_id_close = tab.id.clone();
     let model_click = model.clone();
@@ -33,19 +35,19 @@ pub fn render_tab_item(
         .gap_2()
         .cursor_pointer()
         .bg(if is_active {
-            rgb(0x1E2330) // 浅层蓝灰 Card / Hover
+            pal.card_surface // 浅层蓝灰 Card / Hover
         } else {
-            rgba(0x16192280)
+            rgba(0x00000000)
         })
         .border_1()
         .border_color(if is_active {
-            rgb(0x00E5BA) // 遗迹青蓝 Primary Accent
+            pal.primary_accent // 遗迹青蓝 Primary Accent
         } else {
-            rgb(0x232838) // 蓝灰边框
+            pal.panel_border // 蓝灰边框
         })
         .hover(|s| {
             if !is_active {
-                s.bg(rgb(0x1E2330))
+                s.bg(pal.card_surface)
             } else {
                 s
             }
@@ -75,9 +77,9 @@ pub fn render_tab_item(
                     FontWeight::NORMAL
                 })
                 .text_color(if is_active {
-                    rgb(0xF1F5F9) // 亮白灰 Text Primary
+                    pal.text_primary // 亮白灰 Text Primary
                 } else {
-                    rgb(0x94A3B8) // 蓝灰白 Text Secondary
+                    pal.text_secondary // 蓝灰白 Text Secondary
                 })
                 .child(tab.title.clone()),
         )
@@ -86,7 +88,7 @@ pub fn render_tab_item(
             div()
                 .size(px(6.5))
                 .rounded_full()
-                .bg(rgb(0xF59E0B)) // 琥珀金 Secondary Accent
+                .bg(pal.secondary_accent) // 琥珀金 Secondary Accent
         }))
         // 关闭按钮 ✕
         .child(

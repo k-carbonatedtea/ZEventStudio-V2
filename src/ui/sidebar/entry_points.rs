@@ -7,6 +7,7 @@ pub fn render_entry_point_list(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let entry_points: Vec<(String, String, Option<String>)> = state
         .graph
         .nodes
@@ -26,7 +27,7 @@ pub fn render_entry_point_list(
             div()
                 .text_size(px(11.0))
                 .font_weight(FontWeight::BOLD)
-                .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
+                .text_color(pal.text_primary) // 亮白灰 Text Primary
                 .child(format!("{} ({})", state.t("sidebar.entry_points_title"), entry_points.len())),
         )
         .children(entry_points.into_iter().map(|(id, title, _)| {
@@ -38,19 +39,19 @@ pub fn render_entry_point_list(
                 .p_2p5()
                 .rounded_lg()
                 .bg(if is_selected {
-                    rgb(0x252C3D) // 选中高亮底色
+                    pal.card_hover // 选中高亮底色
                 } else {
-                    rgb(0x1E2330) // 浅层蓝灰 Card / Hover
+                    pal.card_surface // 浅层蓝灰 Card / Hover
                 })
                 .border_1()
                 .border_color(if is_selected {
-                    rgb(0x00E5BA) // 遗迹青蓝 Primary Accent
+                    pal.primary_accent // 遗迹青蓝 Primary Accent
                 } else {
-                    rgb(0x2D3548)
+                    pal.card_border
                 })
-                .hover(|s| {
+                .hover(move |s| {
                     if !is_selected {
-                        s.bg(rgb(0x252C3D)).border_color(rgb(0x00E5BA))
+                        s.bg(pal.card_hover).border_color(pal.primary_accent)
                     } else {
                         s
                     }
@@ -73,7 +74,7 @@ pub fn render_entry_point_list(
                             div()
                                 .font_weight(FontWeight::BOLD)
                                 .text_size(px(12.0))
-                                .text_color(if is_selected { rgb(0x00E5BA) } else { rgb(0xF1F5F9) })
+                                .text_color(if is_selected { pal.primary_accent } else { pal.text_primary })
                                 .child(title),
                         )
                         .child(
@@ -81,10 +82,10 @@ pub fn render_entry_point_list(
                                 .px_1p5()
                                 .py_0p5()
                                 .rounded_sm()
-                                .bg(rgba(0x00e5ba20))
+                                .bg(pal.card_surface)
                                 .text_size(px(9.5))
                                 .font_weight(FontWeight::MEDIUM)
-                                .text_color(rgb(0x00E5BA))
+                                .text_color(pal.primary_accent)
                                 .child(state.t("sidebar.jump_focus")),
                         ),
                 )

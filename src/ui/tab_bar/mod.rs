@@ -19,13 +19,14 @@ pub fn render_document_tab_bar(
         .map(|t| t.file_path.clone())
         .unwrap_or_else(|| state.graph.name.clone());
 
+    let pal = state.theme();
     div()
         .id("document_tab_bar")
         .h(px(32.0))
         .w_full()
-        .bg(rgb(0x161922)) // 蓝灰表面 Panel Surface
+        .bg(pal.panel_surface)
         .border_b_1()
-        .border_color(rgb(0x232838))
+        .border_color(pal.panel_border)
         .flex()
         .items_center()
         .justify_between()
@@ -40,7 +41,7 @@ pub fn render_document_tab_bar(
                 // 标签项列表
                 .children(state.open_tabs.iter().map(|tab| {
                     let is_active = tab.id == active_id;
-                    render_tab_item(tab, is_active, model)
+                    render_tab_item(tab, is_active, state, model)
                 }))
                 // + 新建空白标签按钮
                 .child(
@@ -53,14 +54,13 @@ pub fn render_document_tab_bar(
                         .justify_center()
                         .cursor_pointer()
                         .text_size(px(12.0))
-                        .text_color(rgb(0x94A3B8))
+                        .text_color(pal.text_secondary)
                         .hover(|s| {
-                            s.bg(rgb(0x1E2330))
-                                .text_color(rgb(0xF1F5F9))
+                            s.bg(pal.card_surface)
+                                .text_color(pal.text_primary)
                         })
 
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                            cx.stop_propagation();
                             model_new.update(cx, |st, cx| {
                                 st.new_blank_flow();
                                 cx.notify();

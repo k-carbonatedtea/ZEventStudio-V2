@@ -16,10 +16,11 @@ pub fn render_welcome_view(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
+    let pal = state.theme();
     div()
         .id("welcome_view_root")
         .size_full()
-        .bg(rgb(0x0F1117)) // 深石墨黑 App Background
+        .bg(pal.app_bg)
         .flex()
         // 左侧：资源管理器面板 (VS Code Explorer Sidebar)
         .child(render_welcome_sidebar(state, model))

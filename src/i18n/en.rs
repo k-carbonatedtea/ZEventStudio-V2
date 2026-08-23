@@ -53,6 +53,16 @@ pub fn get_en(key: &str) -> &str {
         "menu.about_info" => "ZEvent Studio - GPU-Accelerated EVFL Nodeflow & Logic Editor",
         "menu.shortcuts_info" => "Shortcuts: Ctrl+S Save | Ctrl+N New | Ctrl+O Open | Wheel Zoom | Drag Pan | Double-Click Add Node",
 
+        // ---------------- 主题风格 (Theme) ----------------
+        "menu.themes" => "🎨 Color Theme",
+        "theme.title" => "🎨 Color Theme",
+        "theme.relic_cyan" => "Relic Cyan (Default)",
+        "theme.twilight_amber" => "Twilight Amber",
+        "theme.sheikah_slate" => "Sheikah Slate",
+        "theme.midnight_purple" => "Midnight Purple",
+        "theme.emerald_forest" => "Emerald Forest",
+        "theme.nordic_light" => "Nordic Light (Light)",
+
         // ---------------- 顶部工具栏 (Toolbar) ----------------
         "toolbar.auto_layout" => "Auto Layout",
         "toolbar.expand_params" => "Expand Params",

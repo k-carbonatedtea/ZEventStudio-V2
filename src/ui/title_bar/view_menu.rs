@@ -36,11 +36,24 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
     let label_zoom_out = state.t("menu.zoom_out").to_string();
     let label_reset_zoom = state.t("menu.reset_zoom").to_string();
 
+    let model_theme = model.clone();
+    let cur_theme = state.current_theme;
+    let theme_items = crate::ui::theme::AppTheme::ALL.map(|t| {
+        (
+            t,
+            format!(
+                "{} {}",
+                if cur_theme == t { "✓" } else { "   " },
+                state.t(t.i18n_key())
+            ),
+        )
+    });
+
     Button::new("titlebar_menu_view")
         .ghost()
         .xsmall()
         .label(state.t("menu.view"))
-        .dropdown_menu(move |menu: PopupMenu, _window, _cx| {
+        .dropdown_menu(move |mut menu: PopupMenu, _window, _cx| {
             let m_wel = model_welcome.clone();
             let m_fc = model_flowchart.clone();
             let m_cd = model_code.clone();
@@ -54,8 +67,10 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
             let m_zi = model_zoom_in.clone();
             let m_zo = model_zoom_out.clone();
             let m_rz = model_reset_zoom.clone();
+            let m_th = model_theme.clone();
 
-            menu.min_w(px(220.0))
+            menu = menu
+                .min_w(px(220.0))
                 .item(
                     PopupMenuItem::new(label_welcome.clone())
                         .on_click(move |_, _, cx| {
@@ -175,5 +190,21 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                             });
                         }),
                 )
+                .separator();
+
+            for &(target_theme, ref label) in &theme_items {
+                let m = m_th.clone();
+                let l = label.clone();
+                menu = menu.item(
+                    PopupMenuItem::new(l).on_click(move |_, _, cx| {
+                        m.update(cx, |st, cx| {
+                            st.set_theme(target_theme, cx);
+                            cx.notify();
+                        });
+                    }),
+                );
+            }
+
+            menu
         })
 }

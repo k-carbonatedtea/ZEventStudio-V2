@@ -130,45 +130,11 @@ impl Render for AppView {
         let current_frame_time = self.frame_time_ms;
         let current_tab = state.current_tab;
 
-        // 3秒自动隐藏 Toast 提示气泡
-        let visible_toast = if let Some(ref t) = state.toast {
-            let elapsed = t.created_at.elapsed().as_secs_f32();
-            if elapsed >= t.duration_secs {
-                let model_dismiss = self.model.clone();
-                cx.spawn(async move |_this, cx| {
-                    cx.update(|cx| {
-                        model_dismiss.update(cx, |st, cx| {
-                            if let Some(ref cur) = st.toast {
-                                if cur.created_at.elapsed().as_secs_f32() >= cur.duration_secs {
-                                    st.toast = None;
-                                    cx.notify();
-                                }
-                            }
-                        });
-                    });
-                }).detach();
-                None
-            } else {
-                let remaining_ms = ((t.duration_secs - elapsed) * 1000.0).max(50.0) as u64;
-                let model_timer = self.model.clone();
-                cx.spawn(async move |_this, cx| {
-                    smol::Timer::after(std::time::Duration::from_millis(remaining_ms + 10)).await;
-                    cx.update(|cx| {
-                        model_timer.update(cx, |st, cx| {
-                            if let Some(ref cur) = st.toast {
-                                if cur.created_at.elapsed().as_secs_f32() >= cur.duration_secs {
-                                    st.toast = None;
-                                    cx.notify();
-                                }
-                            }
-                        });
-                    });
-                }).detach();
-                Some(t.clone())
-            }
-        } else {
-            None
-        };
+        // 3秒自动隐藏 Toast 提示气泡 (过滤已过期 Toast)
+        let visible_toast = state
+            .toast
+            .as_ref()
+            .filter(|t| t.created_at.elapsed().as_secs_f32() < t.duration_secs);
 
         let model_key = self.model.clone();
         let model_root_move = self.model.clone();
@@ -180,9 +146,9 @@ impl Render for AppView {
             .flex()
             .flex_col()
             .size_full()
-            .bg(rgb(0x0F1117))
+            .bg(state.theme().app_bg)
             .font_family(".SystemUIFont")
-            .text_color(rgb(0xF1F5F9))
+            .text_color(state.theme().text_primary)
             // 侧边栏拖拽调宽全局鼠标移动监听
             .on_mouse_move(move |e, _window, cx| {
                 let mx: f32 = e.position.x.into();
@@ -303,7 +269,7 @@ impl Render for AppView {
                     .absolute()
                     .bottom_12()
                     .right_4()
-                    .child(render_toast(&t))
+                    .child(render_toast(t))
             }))
             // 节点属性与分支编辑模态框
             .children((state.active_node_editor_modal.is_some()).then(|| {
