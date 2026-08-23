@@ -63,9 +63,10 @@ impl AppState {
         }
 
         if let Err(e) = self.game_paths.save_to_disk() {
-            self.toast = Some(Toast::error(format!("保存偏好设置失败: {}", e)));
+            let msg = format!("{}: {}", self.t("toast.settings_save_err"), e);
+            self.toast = Some(Toast::error(&msg));
         } else {
-            self.toast = Some(Toast::success("💾 偏好设置已成功保存并持久化！"));
+            self.toast = Some(Toast::success(self.t("toast.settings_save_ok")));
         }
         self.settings_modal_open = false;
         self.active_settings_field = crate::ui::state::ActiveSettingsField::None;
@@ -122,13 +123,14 @@ impl AppState {
                 }
             }
         }
-        self.toast = Some(Toast::success("✨ 已成功清理自动保存快照历史与临时缓存"));
+        self.toast = Some(Toast::success(self.t("toast.cache_cleared")));
     }
 }
 
-/// 弹出原生目录选择器以配置 Switch 路径
-pub fn browse_switch_folder(
+/// 弹出原生目录选择器以配置游戏路径
+pub fn browse_platform_folder(
     model: &Entity<AppState>,
+    platform: crate::model::PlatformType,
     field: &'static str,
     title: &'static str,
     cx: &mut App,
@@ -144,44 +146,24 @@ pub fn browse_switch_folder(
             let path_str = folder.path().to_string_lossy().to_string();
             cx.update(|cx| {
                 model.update(cx, |st, cx| {
-                    match field {
-                        "game_dir" => st.settings_draft.switch.game_dir = path_str,
-                        "dlc_dir" => st.settings_draft.switch.dlc_dir = path_str,
-                        "export_dir" => st.settings_draft.switch.export_dir = path_str,
-                        _ => {}
-                    }
-                    cx.notify();
-                });
-            });
-        }
-    })
-    .detach();
-}
-
-/// 弹出原生目录选择器以配置 Wii U 路径
-pub fn browse_wiiu_folder(
-    model: &Entity<AppState>,
-    field: &'static str,
-    title: &'static str,
-    cx: &mut App,
-) {
-    let model = model.clone();
-    cx.spawn(async move |cx| {
-        let handle = rfd::AsyncFileDialog::new()
-            .set_title(title)
-            .pick_folder()
-            .await;
-
-        if let Some(folder) = handle {
-            let path_str = folder.path().to_string_lossy().to_string();
-            cx.update(|cx| {
-                model.update(cx, |st, cx| {
-                    match field {
-                        "game_dir" => st.settings_draft.wiiu.game_dir = path_str,
-                        "update_dir" => st.settings_draft.wiiu.update_dir = path_str,
-                        "dlc_dir" => st.settings_draft.wiiu.dlc_dir = path_str,
-                        "export_dir" => st.settings_draft.wiiu.export_dir = path_str,
-                        _ => {}
+                    match platform {
+                        crate::model::PlatformType::Switch => {
+                            match field {
+                                "game_dir" => st.settings_draft.switch.game_dir = path_str,
+                                "dlc_dir" => st.settings_draft.switch.dlc_dir = path_str,
+                                "export_dir" => st.settings_draft.switch.export_dir = path_str,
+                                _ => {}
+                            }
+                        }
+                        crate::model::PlatformType::WiiU => {
+                            match field {
+                                "game_dir" => st.settings_draft.wiiu.game_dir = path_str,
+                                "update_dir" => st.settings_draft.wiiu.update_dir = path_str,
+                                "dlc_dir" => st.settings_draft.wiiu.dlc_dir = path_str,
+                                "export_dir" => st.settings_draft.wiiu.export_dir = path_str,
+                                _ => {}
+                            }
+                        }
                     }
                     cx.notify();
                 });

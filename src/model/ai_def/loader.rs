@@ -17,6 +17,7 @@ impl AiCacheManager {
         INSTANCE.get_or_init(AiCacheManager::default)
     }
 
+    #[allow(dead_code)]
     pub fn clear(&self) {
         let mut g = self.ai_defs.write().unwrap_or_else(|p| p.into_inner());
         *g = None;

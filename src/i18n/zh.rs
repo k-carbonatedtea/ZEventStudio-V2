@@ -329,6 +329,14 @@ pub fn get_zh(key: &str) -> &str {
         "toast.no_active_file" => "⚠️ 当前没有打开的文件",
         "toast.revert_success" => "🔄 已重置文件至初始状态",
         "toast.settings_reset" => "🔄 已恢复所有首选项为默认配置",
+        "toast.settings_save_err" => "❌ 保存偏好设置失败",
+        "toast.settings_save_ok" => "💾 偏好设置已成功保存并持久化！",
+        "toast.cache_cleared" => "✨ 已成功清理自动保存快照历史与临时缓存",
+        "toast.new_flow_created" => "✨ 已创建全新空白 EventFlow 流程图",
+        "toast.node_saved" => "✨ 已成功保存节点",
+        "toast.node_missing_info" => "节点缺少角色名或动作名",
+        "toast.params_complete" => "参数已全部完整，无需填充",
+        "toast.autofill_failed" => "自动填充失败",
 
         // ---------------- 角色分类与关键参数 (Actor Theme & Smart Params) ----------------
         "actor.system" => "系统逻辑",

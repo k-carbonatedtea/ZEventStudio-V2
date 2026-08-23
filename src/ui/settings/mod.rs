@@ -1,5 +1,8 @@
+pub mod canvas_helpers;
 pub mod canvas_pane;
+pub mod general_helpers;
 pub mod general_pane;
+pub mod llm_helpers;
 pub mod llm_pane;
 pub mod switch_pane;
 pub mod wiiu_pane;

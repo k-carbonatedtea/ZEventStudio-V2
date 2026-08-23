@@ -262,7 +262,8 @@ impl AppState {
             }
 
             self.mark_current_tab_modified();
-            self.toast = Some(Toast::success(format!("✨ 已成功保存节点 {}", modal_title)));
+            let msg = format!("{} {}", self.t("toast.node_saved"), modal_title);
+            self.toast = Some(Toast::success(&msg));
         }
     }
 
@@ -391,6 +392,82 @@ impl AppState {
                 }
                 tab.is_modified = false;
                 self.toast = Some(Toast::info(self.t("toast.revert_success")));
+            }
+        }
+    }
+
+    /// 基于 AI 定义文件自动填充 Action/Query 节点的参数属性
+    pub fn autofill_node_parameters(&mut self, node_id: &str) {
+        let (actor_name, action_query_name, is_query) = {
+            if let Some(node) = self.graph.find_node(node_id) {
+                let is_q = node.kind == crate::model::NodeKind::Query;
+                if node.kind != crate::model::NodeKind::Action && !is_q {
+                    return;
+                }
+
+                let actor = node.properties.iter()
+                    .find(|p| p.key == "ActorName")
+                    .map(|p| p.val.clone())
+                    .unwrap_or_default();
+                let name = node.properties.iter()
+                    .find(|p| p.key == "Name")
+                    .map(|p| p.val.clone())
+                    .unwrap_or_default();
+
+                if actor.is_empty() || name.is_empty() {
+                    self.toast = Some(Toast::error(self.t("toast.node_missing_info")));
+                    return;
+                }
+                (actor, name, is_q)
+            } else {
+                return;
+            }
+        };
+
+        let search_dirs = crate::model::ai_def::build_search_dirs(
+            Some(&self.game_paths.switch.game_dir),
+            None,
+            Some(&self.game_paths.switch.dlc_dir),
+            None,
+            Some(&self.game_paths.custom_ai_dump_dir),
+        );
+
+        match crate::model::ai_def::get_autofill_parameters(
+            &actor_name, &action_query_name, is_query, &search_dirs,
+        ) {
+            Ok(params) => {
+                if let Some(node) = self.graph.find_node_mut(node_id) {
+                    let mut added_count = 0;
+                    for (key, value) in params {
+                        if !node.properties.iter().any(|p| p.key == key) {
+                            if let Some(obj) = value.as_object() {
+                                if let Some((param_type, param_val)) = obj.iter().next() {
+                                    node.properties.push(PropertyItem {
+                                        val_type: param_type.clone(),
+                                        key: key.clone(),
+                                        val: if let Some(s) = param_val.as_str() {
+                                            s.to_string()
+                                        } else {
+                                            param_val.to_string()
+                                        },
+                                    });
+                                    added_count += 1;
+                                }
+                            }
+                        }
+                    }
+                    if added_count > 0 {
+                        self.toast = Some(Toast::success(
+                            &format!("已自动填充 {} 个参数", added_count),
+                        ));
+                    } else {
+                        self.toast = Some(Toast::success(self.t("toast.params_complete")));
+                    }
+                }
+            }
+            Err(e) => {
+                let msg = format!("{}: {}", self.t("toast.autofill_failed"), e);
+                self.toast = Some(Toast::error(&msg));
             }
         }
     }

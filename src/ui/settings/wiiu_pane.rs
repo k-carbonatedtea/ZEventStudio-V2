@@ -1,12 +1,13 @@
 use gpui::*;
-use crate::model::PlatformType;
-use crate::ui::settings::switch_pane::render_path_field;
 use crate::ui::state::AppState;
-use crate::ui::state_settings::browse_wiiu_folder;
+use crate::ui::settings::switch_pane::render_path_field;
+use crate::ui::state_settings::browse_platform_folder;
+use crate::model::PlatformType;
+use crate::ui::state::ActiveSettingsField;
 
-/// 渲染 Wii U (Cemu) 平台路径配置面板 (Wii U Settings Pane)
+/// 渲染 Wii U 设置面板
 pub fn render_wiiu_pane(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
-    let is_active = state.settings_draft.current_platform == PlatformType::WiiU;
+    let pal = state.theme();
 
     div()
         .id("settings_wiiu_scroll")
@@ -16,185 +17,105 @@ pub fn render_wiiu_pane(state: &AppState, model: &Entity<AppState>) -> impl Into
         .gap_4()
         .overflow_y_scroll()
         .p_1()
-        // 1. 顶部平台说明与生效激活状态栏
-        .child(render_wiiu_tip_bar(state, model, is_active))
-        // 2. 游戏本体 Content 目录 (game_dir)
-        .child(render_wiiu_game_dir_card(state, model))
-        // 3. 补丁 Content 目录 (update_dir)
-        .child(render_wiiu_update_dir_card(state, model))
-        // 4. DLC 0010 Content 目录 (dlc_dir)
-        .child(render_wiiu_dlc_dir_card(state, model))
-        // 5. 模组导出目录 (export_dir)
-        .child(render_wiiu_export_dir_card(state, model))
-}
-
-/// 渲染顶部说明与生效状态条
-fn render_wiiu_tip_bar(
-    state: &AppState,
-    model: &Entity<AppState>,
-    is_active: bool,
-) -> impl IntoElement {
-    let pal = state.theme();
-    let model_set = model.clone();
-
-    div()
-        .p_3p5()
-        .rounded_xl()
-        .bg(pal.card_surface)
-        .border_1()
-        .border_color(pal.card_border)
-        .flex()
-        .items_center()
-        .justify_between()
-        .gap_3()
+        // 顶部信息警告卡片 (WiiU 模拟器跨平台路径问题提示)
         .child(
             div()
-                .flex_1()
-                .min_w_0()
+                .p_3()
+                .rounded_xl()
+                .bg(pal.secondary_accent.opacity(0.1))
+                .border_1()
+                .border_color(pal.secondary_accent.opacity(0.4))
                 .flex()
-                .items_center()
-                .gap_2()
-                .child(div().flex_shrink_0().text_size(px(14.0)).child("💡"))
+                .items_start()
+                .gap_3()
                 .child(
                     div()
-                        .flex_1()
-                        .min_w_0()
-                        .text_size(px(11.5))
-                        .text_color(pal.text_secondary)
-                        .child(state.t("settings.wiiu_tip")),
-                ),
-        )
-        .child(
-            div()
-                .flex_shrink_0()
+                        .text_size(px(16.0))
+                        .text_color(pal.secondary_accent)
+                        .child("⚠️"),
+                )
                 .child(
-                    if is_active {
-                        div()
-                            .px_3()
-                            .py_1()
-                            .rounded_md()
-                            .bg(pal.primary_accent.opacity(0.18))
-                            .border_1()
-                            .border_color(pal.primary_accent)
-                            .flex()
-                            .items_center()
-                            .gap_1p5()
-                            .child(
-                                div()
-                                    .text_size(px(11.0))
-                                    .font_weight(FontWeight::BOLD)
-                                    .text_color(pal.primary_accent)
-                                    .child("✓"),
-                            )
-                            .child(
-                                div()
-                                    .text_size(px(11.0))
-                                    .font_weight(FontWeight::BOLD)
-                                    .text_color(pal.primary_accent)
-                                    .child(state.t("settings.active_badge")),
-                            )
-                            .into_any_element()
-                    } else {
-                        div()
-                            .px_3()
-                            .py_1()
-                            .rounded_md()
-                            .bg(pal.app_bg)
-                            .border_1()
-                            .border_color(pal.panel_border)
-                            .cursor_pointer()
-                            .hover(|s| s.border_color(pal.primary_accent))
-                            .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                                cx.stop_propagation();
-                                model_set.update(cx, |st, cx| {
-                                    st.settings_draft.current_platform = PlatformType::WiiU;
-                                    cx.notify();
-                                });
-                            })
-                            .child(
-                                div()
-                                    .text_size(px(11.0))
-                                    .text_color(pal.text_secondary)
-                                    .child(state.t("settings.set_active_btn")),
-                            )
-                            .into_any_element()
-                    },
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_1()
+                        .child(
+                            div()
+                                .font_weight(FontWeight::BOLD)
+                                .text_size(px(12.5))
+                                .text_color(pal.secondary_accent)
+                                .child(state.t("settings.wiiu_warn_title")),
+                        )
+                        .child(
+                            div()
+                                .text_size(px(11.0))
+                                .text_color(pal.text_secondary)
+                                .child(state.t("settings.wiiu_warn_desc")),
+                        ),
                 ),
         )
-}
-
-/// 渲染 Wii U 游戏本体 Content 目录卡片
-fn render_wiiu_game_dir_card(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
-    let path_val = state.settings_draft.wiiu.game_dir.clone();
-    let m = model.clone();
-
-    render_path_field(
-        state.t("settings.wiiu_game_dir"),
-        state.t("settings.wiiu_game_dir_desc"),
-        &path_val,
-        "C:\\Game\\BOTW\\content",
-        crate::ui::state::ActiveSettingsField::WiiuGameDir,
-        state,
-        model,
-        move |cx| {
-            browse_wiiu_folder(&m, "game_dir", "选择 Wii U 游戏本体目录", cx);
-        },
-    )
-}
-
-/// 渲染 Wii U 更新数据目录输入与浏览卡片
-fn render_wiiu_update_dir_card(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
-    let path_val = state.settings_draft.wiiu.update_dir.clone();
-    let m = model.clone();
-
-    render_path_field(
-        state.t("settings.wiiu_update_dir"),
-        state.t("settings.wiiu_update_dir_desc"),
-        &path_val,
-        "C:\\Game\\BOTW_Update\\content",
-        crate::ui::state::ActiveSettingsField::WiiuUpdateDir,
-        state,
-        model,
-        move |cx| {
-            browse_wiiu_folder(&m, "update_dir", "选择 Wii U 游戏更新目录", cx);
-        },
-    )
-}
-
-/// 渲染 Wii U DLC 目录输入与浏览卡片
-fn render_wiiu_dlc_dir_card(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
-    let path_val = state.settings_draft.wiiu.dlc_dir.clone();
-    let m = model.clone();
-
-    render_path_field(
-        state.t("settings.wiiu_dlc_dir"),
-        state.t("settings.wiiu_dlc_dir_desc"),
-        &path_val,
-        "C:\\Game\\BOTW_DLC\\content",
-        crate::ui::state::ActiveSettingsField::WiiuDlcDir,
-        state,
-        model,
-        move |cx| {
-            browse_wiiu_folder(&m, "dlc_dir", "选择 Wii U 游戏 DLC 目录", cx);
-        },
-    )
-}
-
-/// 渲染 Cemu 模组导出目录卡片
-fn render_wiiu_export_dir_card(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
-    let path_val = state.settings_draft.wiiu.export_dir.clone();
-    let m = model.clone();
-
-    render_path_field(
-        state.t("settings.wiiu_export_dir"),
-        state.t("settings.wiiu_export_dir_desc"),
-        &path_val,
-        "E:\\Cemu\\graphicPacks\\BreathOfTheWild_Mods\\content",
-        crate::ui::state::ActiveSettingsField::WiiuExportDir,
-        state,
-        model,
-        move |cx| {
-            browse_wiiu_folder(&m, "export_dir", "选择 Cemu 模组导出路径", cx);
-        },
-    )
+        // 1. 游戏本体目录 (Base Game)
+        .child(render_path_field(
+            &state.t("settings.wiiu_game_dir"),
+            &state.t("settings.wiiu_game_dir_desc"),
+            &state.settings_draft.wiiu.game_dir,
+            "C:\\Cemu\\Games\\The Legend of Zelda Breath of the Wild\\content",
+            ActiveSettingsField::WiiuGameDir,
+            state,
+            model,
+            {
+                let m = model.clone();
+                move |cx| {
+                    browse_platform_folder(&m, PlatformType::WiiU, "game_dir", "选择 Wii U 游戏本体目录", cx);
+                }
+            }
+        ))
+        // 2. 游戏更新目录 (Update)
+        .child(render_path_field(
+            &state.t("settings.wiiu_update_dir"),
+            &state.t("settings.wiiu_update_dir_desc"),
+            &state.settings_draft.wiiu.update_dir,
+            "C:\\Cemu\\mlc01\\usr\\title\\00050000\\101C9500\\content",
+            ActiveSettingsField::WiiuUpdateDir,
+            state,
+            model,
+            {
+                let m = model.clone();
+                move |cx| {
+                    browse_platform_folder(&m, PlatformType::WiiU, "update_dir", "选择 Wii U 游戏更新目录", cx);
+                }
+            }
+        ))
+        // 3. 游戏 DLC 目录 (DLC)
+        .child(render_path_field(
+            &state.t("settings.wiiu_dlc_dir"),
+            &state.t("settings.wiiu_dlc_dir_desc"),
+            &state.settings_draft.wiiu.dlc_dir,
+            "C:\\Cemu\\mlc01\\usr\\title\\00050000\\101C9500\\aoc\\content",
+            ActiveSettingsField::WiiuDlcDir,
+            state,
+            model,
+            {
+                let m = model.clone();
+                move |cx| {
+                    browse_platform_folder(&m, PlatformType::WiiU, "dlc_dir", "选择 Wii U 游戏 DLC 目录", cx);
+                }
+            }
+        ))
+        // 4. Mod 导出路径 (Export)
+        .child(render_path_field(
+            &state.t("settings.wiiu_export_dir"),
+            &state.t("settings.wiiu_export_dir_desc"),
+            &state.settings_draft.wiiu.export_dir,
+            "C:\\Cemu\\graphicPacks\\ZeldaBOTW_Mods\\MyNodeFlowMod",
+            ActiveSettingsField::WiiuExportDir,
+            state,
+            model,
+            {
+                let m = model.clone();
+                move |cx| {
+                    browse_platform_folder(&m, PlatformType::WiiU, "export_dir", "选择 Cemu 模组导出路径", cx);
+                }
+            }
+        ))
 }

@@ -333,6 +333,14 @@ pub fn get_en(key: &str) -> &str {
         "toast.no_active_file" => "⚠️ No active file opened",
         "toast.revert_success" => "🔄 File reverted to original state",
         "toast.settings_reset" => "🔄 Settings have been reset to default",
+        "toast.settings_save_err" => "❌ Failed to save preferences",
+        "toast.settings_save_ok" => "💾 Preferences successfully saved and persisted!",
+        "toast.cache_cleared" => "✨ Successfully cleared autosave snapshots and temporary cache",
+        "toast.new_flow_created" => "✨ Created a brand new blank EventFlow flowchart",
+        "toast.node_saved" => "✨ Successfully saved node",
+        "toast.node_missing_info" => "Node is missing Actor or Action name",
+        "toast.params_complete" => "Parameters are complete, no autofill needed",
+        "toast.autofill_failed" => "Autofill failed",
 
         // ---------------- 角色分类与关键参数 (Actor Theme & Smart Params) ----------------
         "actor.system" => "System Logic",

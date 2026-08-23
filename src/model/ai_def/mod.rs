@@ -2,8 +2,7 @@ pub mod parser;
 pub mod loader;
 
 use std::path::PathBuf;
-pub use parser::{AiDefs, ActorAiProg, AiClassDef, AiParamDef};
-pub use loader::{AiCacheManager, load_global_ai_defs, load_actor_aiprog};
+pub use loader::AiCacheManager;
 
 /// 生成搜寻 AI 定义文件的有效目录列表
 pub fn build_search_dirs(

@@ -1,7 +1,8 @@
 use gpui::*;
 use crate::model::PlatformType;
 use crate::ui::state::AppState;
-use crate::ui::state_settings::browse_switch_folder;
+use crate::ui::state::ActiveSettingsField;
+use crate::ui::state_settings::browse_platform_folder;
 
 /// 渲染 Nintendo Switch (NX) 平台路径配置面板 (Switch Settings Pane)
 pub fn render_switch_pane(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
@@ -134,7 +135,7 @@ fn render_switch_game_dir_card(state: &AppState, model: &Entity<AppState>) -> im
         state,
         model,
         move |cx| {
-            browse_switch_folder(&m, "game_dir", "选择 Switch RomFS 根目录", cx);
+            browse_platform_folder(&m, PlatformType::Switch, "game_dir", "选择 Switch RomFS 根目录", cx);
         },
     )
 }
@@ -153,7 +154,7 @@ fn render_switch_dlc_dir_card(state: &AppState, model: &Entity<AppState>) -> imp
         state,
         model,
         move |cx| {
-            browse_switch_folder(&m, "dlc_dir", "选择 Switch DLC RomFS 目录", cx);
+            browse_platform_folder(&m, PlatformType::Switch, "dlc_dir", "选择 Switch DLC RomFS 目录", cx);
         },
     )
 }
@@ -168,11 +169,11 @@ fn render_switch_export_dir_card(state: &AppState, model: &Entity<AppState>) -> 
         state.t("settings.switch_export_dir_desc"),
         &path_val,
         "E:\\Atmosphere\\contents\\01007EF00011E000\\romfs",
-        crate::ui::state::ActiveSettingsField::SwitchExportDir,
+        ActiveSettingsField::SwitchExportDir,
         state,
         model,
         move |cx| {
-            browse_switch_folder(&m, "export_dir", "选择 Switch 模组导出路径", cx);
+            browse_platform_folder(&m, PlatformType::Switch, "export_dir", "选择 Switch 模组导出路径", cx);
         },
     )
 }
@@ -182,7 +183,7 @@ pub fn render_path_field<F>(
     description: &str,
     current_val: &str,
     placeholder: &'static str,
-    field_id: crate::ui::state::ActiveSettingsField,
+    field_id: ActiveSettingsField,
     state: &AppState,
     model: &Entity<AppState>,
     on_browse: F,

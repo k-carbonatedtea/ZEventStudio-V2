@@ -157,3 +157,68 @@ pub struct ThemePalette {
     pub panel_border: Rgba,
     pub card_border: Rgba,
 }
+
+impl ThemePalette {
+    /// 将当前调色板一次性同步至 gpui_component 全局主题系统
+    ///
+    /// 统一收拢颜色映射、代码编辑器高亮风格等全部 GPUI Theme Token 的设置逻辑，
+    /// 避免在初始化入口与运行时主题切换两处重复维护相同的颜色映射代码。
+    pub fn apply_to_gpui_component(&self, cx: &mut App) {
+        let gpui_theme = gpui_component::Theme::global_mut(cx);
+        gpui_theme.mode = if self.is_dark {
+            gpui_component::ThemeMode::Dark
+        } else {
+            gpui_component::ThemeMode::Light
+        };
+        gpui_theme.colors.background = self.app_bg.into();
+        gpui_theme.colors.foreground = self.text_primary.into();
+        gpui_theme.colors.popover = self.panel_surface.into();
+        gpui_theme.colors.popover_foreground = self.text_primary.into();
+        gpui_theme.colors.primary = self.primary_accent.into();
+        gpui_theme.colors.primary_foreground = if self.is_dark {
+            rgb(0x0F1117).into()
+        } else {
+            rgb(0xFFFFFF).into()
+        };
+        gpui_theme.colors.secondary = self.card_surface.into();
+        gpui_theme.colors.secondary_foreground = self.text_primary.into();
+        gpui_theme.colors.muted = self.card_surface.into();
+        gpui_theme.colors.muted_foreground = self.text_secondary.into();
+        gpui_theme.colors.accent = self.card_surface.into();
+        gpui_theme.colors.accent_foreground = self.text_primary.into();
+        gpui_theme.colors.border = self.panel_border.into();
+        gpui_theme.colors.input = self.panel_border.into();
+        gpui_theme.colors.title_bar = self.panel_surface.into();
+        gpui_theme.colors.title_bar_border = self.panel_border.into();
+        gpui_theme.tokens = (&gpui_theme.colors).into();
+
+        // 同步代码编辑器语法高亮风格 (从对应明暗默认主题派生)
+        let base_highlight = if self.is_dark {
+            gpui_component::highlighter::HighlightTheme::default_dark()
+        } else {
+            gpui_component::highlighter::HighlightTheme::default_light()
+        };
+
+        let mut style = base_highlight.style.clone();
+        style.editor_background = Some(self.app_bg.into());
+        style.editor_foreground = Some(self.text_primary.into());
+        style.editor_gutter_background = Some(self.panel_surface.into());
+        style.editor_active_line = Some(self.card_surface.into());
+        style.editor_line_number = Some(self.text_secondary.into());
+        style.editor_active_line_number = Some(self.primary_accent.into());
+
+        gpui_theme.highlight_theme = std::sync::Arc::new(
+            gpui_component::highlighter::HighlightTheme {
+                name: format!("{}-Custom", self.name),
+                appearance: if self.is_dark {
+                    gpui_component::ThemeMode::Dark
+                } else {
+                    gpui_component::ThemeMode::Light
+                },
+                style,
+            },
+        );
+
+        gpui_component::Theme::sync_base(cx);
+    }
+}
