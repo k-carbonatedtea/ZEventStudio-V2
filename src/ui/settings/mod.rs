@@ -1,17 +1,18 @@
-pub mod canvas_tab;
-pub mod game_tab;
-pub mod general_tab;
-pub mod performance_tab;
+pub mod canvas_pane;
+pub mod general_pane;
+pub mod switch_pane;
+pub mod wiiu_pane;
 
 use gpui::*;
-use canvas_tab::render_canvas_tab;
-use game_tab::render_game_tab;
-use general_tab::render_general_tab;
-use performance_tab::render_performance_tab;
+use canvas_pane::render_canvas_pane;
+use general_pane::render_general_pane;
+use switch_pane::render_switch_pane;
+use wiiu_pane::render_wiiu_pane;
+use crate::model::PlatformType;
 use crate::ui::state::AppState;
 use crate::ui::state_settings::SettingsTab;
 
-/// 渲染现代化首选项与设置模态窗口 (Preferences & Settings Modal)
+/// 渲染现代化首选项与游戏路径设置模态窗口 (Preferences & Game Settings Modal)
 pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
     if !state.settings_modal_open {
         return div().into_any_element();
@@ -22,13 +23,14 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
     let model_backdrop = model.clone();
     let model_close = model.clone();
     let model_reset = model.clone();
-    let model_done = model.clone();
+    let model_cancel = model.clone();
+    let model_save = model.clone();
 
     div()
         .id("settings_modal_overlay")
         .absolute()
         .inset_0()
-        .bg(hsla(0.0, 0.0, 0.0, 0.65))
+        .bg(hsla(0.0, 0.0, 0.0, 0.68))
         .flex()
         .items_center()
         .justify_center()
@@ -44,8 +46,8 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
         .child(
             div()
                 .id("settings_modal_card")
-                .w(px(760.0))
-                .h(px(520.0))
+                .w(px(780.0))
+                .h(px(540.0))
                 .bg(pal.panel_surface)
                 .border_1()
                 .border_color(pal.panel_border)
@@ -80,22 +82,28 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
                                 .overflow_hidden()
                                 .child(match current_tab {
                                     SettingsTab::General => {
-                                        render_general_tab(state, model).into_any_element()
+                                        render_general_pane(state, model).into_any_element()
+                                    }
+                                    SettingsTab::Switch => {
+                                        render_switch_pane(state, model).into_any_element()
+                                    }
+                                    SettingsTab::WiiU => {
+                                        render_wiiu_pane(state, model).into_any_element()
                                     }
                                     SettingsTab::Canvas => {
-                                        render_canvas_tab(state, model).into_any_element()
-                                    }
-                                    SettingsTab::Performance => {
-                                        render_performance_tab(state, model).into_any_element()
-                                    }
-                                    SettingsTab::Game => {
-                                        render_game_tab(state, model).into_any_element()
+                                        render_canvas_pane(state, model).into_any_element()
                                     }
                                 }),
                         ),
                 )
-                // 3. 底部操作按钮栏 (Footer: 恢复默认 + 完成)
-                .child(render_settings_footer(state, &model_reset, &model_done, &pal)),
+                // 3. 底部操作按钮栏 (Footer: 恢复默认 + 取消 + 保存并应用)
+                .child(render_settings_footer(
+                    state,
+                    &model_reset,
+                    &model_cancel,
+                    &model_save,
+                    &pal,
+                )),
         )
         .into_any_element()
 }
@@ -122,7 +130,7 @@ fn render_settings_header(
                 .flex()
                 .items_center()
                 .gap_2p5()
-                .child(div().text_size(px(16.0)).child("⚙️"))
+                .child(div().text_size(px(17.0)).child("⚙️"))
                 .child(
                     div()
                         .flex()
@@ -170,15 +178,26 @@ fn render_settings_category_sidebar(
     current_tab: SettingsTab,
     pal: &crate::ui::theme::ThemePalette,
 ) -> impl IntoElement {
+    let cur_plat = state.settings_draft.current_platform;
     let categories = [
-        (SettingsTab::General, "🌐", state.t("settings.tab_general")),
-        (SettingsTab::Canvas, "🎨", state.t("settings.tab_canvas")),
-        (SettingsTab::Performance, "⚡", state.t("settings.tab_performance")),
-        (SettingsTab::Game, "🎮", state.t("settings.tab_game")),
+        (SettingsTab::General, "⚙️", state.t("settings.tab_general"), false),
+        (
+            SettingsTab::Switch,
+            "🎮",
+            state.t("settings.tab_switch"),
+            cur_plat == PlatformType::Switch,
+        ),
+        (
+            SettingsTab::WiiU,
+            "🖥️",
+            state.t("settings.tab_wiiu"),
+            cur_plat == PlatformType::WiiU,
+        ),
+        (SettingsTab::Canvas, "🎨", state.t("settings.tab_canvas"), false),
     ];
 
     div()
-        .w(px(190.0))
+        .w(px(200.0))
         .h_full()
         .bg(pal.app_bg)
         .border_r_1()
@@ -187,22 +206,22 @@ fn render_settings_category_sidebar(
         .flex()
         .flex_col()
         .gap_1p5()
-        .children(categories.iter().map(|&(tab, icon, label)| {
-            let is_active = current_tab == tab;
+        .children(categories.iter().map(|&(tab, icon, label, is_active_plat)| {
+            let is_selected = current_tab == tab;
             let m = model.clone();
-            let bg_color = if is_active {
+            let bg_color = if is_selected {
                 pal.primary_accent.opacity(0.18)
             } else {
                 gpui::rgba(0x00000000)
             };
-            let text_color = if is_active {
+            let text_color = if is_selected {
                 pal.primary_accent
             } else {
                 pal.text_secondary
             };
 
             div()
-                .h(px(36.0))
+                .h(px(38.0))
                 .px_3()
                 .rounded_lg()
                 .bg(bg_color)
@@ -226,7 +245,7 @@ fn render_settings_category_sidebar(
                         .child(div().text_size(px(14.0)).child(icon))
                         .child(
                             div()
-                                .font_weight(if is_active {
+                                .font_weight(if is_selected {
                                     FontWeight::BOLD
                                 } else {
                                     FontWeight::NORMAL
@@ -237,30 +256,44 @@ fn render_settings_category_sidebar(
                         ),
                 )
                 .child(
-                    if is_active {
+                    if is_active_plat {
+                        div()
+                            .px_1p5()
+                            .py_0p5()
+                            .rounded_sm()
+                            .bg(pal.primary_accent.opacity(0.15))
+                            .text_size(px(9.5))
+                            .font_weight(FontWeight::BOLD)
+                            .text_color(pal.primary_accent)
+                            .child("Active")
+                            .into_any_element()
+                    } else if is_selected {
                         div()
                             .size(px(5.0))
                             .rounded_full()
                             .bg(pal.primary_accent)
+                            .into_any_element()
                     } else {
-                        div()
+                        div().into_any_element()
                     },
                 )
         }))
 }
 
-/// 渲染底部操作栏 (恢复默认 + 完成)
+/// 渲染底部操作栏 (恢复默认 + 取消 + 保存并应用)
 fn render_settings_footer(
     state: &AppState,
     model_reset: &Entity<AppState>,
-    model_done: &Entity<AppState>,
+    model_cancel: &Entity<AppState>,
+    model_save: &Entity<AppState>,
     pal: &crate::ui::theme::ThemePalette,
 ) -> impl IntoElement {
     let m_reset = model_reset.clone();
-    let m_done = model_done.clone();
+    let m_cancel = model_cancel.clone();
+    let m_save = model_save.clone();
 
     div()
-        .h(px(48.0))
+        .h(px(52.0))
         .px_5()
         .bg(pal.app_bg)
         .border_t_1()
@@ -271,7 +304,7 @@ fn render_settings_footer(
         // 恢复默认按钮
         .child(
             div()
-                .h(px(28.0))
+                .h(px(30.0))
                 .px_3()
                 .rounded_md()
                 .bg(pal.card_surface)
@@ -296,30 +329,67 @@ fn render_settings_footer(
                 })
                 .child(state.t("settings.reset_defaults")),
         )
-        // 完成按钮
+        // 右侧操作按钮组 (取消 + 保存并应用)
         .child(
             div()
-                .h(px(28.0))
-                .px_4()
-                .rounded_md()
-                .bg(pal.primary_accent)
-                .border_1()
-                .border_color(pal.primary_accent_hover)
                 .flex()
                 .items_center()
-                .justify_center()
-                .cursor_pointer()
-                .text_size(px(12.0))
-                .font_weight(FontWeight::BOLD)
-                .text_color(if pal.is_dark { rgb(0x0A0C10) } else { rgb(0xFFFFFF) })
-                .hover(|s| s.bg(pal.primary_accent_hover).shadow_md())
-                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                    cx.stop_propagation();
-                    m_done.update(cx, |st, cx| {
-                        st.close_settings();
-                        cx.notify();
-                    });
-                })
-                .child(state.t("settings.close")),
+                .gap_2p5()
+                // 取消按钮
+                .child(
+                    div()
+                        .h(px(30.0))
+                        .px_3p5()
+                        .rounded_md()
+                        .bg(pal.card_surface)
+                        .border_1()
+                        .border_color(pal.card_border)
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .cursor_pointer()
+                        .text_size(px(12.0))
+                        .text_color(pal.text_secondary)
+                        .hover(|s| {
+                            s.bg(pal.card_hover)
+                                .text_color(pal.text_primary)
+                        })
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            cx.stop_propagation();
+                            m_cancel.update(cx, |st, cx| {
+                                st.close_settings();
+                                cx.notify();
+                            });
+                        })
+                        .child(state.t("settings.cancel_btn")),
+                )
+                // 保存并应用按钮
+                .child(
+                    div()
+                        .h(px(30.0))
+                        .px_4()
+                        .rounded_md()
+                        .bg(pal.primary_accent)
+                        .border_1()
+                        .border_color(pal.primary_accent_hover)
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .gap_1p5()
+                        .cursor_pointer()
+                        .text_size(px(12.0))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(if pal.is_dark { rgb(0x0A0C10) } else { rgb(0xFFFFFF) })
+                        .hover(|s| s.bg(pal.primary_accent_hover).shadow_md())
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            cx.stop_propagation();
+                            m_save.update(cx, |st, cx| {
+                                st.save_and_apply_settings();
+                                cx.notify();
+                            });
+                        })
+                        .child(div().text_size(px(12.0)).child("💾"))
+                        .child(state.t("settings.save_btn")),
+                ),
         )
 }

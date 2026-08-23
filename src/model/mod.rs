@@ -1,4 +1,5 @@
 pub mod actor;
+pub mod bcml;
 pub mod code_document;
 pub mod document_tab;
 pub mod edge;
@@ -11,6 +12,12 @@ pub mod layout;
 pub mod node;
 pub mod port;
 pub mod sarc_writer;
+pub mod settings;
+
+#[allow(unused_imports)]
+pub use bcml::{import_bcml_paths, BcmlImportResult};
+#[allow(unused_imports)]
+pub use settings::{GamePathSettings, PlatformType, SwitchPathSettings, WiiUPathSettings};
 
 #[allow(unused_imports)]
 pub use actor::*;

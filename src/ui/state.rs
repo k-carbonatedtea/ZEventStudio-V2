@@ -130,7 +130,9 @@ pub struct AppState {
     pub game_lang: crate::model::GameLanguage,
     pub current_theme: crate::ui::theme::AppTheme,
 
-    // 首选项设置模态弹窗状态
+    // 首选项设置模态弹窗状态与游戏路径配置
+    pub game_paths: crate::model::GamePathSettings,
+    pub settings_draft: crate::model::GamePathSettings,
     pub settings_modal_open: bool,
     pub settings_active_tab: crate::ui::state_settings::SettingsTab,
     pub grid_style: crate::ui::state_settings::GridStyle,
@@ -157,6 +159,8 @@ impl AppState {
     pub fn new() -> Self {
         let mut graph = Graph::new("EventFlow");
         graph.ensure_actors_populated();
+        let game_paths = crate::model::GamePathSettings::load_from_disk();
+        let game_lang = game_paths.language;
 
         let mut state = Self {
             graph,
@@ -210,8 +214,10 @@ impl AppState {
             frame_time_ms: 1.0,
             show_welcome_on_startup: true,
             lang: crate::i18n::Language::Zh,
-            game_lang: crate::model::GameLanguage::CNzh,
+            game_lang,
             current_theme: crate::ui::theme::AppTheme::default(),
+            game_paths: game_paths.clone(),
+            settings_draft: game_paths,
             settings_modal_open: false,
             settings_active_tab: crate::ui::state_settings::SettingsTab::General,
             grid_style: crate::ui::state_settings::GridStyle::Dots,
