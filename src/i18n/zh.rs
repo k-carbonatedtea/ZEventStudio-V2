@@ -2,6 +2,58 @@
 pub fn get_zh(key: &str) -> &str {
     match key {
 
+        // ---------------- 顶部菜单栏 (Menu Bar) ----------------
+        "menu.file" => "文件",
+        "menu.edit" => "编辑",
+        "menu.selection" => "选择",
+        "menu.view" => "查看",
+        "menu.help" => "帮助",
+
+        "menu.new_flow" => "新建事件流 (Ctrl+N)",
+        "menu.open_file" => "打开单个文件... (Ctrl+O)",
+        "menu.open_mod" => "打开 Mod 文件夹...",
+        "menu.open_pack" => "打开 SARC 封包...",
+        "menu.save" => "保存当前文件 (Ctrl+S)",
+        "menu.revert" => "重置文件修改",
+        "menu.close_tab" => "关闭当前标签页 (Ctrl+W)",
+        "menu.close_all_tabs" => "关闭所有标签页",
+        "menu.exit" => "退出 (Alt+F4)",
+
+        "menu.auto_layout" => "自动排版图表",
+        "menu.expand_all_params" => "展开所有参数",
+        "menu.collapse_all_params" => "折叠所有参数",
+        "menu.knife_mode" => "切换切刀工具",
+        "menu.delete_selected" => "删除选中节点 (Delete)",
+
+        "menu.select_all" => "全选节点 (Ctrl+A)",
+        "menu.deselect_all" => "取消选择 (Esc)",
+        "menu.select_actions" => "选择所有 Action 动作节点",
+        "menu.select_switches" => "选择所有 Switch 条件节点",
+        "menu.select_queries" => "选择所有 Query 查询节点",
+        "menu.select_subflows" => "选择所有 SubFlow 子流程节点",
+        "menu.select_entries" => "选择所有 EntryPoint 入口节点",
+
+        "menu.view_welcome" => "启动欢迎页",
+        "menu.view_flowchart" => "流程图画布",
+        "menu.view_code_editor" => "代码编辑器",
+        "menu.view_actors" => "角色管理器",
+        "menu.view_events" => "事件流管理器",
+        "menu.view_json" => "JSON 源码",
+        "menu.toggle_sidebar" => "切换预设侧边栏",
+        "menu.toggle_inspector" => "切换属性面板",
+        "menu.toggle_perf" => "切换极速性能模式",
+        "menu.fit_view" => "自适应居中视口",
+        "menu.zoom_in" => "放大画布",
+        "menu.zoom_out" => "缩小画布",
+        "menu.reset_zoom" => "重置缩放 (100%)",
+
+        "menu.shortcuts" => "快捷键指南",
+        "menu.evfl_spec" => "EVFL 核心机制说明",
+        "menu.switch_lang" => "切换语言 (中 / EN)",
+        "menu.about" => "关于 ZEvent Studio",
+        "menu.about_info" => "ZEvent Studio - GPU 加速 EVFL 节点流与剧情逻辑编辑器",
+        "menu.shortcuts_info" => "快捷键: Ctrl+S 保存 | Ctrl+N 新建 | Ctrl+O 打开 | 滚轮缩放 | 拖拽平移 | 双击新建节点",
+
         // ---------------- 顶部工具栏 (Toolbar) ----------------
         "toolbar.auto_layout" => "自动排版",
         "toolbar.expand_params" => "展开参数",

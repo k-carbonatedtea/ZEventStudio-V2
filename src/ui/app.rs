@@ -5,6 +5,7 @@ use crate::ui::canvas::{render_flow_canvas, render_node_editor_modal};
 use crate::ui::components::render_toast;
 use crate::ui::inspector::render_inspector;
 use crate::ui::key_handler::handle_global_key_event;
+use crate::ui::render_title_bar;
 use crate::ui::sidebar::render_sidebar;
 use crate::ui::state::{AppState, AppWorkspaceTab};
 use crate::ui::toolbar::render_toolbar;
@@ -215,6 +216,8 @@ impl Render for AppView {
                     }
                 });
             })
+            // 顶部沉浸式自定义标题栏与菜单栏 (TitleBar & Menu Bar)
+            .child(render_title_bar(state, &self.model))
             // 顶部工具栏 (Toolbar)
             .child(render_toolbar(state, current_fps, current_frame_time, &self.model))
             // 全局主工作区主体 (根据工作区状态切换)

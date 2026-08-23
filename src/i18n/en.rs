@@ -1,6 +1,58 @@
 /// 英文 (English) 本地化词典
 pub fn get_en(key: &str) -> &str {
     match key {
+        // ---------------- 顶部菜单栏 (Menu Bar) ----------------
+        "menu.file" => "File",
+        "menu.edit" => "Edit",
+        "menu.selection" => "Selection",
+        "menu.view" => "View",
+        "menu.help" => "Help",
+
+        "menu.new_flow" => "New EventFlow (Ctrl+N)",
+        "menu.open_file" => "Open File... (Ctrl+O)",
+        "menu.open_mod" => "Open Mod Folder...",
+        "menu.open_pack" => "Open SARC Pack...",
+        "menu.save" => "Save Active File (Ctrl+S)",
+        "menu.revert" => "Revert Changes",
+        "menu.close_tab" => "Close Tab (Ctrl+W)",
+        "menu.close_all_tabs" => "Close All Tabs",
+        "menu.exit" => "Exit (Alt+F4)",
+
+        "menu.auto_layout" => "Auto Layout Graph",
+        "menu.expand_all_params" => "Expand All Parameters",
+        "menu.collapse_all_params" => "Collapse All Parameters",
+        "menu.knife_mode" => "Toggle Knife Tool",
+        "menu.delete_selected" => "Delete Selected Node (Delete)",
+
+        "menu.select_all" => "Select All Nodes (Ctrl+A)",
+        "menu.deselect_all" => "Deselect (Esc)",
+        "menu.select_actions" => "Select All Action Nodes",
+        "menu.select_switches" => "Select All Switch Nodes",
+        "menu.select_queries" => "Select All Query Nodes",
+        "menu.select_subflows" => "Select All SubFlow Nodes",
+        "menu.select_entries" => "Select All EntryPoint Nodes",
+
+        "menu.view_welcome" => "Welcome Launcher",
+        "menu.view_flowchart" => "Flowchart Canvas",
+        "menu.view_code_editor" => "Code Editor",
+        "menu.view_actors" => "Actor Manager",
+        "menu.view_events" => "Event Manager",
+        "menu.view_json" => "JSON Viewer",
+        "menu.toggle_sidebar" => "Toggle Sidebar",
+        "menu.toggle_inspector" => "Toggle Inspector",
+        "menu.toggle_perf" => "Toggle Extreme Perf Mode",
+        "menu.fit_view" => "Fit / Center View",
+        "menu.zoom_in" => "Zoom In",
+        "menu.zoom_out" => "Zoom Out",
+        "menu.reset_zoom" => "Reset Zoom (100%)",
+
+        "menu.shortcuts" => "Keyboard Shortcuts",
+        "menu.evfl_spec" => "EVFL Core Specification",
+        "menu.switch_lang" => "Switch Language (EN / 中)",
+        "menu.about" => "About ZEvent Studio",
+        "menu.about_info" => "ZEvent Studio - GPU-Accelerated EVFL Nodeflow & Logic Editor",
+        "menu.shortcuts_info" => "Shortcuts: Ctrl+S Save | Ctrl+N New | Ctrl+O Open | Wheel Zoom | Drag Pan | Double-Click Add Node",
+
         // ---------------- 顶部工具栏 (Toolbar) ----------------
         "toolbar.auto_layout" => "Auto Layout",
         "toolbar.expand_params" => "Expand Params",
