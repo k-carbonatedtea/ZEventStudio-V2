@@ -25,19 +25,31 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
         }
     }
 
-    // 4. 标签页右键菜单拦截 (Esc 关闭)
+    // 4. 快捷键: Ctrl+Q 退出软件
+    if event.keystroke.modifiers.control && event.keystroke.key == "q" {
+        let allow_exit = state.request_exit_application();
+        if allow_exit {
+            state.should_quit_app = true;
+        }
+        return true;
+    }
+
+    // 5. 标签页右键菜单拦截 (Esc 关闭)
     if state.tab_context_menu.is_some() && event.keystroke.key == "escape" {
         state.tab_context_menu = None;
         return true;
     }
 
-    // 5. 未保存修改确认模态框键盘事件拦截 (Esc 取消, Enter 保存并关闭)
+    // 6. 未保存修改确认模态框键盘事件拦截 (Esc 取消, Enter 保存并关闭)
     if state.unsaved_changes_modal.is_some() {
         if event.keystroke.key == "escape" {
             state.cancel_unsaved_changes_modal();
             return true;
         } else if event.keystroke.key == "enter" {
-            state.confirm_save_and_close_tab();
+            let should_quit = state.confirm_save_and_close_tab();
+            if should_quit {
+                state.should_quit_app = true;
+            }
             return true;
         }
         return false;

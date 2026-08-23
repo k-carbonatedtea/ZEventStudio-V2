@@ -126,6 +126,9 @@ impl Render for AppView {
         }
 
         let state = self.model.read(cx);
+        if state.should_quit_app {
+            cx.quit();
+        }
         let current_fps = self.fps;
         let current_frame_time = self.frame_time_ms;
         let current_tab = state.current_tab;

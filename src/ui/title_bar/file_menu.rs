@@ -16,6 +16,7 @@ pub fn render_file_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
     let model_revert = model.clone();
     let model_close_tab = model.clone();
     let model_close_all = model.clone();
+    let model_exit = model.clone();
 
     let label_new = state.t("menu.new_flow").to_string();
     let label_open_file = state.t("menu.open_file").to_string();
@@ -40,6 +41,7 @@ pub fn render_file_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
             let m_revert = model_revert.clone();
             let m_close_tab = model_close_tab.clone();
             let m_close_all = model_close_all.clone();
+            let m_exit = model_exit.clone();
 
             menu.min_w(px(220.0))
                 .item(
@@ -112,8 +114,15 @@ pub fn render_file_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                 .separator()
                 .item(
                     PopupMenuItem::new(label_exit.clone())
-                        .on_click(move |_, window, _| {
-                            window.remove_window();
+                        .on_click(move |_, _window, cx| {
+                            m_exit.update(cx, |st, cx| {
+                                let allow_exit = st.request_exit_application();
+                                if allow_exit {
+                                    cx.quit();
+                                } else {
+                                    cx.notify();
+                                }
+                            });
                         }),
                 )
         })

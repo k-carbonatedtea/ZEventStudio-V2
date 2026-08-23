@@ -237,8 +237,12 @@ pub fn render_unsaved_changes_modal(
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     cx.stop_propagation();
                                     model_discard.update(cx, |st, cx| {
-                                        st.confirm_discard_and_close_tab();
-                                        cx.notify();
+                                        let should_quit = st.confirm_discard_and_close_tab();
+                                        if should_quit {
+                                            cx.quit();
+                                        } else {
+                                            cx.notify();
+                                        }
                                     });
                                 })
                                 .child(dont_save_text),
@@ -267,8 +271,12 @@ pub fn render_unsaved_changes_modal(
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     cx.stop_propagation();
                                     model_save.update(cx, |st, cx| {
-                                        st.confirm_save_and_close_tab();
-                                        cx.notify();
+                                        let should_quit = st.confirm_save_and_close_tab();
+                                        if should_quit {
+                                            cx.quit();
+                                        } else {
+                                            cx.notify();
+                                        }
                                     });
                                 })
                                 .child(save_text),

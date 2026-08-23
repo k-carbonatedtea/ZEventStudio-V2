@@ -66,26 +66,88 @@ impl AppState {
         self.close_document_tab(tab_id);
     }
 
-    /// 确认保存并关闭当前弹窗指定的标签页
-    pub fn confirm_save_and_close_tab(&mut self) {
+    /// 请求退出/关闭应用程序：
+    /// - 若无未保存修改，返回 true 允许立即关闭窗口退出；
+    /// - 若存在未保存修改，返回 false 拦截关闭，并弹出首个未保存标签页的确认提示框。
+    pub fn request_exit_application(&mut self) -> bool {
+        // 1. 同步当前活跃流程图状态并重算修改标记
+        if let Some(cur_id) = self.active_tab_id.as_deref() {
+            if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == cur_id) {
+                if tab.tab_kind == DocumentTabKind::Flowchart {
+                    tab.graph = Some(self.graph.clone());
+                }
+                tab.recompute_modified();
+            }
+        }
+
+        // 2. 检查所有已打开标签中是否有被修改的文件
+        if let Some(dirty_tab) = self.open_tabs.iter().find(|t| t.is_modified) {
+            self.is_exiting_app = true;
+            self.unsaved_changes_modal = Some(UnsavedChangesModalState {
+                tab_id: dirty_tab.id.clone(),
+                title: dirty_tab.title.clone(),
+                file_path: dirty_tab.file_path.clone(),
+            });
+            false
+        } else {
+            self.is_exiting_app = false;
+            true
+        }
+    }
+
+    /// 确认保存并关闭当前弹窗指定的标签页 (若处于退出流程，返回是否已处理完毕所有未保存项)
+    pub fn confirm_save_and_close_tab(&mut self) -> bool {
         if let Some(modal) = self.unsaved_changes_modal.take() {
             let tab_id = modal.tab_id.clone();
             if self.save_document_tab(&tab_id) {
                 self.close_document_tab(&tab_id);
             }
         }
+
+        if self.is_exiting_app {
+            if let Some(next_dirty) = self.open_tabs.iter().find(|t| t.is_modified) {
+                self.unsaved_changes_modal = Some(UnsavedChangesModalState {
+                    tab_id: next_dirty.id.clone(),
+                    title: next_dirty.title.clone(),
+                    file_path: next_dirty.file_path.clone(),
+                });
+                false
+            } else {
+                self.is_exiting_app = false;
+                true
+            }
+        } else {
+            false
+        }
     }
 
-    /// 确认不保存（放弃修改）并关闭当前弹窗指定的标签页
-    pub fn confirm_discard_and_close_tab(&mut self) {
+    /// 确认不保存（放弃修改）并关闭当前弹窗指定的标签页 (若处于退出流程，返回是否已处理完毕所有未保存项)
+    pub fn confirm_discard_and_close_tab(&mut self) -> bool {
         if let Some(modal) = self.unsaved_changes_modal.take() {
             self.close_document_tab(&modal.tab_id);
+        }
+
+        if self.is_exiting_app {
+            if let Some(next_dirty) = self.open_tabs.iter().find(|t| t.is_modified) {
+                self.unsaved_changes_modal = Some(UnsavedChangesModalState {
+                    tab_id: next_dirty.id.clone(),
+                    title: next_dirty.title.clone(),
+                    file_path: next_dirty.file_path.clone(),
+                });
+                false
+            } else {
+                self.is_exiting_app = false;
+                true
+            }
+        } else {
+            false
         }
     }
 
     /// 取消未保存弹窗
     pub fn cancel_unsaved_changes_modal(&mut self) {
         self.unsaved_changes_modal = None;
+        self.is_exiting_app = false;
     }
 
     /// 关闭指定文档标签页

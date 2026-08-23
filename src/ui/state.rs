@@ -113,6 +113,8 @@ pub struct AppState {
     pub tab_context_menu: Option<(String, (f32, f32))>,
     pub active_node_editor_modal: Option<crate::ui::canvas::NodeEditorModalState>,
     pub unsaved_changes_modal: Option<UnsavedChangesModalState>,
+    pub is_exiting_app: bool,
+    pub should_quit_app: bool,
 
     pub inspector_open: bool,
 
@@ -185,6 +187,8 @@ impl AppState {
             tab_context_menu: None,
             active_node_editor_modal: None,
             unsaved_changes_modal: None,
+            is_exiting_app: false,
+            should_quit_app: false,
             inspector_open: true,
 
             sidebar_open: true,

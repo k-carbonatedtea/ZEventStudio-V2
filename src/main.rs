@@ -68,8 +68,21 @@ fn main() {
             ..TitleBar::window_options()
         };
 
-        cx.open_window(window_options, |_, cx| {
-            cx.new(AppView::new)
+        cx.open_window(window_options, |window, cx| {
+            let app_view = cx.new(AppView::new);
+            let model = app_view.read(cx).model.clone();
+
+            window.on_window_should_close(cx, move |_window, cx| {
+                let model = model.clone();
+                let mut should_close = true;
+                model.update(cx, |st, cx| {
+                    should_close = st.request_exit_application();
+                    cx.notify();
+                });
+                should_close
+            });
+
+            app_view
         })
         .expect("Failed to open ZEvent Studio main window");
     });
