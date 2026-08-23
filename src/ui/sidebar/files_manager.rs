@@ -127,6 +127,7 @@ pub fn render_files_manager(
         .child(
             div()
                 .id("files_explorer_scroll_area")
+                .group("file-tree-container")
                 .flex_1()
                 .overflow_y_scroll()
                 .p_1()

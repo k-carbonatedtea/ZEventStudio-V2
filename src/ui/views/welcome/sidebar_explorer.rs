@@ -1,4 +1,4 @@
-﻿use gpui::*;
+use gpui::*;
 use crate::ui::components::render_file_tree;
 use crate::ui::state::AppState;
 use crate::ui::views::welcome::quick_tab::{pick_and_load_file, pick_and_load_mod_folder, pick_and_load_pack_file};
@@ -116,6 +116,7 @@ pub fn render_welcome_sidebar(
         .child(
             div()
                 .id("welcome_sidebar_scroll")
+                .group("file-tree-container")
                 .flex_1()
                 .overflow_y_scroll()
                 .flex()

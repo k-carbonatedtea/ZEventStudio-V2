@@ -49,7 +49,11 @@ fn render_file_tree_node(
     let path_clone = node.path.clone();
     let model_click = model.clone();
 
-    let pad_left = (level * 12 + 8) as f32;
+    let guide_line_color = if pal.is_dark {
+        hsla(215.0 / 360.0, 0.20, 0.40, 0.40)
+    } else {
+        hsla(215.0 / 360.0, 0.20, 0.60, 0.35)
+    };
 
     div()
         .flex()
@@ -61,7 +65,7 @@ fn render_file_tree_node(
                 .items_center()
                 .justify_between()
                 .h(px(26.0))
-                .pl(px(pad_left))
+                .pl_1()
                 .pr_2()
                 .rounded_md()
                 .cursor_pointer()
@@ -92,32 +96,54 @@ fn render_file_tree_node(
                     div()
                         .flex()
                         .items_center()
-                        .gap_1p5()
                         .flex_1()
                         .overflow_hidden()
                         .whitespace_nowrap()
-                        // 展开/折叠三角指示符
-                        .child(
+                        // 1. 层级缩进竖向引导提示线 (Indent Guides)
+                        .children((0..level).map(|_| {
                             div()
-                                .w(px(12.0))
-                                .text_size(px(10.0))
-                                .text_color(pal.text_secondary)
+                                .w(px(14.0))
+                                .h(px(26.0))
                                 .flex()
                                 .items_center()
                                 .justify_center()
+                                .flex_shrink_0()
+                                .child(
+                                    div()
+                                        .w(px(1.0))
+                                        .h(px(26.0))
+                                        .bg(rgba(0x00000000))
+                                        .group_hover("file-tree-container", move |s| {
+                                            s.bg(guide_line_color)
+                                        }),
+                                )
+                        }))
+                        // 2. 展开/折叠三角指示符 (Expand / Collapse Chevron)
+                        .child(
+                            div()
+                                .w(px(14.0))
+                                .h(px(26.0))
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .flex_shrink_0()
+                                .text_size(px(10.0))
+                                .text_color(pal.text_secondary)
                                 .child(if is_container {
                                     if is_expanded { "⌄" } else { "›" }
                                 } else {
                                     " "
                                 }),
                         )
-                        // 节点类型图标
+                        // 3. 节点类型图标 (Node Type Icon)
                         .child(
                             div()
+                                .mr_1()
                                 .text_size(px(12.0))
+                                .flex_shrink_0()
                                 .child(get_node_icon(node)),
                         )
-                        // 节点名称与修改标记
+                        // 4. 节点名称与修改标记 (Node Name & Dirty Indicator)
                         .child(
                             div()
                                 .flex()
