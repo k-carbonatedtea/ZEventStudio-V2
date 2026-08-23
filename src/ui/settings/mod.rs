@@ -1,11 +1,13 @@
 pub mod canvas_pane;
 pub mod general_pane;
+pub mod llm_pane;
 pub mod switch_pane;
 pub mod wiiu_pane;
 
 use gpui::*;
 use canvas_pane::render_canvas_pane;
 use general_pane::render_general_pane;
+use llm_pane::render_llm_pane;
 use switch_pane::render_switch_pane;
 use wiiu_pane::render_wiiu_pane;
 use crate::model::PlatformType;
@@ -128,6 +130,9 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
                                 .child(match current_tab {
                                     SettingsTab::General => {
                                         render_general_pane(state, model).into_any_element()
+                                    }
+                                    SettingsTab::Llm => {
+                                        render_llm_pane(state, model).into_any_element()
                                     }
                                     SettingsTab::Switch => {
                                         render_switch_pane(state, model).into_any_element()
@@ -263,6 +268,7 @@ fn render_settings_category_sidebar(
     let cur_plat = state.settings_draft.current_platform;
     let categories = [
         (SettingsTab::General, "⚙️", state.t("settings.tab_general"), false),
+        (SettingsTab::Llm, "✨", state.t("settings.tab_llm"), false),
         (
             SettingsTab::Switch,
             "🎮",

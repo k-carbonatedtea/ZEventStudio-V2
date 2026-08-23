@@ -41,6 +41,39 @@ pub struct SwitchPathSettings {
     pub export_dir: String,
 }
 
+/// LLM 服务提供商
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum LlmProvider {
+    #[default]
+    DeepSeek,
+    OpenAI,
+    Ollama,
+    Custom,
+}
+
+/// 大语言模型自动填充配置
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LlmSettings {
+    pub provider: LlmProvider,
+    pub api_key: String,
+    pub base_url: String,
+    pub model_name: String,
+    pub enable_auto_fill: bool,
+}
+
+impl Default for LlmSettings {
+    fn default() -> Self {
+        Self {
+            provider: LlmProvider::DeepSeek,
+            api_key: String::new(),
+            base_url: "https://api.deepseek.com".to_string(),
+            model_name: "deepseek-coder".to_string(),
+            enable_auto_fill: true,
+        }
+    }
+}
+
 /// 全局游戏与编辑器偏好设置
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GamePathSettings {
@@ -50,6 +83,8 @@ pub struct GamePathSettings {
     pub switch: SwitchPathSettings,
     #[serde(default)]
     pub custom_ai_dump_dir: String,
+    #[serde(default)]
+    pub llm: LlmSettings,
 }
 
 impl Default for GamePathSettings {
@@ -60,6 +95,7 @@ impl Default for GamePathSettings {
             wiiu: WiiUPathSettings::default(),
             switch: SwitchPathSettings::default(),
             custom_ai_dump_dir: String::new(),
+            llm: LlmSettings::default(),
         }
     }
 }

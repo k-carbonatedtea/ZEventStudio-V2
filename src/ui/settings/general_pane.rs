@@ -486,7 +486,7 @@ fn render_storage_cache_card(state: &AppState, model: &Entity<AppState>) -> impl
 }
 
 /// 渲染选项单选胶囊
-fn render_choice_chip<F>(
+pub fn render_choice_chip<F>(
     title: &'static str,
     is_active: bool,
     pal: &crate::ui::theme::ThemePalette,
