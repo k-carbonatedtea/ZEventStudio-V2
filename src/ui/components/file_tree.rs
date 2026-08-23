@@ -66,15 +66,15 @@ fn render_file_tree_node(
                 .rounded_md()
                 .cursor_pointer()
                 .bg(if is_selected {
-                    hsla(215.0 / 360.0, 0.50, 0.22, 1.0)
+                    rgb(0x1E2330) // 浅层蓝灰 Card / Hover
                 } else {
-                    hsla(0.0, 0.0, 0.0, 0.0)
+                    rgba(0x00000000)
                 })
                 .hover(|s| {
                     if is_selected {
-                        s.bg(hsla(215.0 / 360.0, 0.55, 0.26, 1.0))
+                        s.bg(rgb(0x252C3D))
                     } else {
-                        s.bg(hsla(240.0 / 360.0, 0.06, 0.14, 1.0))
+                        s.bg(rgb(0x1E2330))
                     }
                 })
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
@@ -101,7 +101,7 @@ fn render_file_tree_node(
                             div()
                                 .w(px(12.0))
                                 .text_size(px(10.0))
-                                .text_color(hsla(240.0 / 360.0, 0.05, 0.60, 1.0))
+                                .text_color(rgb(0x94A3B8))
                                 .flex()
                                 .items_center()
                                 .justify_center()
@@ -134,13 +134,13 @@ fn render_file_tree_node(
                                             FontWeight::NORMAL
                                         })
                                         .text_color(if is_modified {
-                                            hsla(45.0 / 360.0, 0.95, 0.55, 1.0) // 显眼黄色：已被修改
+                                            rgb(0xF59E0B) // 琥珀金：已被修改
                                         } else if is_selected {
-                                            hsla(0.0, 0.0, 1.0, 1.0)
+                                            rgb(0x00E5BA) // 遗迹青蓝：当前选中
                                         } else if is_container {
-                                            hsla(240.0 / 360.0, 0.05, 0.90, 1.0)
+                                            rgb(0xF1F5F9) // 亮白灰：目录
                                         } else {
-                                            hsla(240.0 / 360.0, 0.05, 0.75, 1.0)
+                                            rgb(0x94A3B8) // 蓝灰白：普通文件
                                         })
                                         .overflow_hidden()
                                         .whitespace_nowrap()
@@ -149,7 +149,7 @@ fn render_file_tree_node(
                                 .children(is_modified.then(|| {
                                     div()
                                         .text_size(px(8.0))
-                                        .text_color(hsla(45.0 / 360.0, 0.95, 0.55, 1.0))
+                                        .text_color(rgb(0xF59E0B))
                                         .child("●")
                                 })),
                         ),

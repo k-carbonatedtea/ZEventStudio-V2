@@ -12,16 +12,16 @@ pub fn render_welcome_main_content(
     div()
         .flex_1()
         .h_full()
-        .bg(hsla(240.0 / 360.0, 0.06, 0.06, 1.0))
+        .bg(rgb(0x0F1117)) // 深石墨黑 App Background
         .flex()
         .flex_col()
         // 顶部编辑器选项卡栏 (Tab Strip)
         .child(
             div()
                 .h(px(36.0))
-                .bg(hsla(240.0 / 360.0, 0.06, 0.05, 1.0))
+                .bg(rgb(0x161922)) // 蓝灰表面 Panel Surface
                 .border_b_1()
-                .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
+                .border_color(rgb(0x232838))
                 .flex()
                 .items_center()
                 .px_2()
@@ -29,15 +29,15 @@ pub fn render_welcome_main_content(
                     div()
                         .h(px(35.0))
                         .px_3()
-                        .bg(hsla(240.0 / 360.0, 0.06, 0.06, 1.0))
+                        .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
                         .border_t_2()
-                        .border_color(hsla(215.0 / 360.0, 0.80, 0.55, 1.0))
+                        .border_color(rgb(0x00E5BA)) // 遗迹青蓝 Primary Accent
                         .flex()
                         .items_center()
                         .gap_2()
                         .text_size(px(12.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(hsla(0.0, 0.0, 1.0, 0.95))
+                        .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
                         .child("📜")
                         .child(state.t("tab.welcome")),
                 ),
@@ -63,13 +63,13 @@ pub fn render_welcome_main_content(
                             div()
                                 .font_weight(FontWeight::BOLD)
                                 .text_size(px(26.0))
-                                .text_color(hsla(0.0, 0.0, 1.0, 0.98))
+                                .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
                                 .child(state.t("empty.title")),
                         )
                         .child(
                             div()
                                 .text_size(px(13.0))
-                                .text_color(hsla(215.0 / 360.0, 0.20, 0.60, 1.0))
+                                .text_color(rgb(0x94A3B8)) // 蓝灰白 Text Secondary
                                 .child(state.t("empty.subtitle")),
                         ),
                 )
@@ -119,7 +119,7 @@ fn render_start_actions_section(
             div()
                 .font_weight(FontWeight::BOLD)
                 .text_size(px(14.0))
-                .text_color(hsla(0.0, 0.0, 1.0, 0.90))
+                .text_color(rgb(0xF1F5F9))
                 .child(state.t("welcome.start_section")),
         )
         .child(render_link_action("📄", state.t("empty.newFlow"), Some("Ctrl+N"), move |cx| {
@@ -135,8 +135,6 @@ fn render_start_actions_section(
             pick_and_load_mod_folder(&model_folder, cx);
         }))
 }
-
-
 
 fn render_link_action<F>(
     icon_str: &'static str,
@@ -154,7 +152,7 @@ where
         .items_center()
         .justify_between()
         .py_1()
-        .hover(|s| s.text_color(hsla(215.0 / 360.0, 0.80, 0.70, 1.0)))
+        .hover(|s| s.text_color(rgb(0x00E5BA)))
         .cursor_pointer()
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             on_click(cx);
@@ -168,14 +166,14 @@ where
                 .child(
                     div()
                         .text_size(px(12.5))
-                        .text_color(hsla(215.0 / 360.0, 0.70, 0.65, 1.0))
+                        .text_color(rgb(0xF1F5F9))
                         .child(label_str),
                 ),
         )
         .children(shortcut.map(|sc| {
             div()
                 .text_size(px(11.0))
-                .text_color(hsla(215.0 / 360.0, 0.20, 0.50, 1.0))
+                .text_color(rgb(0x94A3B8))
                 .child(sc)
         }))
 }
@@ -200,15 +198,15 @@ fn render_recent_files_section(
                     div()
                         .font_weight(FontWeight::BOLD)
                         .text_size(px(14.0))
-                        .text_color(hsla(0.0, 0.0, 1.0, 0.90))
+                        .text_color(rgb(0xF1F5F9))
                         .child(state.t("welcome.recent_section")),
                 )
                 .children(if recent_count > 0 {
                     Some(
                         div()
                             .text_size(px(11.0))
-                            .text_color(hsla(0.0, 0.70, 0.60, 0.9))
-                            .hover(|s| s.text_color(hsla(0.0, 0.80, 0.70, 1.0)))
+                            .text_color(rgb(0xEF4444))
+                            .hover(|s| s.text_color(rgb(0xF87171)))
                             .cursor_pointer()
                             .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                 model_clear.update(cx, |st, cx| {
@@ -227,7 +225,7 @@ fn render_recent_files_section(
                 div()
                     .py_2()
                     .text_size(px(11.5))
-                    .text_color(hsla(215.0 / 360.0, 0.20, 0.50, 1.0))
+                    .text_color(rgb(0x94A3B8))
                     .child(state.t("empty.noRecentProjects")),
             )
         } else {
@@ -251,8 +249,10 @@ fn render_vs_recent_row(
         .flex()
         .items_center()
         .justify_between()
-        .py_1()
-        .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.12, 1.0)))
+        .py_1p5()
+        .px_2()
+        .rounded_md()
+        .hover(|s| s.bg(rgb(0x1E2330))) // 浅层蓝灰 Card / Hover
         .cursor_pointer()
 
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
@@ -273,19 +273,20 @@ fn render_vs_recent_row(
                 .flex()
                 .flex_col()
                 .gap_0p5()
-                .child(div().text_size(px(12.0)).font_weight(FontWeight::BOLD).text_color(hsla(215.0 / 360.0, 0.70, 0.65, 1.0)).child(item.name.clone()))
-                .child(div().text_size(px(10.5)).text_color(hsla(215.0 / 360.0, 0.20, 0.45, 1.0)).child(item.path.clone())),
+                .child(div().text_size(px(12.0)).font_weight(FontWeight::BOLD).text_color(rgb(0x00E5BA)).child(item.name.clone()))
+                .child(div().text_size(px(10.5)).text_color(rgb(0x94A3B8)).child(item.path.clone())),
         )
         .child(
             div()
                 .w(px(18.0))
                 .h(px(18.0))
                 .rounded_md()
-                .hover(|s| s.bg(hsla(0.0, 0.70, 0.35, 0.9)))
+                .hover(|s| s.bg(rgb(0xEF4444)).text_color(rgb(0xFFFFFF)))
                 .flex()
                 .items_center()
                 .justify_center()
                 .cursor_pointer()
+                .text_color(rgb(0x94A3B8))
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     cx.stop_propagation();
                     model_del.update(cx, |st, cx| {

@@ -19,9 +19,9 @@ pub fn render_graph_stats(state: &AppState) -> impl IntoElement {
             div()
                 .p_3()
                 .rounded_lg()
-                .bg(hsla(215.0 / 360.0, 0.35, 0.18, 0.95))
+                .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
                 .border_1()
-                .border_color(hsla(215.0 / 360.0, 0.45, 0.30, 1.0))
+                .border_color(rgb(0x2D3548))
                 .flex()
                 .flex_col()
                 .gap_1()
@@ -29,13 +29,13 @@ pub fn render_graph_stats(state: &AppState) -> impl IntoElement {
                     div()
                         .font_weight(FontWeight::BOLD)
                         .text_size(px(13.0))
-                        .text_color(rgb(0xffffff))
+                        .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
                         .child(state.graph.name.clone()),
                 )
                 .child(
                     div()
                         .text_size(px(10.5))
-                        .text_color(hsla(215.0 / 360.0, 0.25, 0.70, 1.0))
+                        .text_color(rgb(0x94A3B8)) // 蓝灰白 Text Secondary
                         .child(state.graph.description.clone()),
                 ),
         )
@@ -49,16 +49,16 @@ pub fn render_graph_stats(state: &AppState) -> impl IntoElement {
                     div()
                         .text_size(px(11.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(hsla(215.0 / 360.0, 0.2, 0.7, 1.0))
+                        .text_color(rgb(0xF1F5F9))
                         .child(state.t("inspector.topology_stats")),
                 )
                 .child(
                     div()
                         .p_2p5()
                         .rounded_lg()
-                        .bg(hsla(220.0 / 360.0, 0.25, 0.14, 1.0))
+                        .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
                         .border_1()
-                        .border_color(hsla(215.0 / 360.0, 0.25, 0.22, 1.0))
+                        .border_color(rgb(0x2D3548))
                         .flex()
                         .flex_col()
                         .gap_1p5()
@@ -74,9 +74,9 @@ pub fn render_graph_stats(state: &AppState) -> impl IntoElement {
             div()
                 .p_3()
                 .rounded_lg()
-                .bg(hsla(145.0 / 360.0, 0.25, 0.15, 0.8))
+                .bg(rgba(0x00e5ba15))
                 .border_1()
-                .border_color(hsla(145.0 / 360.0, 0.45, 0.30, 0.8))
+                .border_color(rgba(0x00e5ba40))
                 .flex()
                 .flex_col()
                 .gap_1()
@@ -84,26 +84,26 @@ pub fn render_graph_stats(state: &AppState) -> impl IntoElement {
                     div()
                         .font_weight(FontWeight::BOLD)
                         .text_size(px(11.5))
-                        .text_color(hsla(145.0 / 360.0, 0.8, 0.85, 1.0))
+                        .text_color(rgb(0x00E5BA)) // 遗迹青蓝 Primary Accent
                         .child(state.t("inspector.tips_title")),
                 )
                 .child(
                     div()
                         .text_size(px(10.5))
-                        .text_color(hsla(145.0 / 360.0, 0.4, 0.80, 1.0))
+                        .text_color(rgb(0x94A3B8))
                         .child(state.t("inspector.tip_entry_jump")),
                 )
                 .child(
                     div()
                         .text_size(px(10.5))
-                        .text_color(hsla(145.0 / 360.0, 0.4, 0.80, 1.0))
+                        .text_color(rgb(0x94A3B8))
                         .child(state.t("inspector.tip_pan_zoom")),
                 )
                 .child(
                     div()
                         .text_size(px(10.5))
-                        .text_color(hsla(145.0 / 360.0, 0.4, 0.80, 1.0))
-                        .child(state.t("inspector.tip_quick_add")),
+                        .text_color(rgb(0x94A3B8))
+                        .child(state.t("inspector.tip_quick_search")),
                 ),
         )
 }

@@ -29,7 +29,7 @@ pub fn render_flow_canvas(
         .flex_1()
         .size_full()
         .overflow_hidden()
-        .bg(hsla(240.0 / 360.0, 0.06, 0.09, 1.0))
+        .bg(rgb(0x0F1117)) // 深石墨黑 App Background
         .cursor(match &drag_state {
             DragState::PanCanvas { .. } => CursorStyle::ClosedHand,
             DragState::Connecting { .. } => CursorStyle::Crosshair,

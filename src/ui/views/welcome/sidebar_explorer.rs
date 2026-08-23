@@ -25,7 +25,9 @@ pub fn render_welcome_sidebar(
         .w(px(state.sidebar_width))
         .flex_shrink_0()
         .h_full()
-        .bg(hsla(240.0 / 360.0, 0.06, 0.07, 1.0))
+        .bg(rgb(0x161922)) // 蓝灰表面 Panel Surface
+        .border_r_1()
+        .border_color(rgb(0x232838))
         .overflow_hidden()
         .flex()
         .flex_col()
@@ -39,13 +41,13 @@ pub fn render_welcome_sidebar(
                 .items_center()
                 .justify_between()
                 .border_b_1()
-                .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
-                .bg(hsla(240.0 / 360.0, 0.06, 0.05, 1.0))
+                .border_color(rgb(0x232838))
+                .bg(rgb(0x161922))
                 .child(
                     div()
                         .text_size(px(11.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(hsla(240.0 / 360.0, 0.05, 0.80, 1.0))
+                        .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
                         .child(state.t("welcome.explorer")),
                 )
                 .child(
@@ -61,8 +63,8 @@ pub fn render_welcome_sidebar(
                                 .rounded_md()
                                 .cursor_pointer()
                                 .text_size(px(11.0))
-                                .text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0))
-                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0)).text_color(rgb(0xffffff)))
+                                .text_color(rgb(0x94A3B8))
+                                .hover(|s| s.bg(rgb(0x1E2330)).text_color(rgb(0xF1F5F9)))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     model_new.update(cx, |st, cx| {
                                         st.new_blank_flow();
@@ -79,8 +81,8 @@ pub fn render_welcome_sidebar(
                                 .rounded_md()
                                 .cursor_pointer()
                                 .text_size(px(11.0))
-                                .text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0))
-                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0)).text_color(rgb(0xffffff)))
+                                .text_color(rgb(0x94A3B8))
+                                .hover(|s| s.bg(rgb(0x1E2330)).text_color(rgb(0xF1F5F9)))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     model_refresh.update(cx, |st, cx| {
                                         st.reload_project();
@@ -97,8 +99,8 @@ pub fn render_welcome_sidebar(
                                 .rounded_md()
                                 .cursor_pointer()
                                 .text_size(px(11.0))
-                                .text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0))
-                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0)).text_color(rgb(0xffffff)))
+                                .text_color(rgb(0x94A3B8))
+                                .hover(|s| s.bg(rgb(0x1E2330)).text_color(rgb(0xF1F5F9)))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     model_collapse.update(cx, |st, cx| {
                                         st.collapse_all_tree_paths();
@@ -122,13 +124,13 @@ pub fn render_welcome_sidebar(
                     div()
                         .px_3()
                         .py_1p5()
-                        .bg(hsla(240.0 / 360.0, 0.06, 0.10, 1.0))
+                        .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
                         .flex()
                         .items_center()
                         .gap_1p5()
                         .text_size(px(11.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(hsla(0.0, 0.0, 1.0, 0.90))
+                        .text_color(rgb(0xF1F5F9))
                         .child("⌄")
                         .child(project_name),
                 )
@@ -147,7 +149,7 @@ pub fn render_welcome_sidebar(
                         .child(
                             div()
                                 .text_size(px(11.5))
-                                .text_color(hsla(240.0 / 360.0, 0.05, 0.65, 1.0))
+                                .text_color(rgb(0x94A3B8))
                                 .child(state.t("welcome.no_folder_hint")),
                         )
                         // 打开文件夹大按钮
@@ -157,8 +159,8 @@ pub fn render_welcome_sidebar(
                                 .py_2()
                                 .px_3()
                                 .rounded_md()
-                                .bg(hsla(215.0 / 360.0, 0.60, 0.35, 1.0))
-                                .hover(|s| s.bg(hsla(215.0 / 360.0, 0.70, 0.42, 1.0)))
+                                .bg(rgb(0x00E5BA)) // 遗迹青蓝 Primary Accent
+                                .hover(|s| s.opacity(0.90))
                                 .cursor_pointer()
                                 .flex()
                                 .items_center()
@@ -166,7 +168,7 @@ pub fn render_welcome_sidebar(
                                 .gap_2()
                                 .text_size(px(12.0))
                                 .font_weight(FontWeight::BOLD)
-                                .text_color(hsla(0.0, 0.0, 1.0, 1.0))
+                                .text_color(rgb(0x0F1117)) // 深石墨黑 App Background (高对比度文字)
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_mod_folder(&model_folder, cx);
                                 })
@@ -176,7 +178,7 @@ pub fn render_welcome_sidebar(
                         .child(
                             div()
                                 .text_size(px(10.5))
-                                .text_color(hsla(240.0 / 360.0, 0.05, 0.50, 1.0))
+                                .text_color(rgb(0x94A3B8))
                                 .child(state.t("welcome.open_folder_desc")),
                         )
                         // 打开 SARC 封包按钮
@@ -186,17 +188,17 @@ pub fn render_welcome_sidebar(
                                 .py_1p5()
                                 .px_3()
                                 .rounded_md()
-                                .bg(hsla(240.0 / 360.0, 0.06, 0.12, 1.0))
+                                .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
                                 .border_1()
-                                .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
-                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.18, 1.0)))
+                                .border_color(rgb(0x2D3548))
+                                .hover(|s| s.bg(rgb(0x252C3D)).border_color(rgb(0x00E5BA)))
                                 .cursor_pointer()
                                 .flex()
                                 .items_center()
                                 .justify_center()
                                 .gap_2()
                                 .text_size(px(11.5))
-                                .text_color(hsla(240.0 / 360.0, 0.05, 0.85, 1.0))
+                                .text_color(rgb(0xF1F5F9))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_pack_file(&model_pack, cx);
                                 })
@@ -210,17 +212,17 @@ pub fn render_welcome_sidebar(
                                 .py_1p5()
                                 .px_3()
                                 .rounded_md()
-                                .bg(hsla(240.0 / 360.0, 0.06, 0.12, 1.0))
+                                .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
                                 .border_1()
-                                .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
-                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.18, 1.0)))
+                                .border_color(rgb(0x2D3548))
+                                .hover(|s| s.bg(rgb(0x252C3D)).border_color(rgb(0x00E5BA)))
                                 .cursor_pointer()
                                 .flex()
                                 .items_center()
                                 .justify_center()
                                 .gap_2()
                                 .text_size(px(11.5))
-                                .text_color(hsla(240.0 / 360.0, 0.05, 0.85, 1.0))
+                                .text_color(rgb(0xF1F5F9))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_file(&model_file, cx);
                                 })

@@ -15,27 +15,27 @@ pub fn render_status_pill(
     // 动态 FPS 状态指示灯颜色
     let (fps_bg, fps_border, fps_dot) = if perf_mode {
         (
-            hsla(15.0 / 360.0, 0.65, 0.20, 0.95),
-            hsla(25.0 / 360.0, 0.95, 0.55, 1.0),
-            hsla(25.0 / 360.0, 1.0, 0.60, 1.0),
+            rgba(0xf59e0b25),
+            rgb(0xF59E0B),
+            rgb(0xF59E0B),
         )
     } else if fps >= 50.0 {
         (
-            hsla(145.0 / 360.0, 0.45, 0.16, 0.95),
-            hsla(145.0 / 360.0, 0.70, 0.45, 1.0),
-            hsla(145.0 / 360.0, 0.90, 0.60, 1.0),
+            rgba(0x00e5ba20),
+            rgba(0x00e5ba60),
+            rgb(0x00E5BA),
         )
     } else if fps >= 28.0 {
         (
-            hsla(45.0 / 360.0, 0.45, 0.16, 0.95),
-            hsla(45.0 / 360.0, 0.70, 0.45, 1.0),
-            hsla(45.0 / 360.0, 0.90, 0.60, 1.0),
+            rgba(0xf59e0b20),
+            rgba(0xf59e0b60),
+            rgb(0xF59E0B),
         )
     } else {
         (
-            hsla(0.0, 0.45, 0.16, 0.95),
-            hsla(0.0, 0.70, 0.45, 1.0),
-            hsla(0.0, 0.90, 0.60, 1.0),
+            rgba(0xef444420),
+            rgba(0xef444460),
+            rgb(0xEF4444),
         )
     };
 
@@ -49,14 +49,14 @@ pub fn render_status_pill(
                 .px_2p5()
                 .py_1()
                 .rounded_lg()
-                .bg(hsla(220.0 / 360.0, 0.25, 0.16, 1.0))
+                .bg(rgb(0x1E2330))
                 .border_1()
-                .border_color(hsla(220.0 / 360.0, 0.25, 0.28, 1.0))
-                .hover(|s| s.bg(hsla(220.0 / 360.0, 0.35, 0.25, 1.0)))
+                .border_color(rgb(0x2D3548))
+                .hover(|s| s.bg(rgb(0x262E3F)).text_color(rgb(0xF1F5F9)))
                 .cursor_pointer()
                 .text_size(px(11.0))
                 .font_weight(FontWeight::BOLD)
-                .text_color(hsla(215.0 / 360.0, 0.25, 0.85, 1.0))
+                .text_color(rgb(0x94A3B8))
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     model_lang.update(cx, |st, cx| {
                         st.lang = st.lang.toggle();

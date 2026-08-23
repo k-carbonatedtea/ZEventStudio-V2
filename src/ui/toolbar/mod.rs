@@ -20,9 +20,9 @@ pub fn render_toolbar(
         .items_center()
         .justify_between()
         .px_4()
-        .bg(hsla(220.0 / 360.0, 0.35, 0.11, 0.98))
+        .bg(rgb(0x161922))
         .border_b_1()
-        .border_color(hsla(220.0 / 360.0, 0.25, 0.20, 1.0))
+        .border_color(rgb(0x232838))
         .shadow_md()
         // Left: Logo & Active Graph Tag
         .child(render_branding(state))

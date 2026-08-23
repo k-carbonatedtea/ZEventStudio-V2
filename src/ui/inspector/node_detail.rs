@@ -65,7 +65,7 @@ pub fn render_node_detail(
                     div()
                         .text_size(px(11.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(hsla(215.0 / 360.0, 0.2, 0.7, 1.0))
+                        .text_color(rgb(0xF1F5F9))
                         .child(state.t("inspector.position")),
                 )
                 .child(
@@ -78,9 +78,11 @@ pub fn render_node_detail(
                                 .px_2p5()
                                 .py_1()
                                 .rounded_md()
-                                .bg(hsla(220.0 / 360.0, 0.25, 0.15, 1.0))
+                                .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
+                                .border_1()
+                                .border_color(rgb(0x2D3548))
                                 .text_size(px(11.0))
-                                .text_color(rgb(0xffffff))
+                                .text_color(rgb(0xF1F5F9))
                                 .child(format!("X: {:.1}", node.pos.0)),
                         )
                         .child(
@@ -89,9 +91,11 @@ pub fn render_node_detail(
                                 .px_2p5()
                                 .py_1()
                                 .rounded_md()
-                                .bg(hsla(220.0 / 360.0, 0.25, 0.15, 1.0))
+                                .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
+                                .border_1()
+                                .border_color(rgb(0x2D3548))
                                 .text_size(px(11.0))
-                                .text_color(rgb(0xffffff))
+                                .text_color(rgb(0xF1F5F9))
                                 .child(format!("Y: {:.1}", node.pos.1)),
                         ),
                 ),
@@ -106,7 +110,7 @@ pub fn render_node_detail(
                     div()
                         .text_size(px(11.0))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(hsla(215.0 / 360.0, 0.2, 0.7, 1.0))
+                        .text_color(rgb(0xF1F5F9))
                         .child(format!(
                             "{} ({}: {} / {}: {})",
                             state.t("inspector.ports_summary"),
@@ -127,9 +131,11 @@ pub fn render_node_detail(
                                 .px_2()
                                 .py_1()
                                 .rounded_md()
-                                .bg(hsla(145.0 / 360.0, 0.25, 0.15, 0.8))
+                                .bg(rgba(0x00e5ba18))
+                                .border_1()
+                                .border_color(rgba(0x00e5ba40))
                                 .text_size(px(10.5))
-                                .text_color(hsla(145.0 / 360.0, 0.7, 0.8, 1.0))
+                                .text_color(rgb(0x00E5BA)) // 遗迹青蓝 Primary Accent
                                 .child(format!("{}: {}", state.t("inspector.port_in"), p.name))
                         }))
                         .children(node.outputs.iter().map(|p| {
@@ -137,9 +143,11 @@ pub fn render_node_detail(
                                 .px_2()
                                 .py_1()
                                 .rounded_md()
-                                .bg(hsla(45.0 / 360.0, 0.25, 0.15, 0.8))
+                                .bg(rgba(0xf59e0b18))
+                                .border_1()
+                                .border_color(rgba(0xf59e0b40))
                                 .text_size(px(10.5))
-                                .text_color(hsla(45.0 / 360.0, 0.7, 0.8, 1.0))
+                                .text_color(rgb(0xF59E0B)) // 琥珀金 Secondary Accent
                                 .child(format!("{}: {}", state.t("inspector.port_out"), p.name))
                         })),
                 ),
@@ -152,15 +160,15 @@ pub fn render_node_detail(
                 .mt_2()
                 .py_2()
                 .rounded_lg()
-                .bg(hsla(0.0, 0.6, 0.35, 0.9))
-                .hover(|s| s.bg(hsla(0.0, 0.75, 0.45, 1.0)))
+                .bg(rgb(0xEF4444))
+                .hover(|s| s.opacity(0.9))
                 .cursor_pointer()
                 .flex()
                 .items_center()
                 .justify_center()
                 .text_size(px(12.0))
                 .font_weight(FontWeight::BOLD)
-                .text_color(rgb(0xffffff))
+                .text_color(rgb(0xFFFFFF))
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     model_del.update(cx, |st, cx| {
                         st.delete_selected_node();

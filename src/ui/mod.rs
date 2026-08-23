@@ -9,10 +9,13 @@ pub mod state;
 pub mod state_editor;
 pub mod state_project;
 pub mod tab_bar;
+pub mod theme;
 pub mod title_bar;
 pub mod toolbar;
 pub mod views;
 
 pub use app::AppView;
 pub use tab_bar::render_document_tab_bar;
+#[allow(unused_imports)]
+pub use theme::ThemeColors;
 pub use title_bar::render_title_bar;

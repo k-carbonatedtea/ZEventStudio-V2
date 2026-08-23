@@ -23,9 +23,9 @@ pub fn render_document_tab_bar(
         .id("document_tab_bar")
         .h(px(32.0))
         .w_full()
-        .bg(hsla(240.0 / 360.0, 0.06, 0.09, 1.0)) // 高级深黑底色
+        .bg(rgb(0x161922)) // 蓝灰表面 Panel Surface
         .border_b_1()
-        .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
+        .border_color(rgb(0x232838))
         .flex()
         .items_center()
         .justify_between()
@@ -53,10 +53,10 @@ pub fn render_document_tab_bar(
                         .justify_center()
                         .cursor_pointer()
                         .text_size(px(12.0))
-                        .text_color(hsla(240.0 / 360.0, 0.05, 0.55, 1.0))
+                        .text_color(rgb(0x94A3B8))
                         .hover(|s| {
-                            s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
-                                .text_color(hsla(0.0, 0.0, 1.0, 1.0))
+                            s.bg(rgb(0x1E2330))
+                                .text_color(rgb(0xF1F5F9))
                         })
 
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {

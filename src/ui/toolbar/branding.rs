@@ -21,13 +21,14 @@ pub fn render_branding(state: &AppState) -> impl IntoElement {
                 .child(
                     div()
                         .text_size(px(18.0))
+                        .text_color(rgb(0xF59E0B))
                         .child("⚡"),
                 )
                 .child(
                     div()
                         .font_weight(FontWeight::EXTRA_BOLD)
                         .text_size(px(15.0))
-                        .text_color(rgb(0xffffff))
+                        .text_color(rgb(0xF1F5F9))
                         .child("NodeFlow Studio"),
                 ),
         )
@@ -37,10 +38,12 @@ pub fn render_branding(state: &AppState) -> impl IntoElement {
                 .px_2()
                 .py_0p5()
                 .rounded_md()
-                .bg(hsla(215.0 / 360.0, 0.35, 0.20, 1.0))
+                .bg(rgb(0x1E2330))
+                .border_1()
+                .border_color(rgb(0x2D3548))
                 .text_size(px(10.5))
                 .font_weight(FontWeight::BOLD)
-                .text_color(hsla(215.0 / 360.0, 0.5, 0.85, 1.0))
+                .text_color(rgb(0x94A3B8))
                 .child("EVFL Studio"),
         )
         // Active Graph Summary Badge
@@ -52,12 +55,12 @@ pub fn render_branding(state: &AppState) -> impl IntoElement {
                 .px_2p5()
                 .py_1()
                 .rounded_md()
-                .bg(hsla(145.0 / 360.0, 0.35, 0.18, 0.95))
+                .bg(rgba(0x00e5ba18))
                 .border_1()
-                .border_color(hsla(145.0 / 360.0, 0.6, 0.40, 1.0))
+                .border_color(rgba(0x00e5ba50))
                 .text_size(px(11.0))
                 .font_weight(FontWeight::BOLD)
-                .text_color(hsla(145.0 / 360.0, 0.8, 0.90, 1.0))
+                .text_color(rgb(0x00E5BA))
                 .child(format!(
                     "{} ({} {} / {} {})",
                     state.graph.name, node_count, node_label, edge_count, edge_label

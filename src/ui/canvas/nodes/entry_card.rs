@@ -31,18 +31,18 @@ pub fn render_entry_card(
 
     let (border_col, card_bg) = if ctx.is_selected {
         (
-            hsla(199.0 / 360.0, 0.98, 0.58, 1.0), // 选中极光亮青蓝 #38bdf8
-            hsla(170.0 / 360.0, 0.84, 0.35, 1.0),
+            rgb(0x00E5BA), // 核心选中高亮：遗迹青蓝 Primary Accent
+            rgb(0x00E5BA),
         )
     } else if is_on_active_path {
         (
-            hsla(45.0 / 360.0, 0.70, 0.42, 0.75), // 路径温和柔金
-            hsla(160.0 / 360.0, 0.84, 0.39, 1.0),
+            rgb(0xF59E0B), // 链路高亮：琥珀金 Secondary Accent
+            rgb(0x10B981),
         )
     } else {
         (
-            hsla(160.0 / 360.0, 0.84, 0.28, 1.0), // #059669
-            hsla(160.0 / 360.0, 0.84, 0.39, 1.0),
+            rgb(0x059669),
+            rgb(0x10B981),
         )
     };
 

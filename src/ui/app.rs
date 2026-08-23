@@ -180,9 +180,9 @@ impl Render for AppView {
             .flex()
             .flex_col()
             .size_full()
-            .bg(hsla(240.0 / 360.0, 0.06, 0.07, 1.0))
+            .bg(rgb(0x0F1117))
             .font_family(".SystemUIFont")
-            .text_color(rgb(0xffffff))
+            .text_color(rgb(0xF1F5F9))
             // 侧边栏拖拽调宽全局鼠标移动监听
             .on_mouse_move(move |e, _window, cx| {
                 let mx: f32 = e.position.x.into();

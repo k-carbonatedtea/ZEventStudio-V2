@@ -33,19 +33,19 @@ pub fn render_tab_item(
         .gap_2()
         .cursor_pointer()
         .bg(if is_active {
-            hsla(240.0 / 360.0, 0.06, 0.20, 1.0)
+            rgb(0x1E2330) // 浅层蓝灰 Card / Hover
         } else {
-            hsla(240.0 / 360.0, 0.06, 0.10, 0.6)
+            rgba(0x16192280)
         })
         .border_1()
         .border_color(if is_active {
-            hsla(215.0 / 360.0, 0.60, 0.45, 0.8)
+            rgb(0x00E5BA) // 遗迹青蓝 Primary Accent
         } else {
-            hsla(240.0 / 360.0, 0.06, 0.15, 0.5)
+            rgb(0x232838) // 蓝灰边框
         })
         .hover(|s| {
             if !is_active {
-                s.bg(hsla(240.0 / 360.0, 0.06, 0.15, 1.0))
+                s.bg(rgb(0x1E2330))
             } else {
                 s
             }
@@ -75,9 +75,9 @@ pub fn render_tab_item(
                     FontWeight::NORMAL
                 })
                 .text_color(if is_active {
-                    hsla(0.0, 0.0, 1.0, 1.0)
+                    rgb(0xF1F5F9) // 亮白灰 Text Primary
                 } else {
-                    hsla(240.0 / 360.0, 0.05, 0.70, 1.0)
+                    rgb(0x94A3B8) // 蓝灰白 Text Secondary
                 })
                 .child(tab.title.clone()),
         )
@@ -86,7 +86,7 @@ pub fn render_tab_item(
             div()
                 .size(px(6.5))
                 .rounded_full()
-                .bg(hsla(45.0 / 360.0, 0.95, 0.55, 1.0))
+                .bg(rgb(0xF59E0B)) // 琥珀金 Secondary Accent
         }))
         // 关闭按钮 ✕
         .child(

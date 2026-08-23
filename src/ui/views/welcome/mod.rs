@@ -19,7 +19,7 @@ pub fn render_welcome_view(
     div()
         .id("welcome_view_root")
         .size_full()
-        .bg(hsla(240.0 / 360.0, 0.06, 0.05, 1.0))
+        .bg(rgb(0x0F1117)) // 深石墨黑 App Background
         .flex()
         // 左侧：资源管理器面板 (VS Code Explorer Sidebar)
         .child(render_welcome_sidebar(state, model))

@@ -27,8 +27,8 @@ pub fn draw_canvas_grid(
         grid_step /= 2.0;
     }
 
-    let dot_color = hsla(240.0 / 360.0, 0.05, 0.22, 0.40);
-    let major_dot_color = hsla(240.0 / 360.0, 0.10, 0.35, 0.65);
+    let dot_color = rgba(0x94a3b820);
+    let major_dot_color = rgba(0x00e5ba35);
 
     let start_x = ((pan.0 % grid_step) + grid_step) % grid_step + orig_x;
     let start_y = ((pan.1 % grid_step) + grid_step) % grid_step + orig_y;

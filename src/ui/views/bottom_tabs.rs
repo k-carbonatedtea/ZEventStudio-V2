@@ -11,9 +11,9 @@ pub fn render_bottom_tabs(
     div()
         .w_full()
         .h(px(34.0))
-        .bg(hsla(220.0 / 360.0, 0.40, 0.08, 0.98))
+        .bg(rgb(0x161922)) // 蓝灰表面 Panel Surface
         .border_t_1()
-        .border_color(hsla(220.0 / 360.0, 0.25, 0.18, 1.0))
+        .border_color(rgb(0x232838))
         .flex()
         .items_center()
         .px_3()
@@ -62,25 +62,25 @@ fn render_bottom_tab_item(
         .py_1()
         .rounded_md()
         .bg(if is_active {
-            hsla(215.0 / 360.0, 0.45, 0.22, 1.0)
+            rgb(0x1E2330) // 浅层蓝灰 Card / Hover
         } else {
-            hsla(0.0, 0.0, 0.0, 0.0)
+            rgba(0x00000000)
         })
         .border_1()
         .border_color(if is_active {
-            hsla(215.0 / 360.0, 0.60, 0.45, 1.0)
+            rgb(0x00E5BA) // 遗迹青蓝 Primary Accent
         } else {
-            hsla(0.0, 0.0, 0.0, 0.0)
+            rgba(0x00000000)
         })
         .text_size(px(11.5))
         .font_weight(if is_active { FontWeight::BOLD } else { FontWeight::NORMAL })
         .text_color(if is_active {
-            hsla(0.0, 0.0, 1.0, 1.0)
+            rgb(0x00E5BA) // 遗迹青蓝 Primary Accent
         } else {
-            hsla(215.0 / 360.0, 0.20, 0.65, 1.0)
+            rgb(0x94A3B8) // 蓝灰白 Text Secondary
         })
         .cursor_pointer()
-        .hover(|s| s.bg(hsla(215.0 / 360.0, 0.30, 0.16, 1.0)))
+        .hover(|s| s.bg(rgb(0x1E2330)).text_color(rgb(0xF1F5F9)))
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             model_click.update(cx, |st, cx| {
                 st.current_tab = target_tab;

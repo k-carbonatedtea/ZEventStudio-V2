@@ -36,20 +36,20 @@ pub fn render_event_card(
 
     let (card_bg, card_border, is_border_thick) = if ctx.is_selected {
         (
-            hsla(215.0 / 360.0, 0.45, 0.13, 0.98), // 选中态：深蓝宝石流光底色
-            hsla(199.0 / 360.0, 0.98, 0.58, 1.0),  // 选中态：极光亮青蓝 2px 醒目边框 #38bdf8
+            rgb(0x1E2330), // 选中态：浅层蓝灰 Card / Hover
+            rgb(0x00E5BA), // 选中态：遗迹青蓝 2px 醒目边框 Primary Accent #00E5BA
             true,
         )
     } else if is_on_active_path {
         (
-            hsla(240.0 / 360.0, 0.06, 0.10, 0.98), // 链路节点：标准深色背景
-            hsla(45.0 / 360.0, 0.70, 0.42, 0.75),  // 链路节点：柔和细金线
+            rgb(0x161922), // 链路节点：蓝灰表面 Panel Surface
+            rgb(0xF59E0B), // 链路节点：琥珀金 Secondary Accent #F59E0B
             false,
         )
     } else {
         (
-            hsla(240.0 / 360.0, 0.06, 0.10, 0.98),
-            theme.border_color,
+            rgb(0x161922), // 标准节点底色：蓝灰表面 Panel Surface
+            rgb(0x232838), // 蓝灰边框
             false,
         )
     };
@@ -171,7 +171,7 @@ pub fn render_event_card(
                                     div()
                                         .font_weight(FontWeight::BOLD)
                                         .text_size(px(font_title))
-                                        .text_color(rgb(0xffffff))
+                                        .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
                                         .child(node.title.clone()),
                                 ),
                         )
@@ -184,7 +184,7 @@ pub fn render_event_card(
                                 .bg(theme.badge_bg)
                                 .text_size(px(font_badge * 0.9))
                                 .font_weight(FontWeight::BOLD)
-                                .text_color(rgb(0xffffff))
+                                .text_color(rgb(0xFFFFFF))
                                 .child(node.kind.display_name()),
                         ),
                 )
@@ -194,7 +194,7 @@ pub fn render_event_card(
                         .pt(px((3.0 * z).max(1.0)))
                         .font_weight(FontWeight::MEDIUM)
                         .text_size(px(font_sub))
-                        .text_color(hsla(215.0 / 360.0, 0.25, 0.85, 1.0))
+                        .text_color(rgb(0x94A3B8)) // 蓝灰白 Text Secondary
                         .child(sub.clone())
                 }))
                 // 3. 核心高频业务参数胶囊 / 完整参数列表

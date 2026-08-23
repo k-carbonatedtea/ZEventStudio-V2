@@ -23,8 +23,8 @@ pub fn render_title_bar(state: &AppState, model: &Entity<AppState>) -> impl Into
         .unwrap_or_else(|| "ZEvent Studio - GPU-Accelerated Nodeflow Editor".to_string());
 
     TitleBar::new()
-        .bg(hsla(220.0 / 360.0, 0.40, 0.08, 0.98))
-        .border_color(hsla(220.0 / 360.0, 0.25, 0.18, 1.0))
+        .bg(rgb(0x161922))
+        .border_color(rgb(0x232838))
         // 1. 左侧区域: 应用程序标识 (Logo) + 顶部核心菜单栏 (文件 / 编辑 / 选择 / 查看 / 帮助)
         .child(
             div()
@@ -43,22 +43,22 @@ pub fn render_title_bar(state: &AppState, model: &Entity<AppState>) -> impl Into
                             div()
                                 .size(px(18.0))
                                 .rounded_md()
-                                .bg(hsla(145.0 / 360.0, 0.85, 0.45, 0.20))
+                                .bg(rgba(0x00e5ba18))
                                 .border_1()
-                                .border_color(hsla(145.0 / 360.0, 0.90, 0.50, 0.50))
+                                .border_color(rgba(0x00e5ba40))
                                 .flex()
                                 .items_center()
                                 .justify_center()
                                 .text_size(px(10.5))
                                 .font_weight(FontWeight::BOLD)
-                                .text_color(hsla(145.0 / 360.0, 0.95, 0.60, 1.0))
+                                .text_color(rgb(0xF59E0B))
                                 .child("⚡"),
                         )
                         .child(
                             div()
                                 .text_size(px(12.0))
                                 .font_weight(FontWeight::BOLD)
-                                .text_color(hsla(0.0, 0.0, 0.95, 1.0))
+                                .text_color(rgb(0xF1F5F9))
                                 .child("ZEvent"),
                         ),
                 )
@@ -79,7 +79,7 @@ pub fn render_title_bar(state: &AppState, model: &Entity<AppState>) -> impl Into
                 .child(
                     div()
                         .text_size(px(11.5))
-                        .text_color(hsla(215.0 / 360.0, 0.15, 0.55, 1.0))
+                        .text_color(rgb(0x94A3B8))
                         .child(active_doc_name),
                 ),
         )

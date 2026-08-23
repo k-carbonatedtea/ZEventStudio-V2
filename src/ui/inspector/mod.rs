@@ -28,9 +28,9 @@ pub fn render_inspector(
         .h_full()
         .flex()
         .flex_col()
-        .bg(hsla(220.0 / 360.0, 0.35, 0.10, 0.98))
+        .bg(rgb(0x161922)) // 蓝灰表面 Panel Surface
         .border_l_1()
-        .border_color(hsla(220.0 / 360.0, 0.25, 0.20, 1.0))
+        .border_color(rgb(0x232838))
         // 1. 顶部 Header
         .child(
             div()
@@ -40,12 +40,12 @@ pub fn render_inspector(
                 .px_4()
                 .py_3()
                 .border_b_1()
-                .border_color(hsla(220.0 / 360.0, 0.25, 0.20, 1.0))
+                .border_color(rgb(0x232838))
                 .child(
                     div()
                         .font_weight(FontWeight::BOLD)
                         .text_size(px(13.0))
-                        .text_color(rgb(0xffffff))
+                        .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
                         .child(format!("⚙️ {}", state.t("inspector.title"))),
                 )
                 .child(
@@ -54,8 +54,10 @@ pub fn render_inspector(
                         .px_2()
                         .py_0p5()
                         .rounded_sm()
-                        .bg(hsla(215.0 / 360.0, 0.3, 0.25, 1.0))
-                        .text_color(hsla(215.0 / 360.0, 0.4, 0.85, 1.0))
+                        .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
+                        .border_1()
+                        .border_color(rgb(0x2D3548))
+                        .text_color(rgb(0x00E5BA)) // 遗迹青蓝 Primary Accent
                         .child(header_status_text),
                 ),
         )

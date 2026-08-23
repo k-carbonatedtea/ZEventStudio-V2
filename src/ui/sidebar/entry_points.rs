@@ -26,7 +26,7 @@ pub fn render_entry_point_list(
             div()
                 .text_size(px(11.0))
                 .font_weight(FontWeight::BOLD)
-                .text_color(hsla(215.0 / 360.0, 0.3, 0.70, 1.0))
+                .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
                 .child(format!("{} ({})", state.t("sidebar.entry_points_title"), entry_points.len())),
         )
         .children(entry_points.into_iter().map(|(id, title, _)| {
@@ -38,19 +38,19 @@ pub fn render_entry_point_list(
                 .p_2p5()
                 .rounded_lg()
                 .bg(if is_selected {
-                    hsla(0.0, 0.65, 0.25, 0.95)
+                    rgb(0x252C3D) // 选中高亮底色
                 } else {
-                    hsla(240.0 / 360.0, 0.06, 0.11, 1.0)
+                    rgb(0x1E2330) // 浅层蓝灰 Card / Hover
                 })
                 .border_1()
                 .border_color(if is_selected {
-                    hsla(0.0, 0.85, 0.55, 1.0)
+                    rgb(0x00E5BA) // 遗迹青蓝 Primary Accent
                 } else {
-                    hsla(240.0 / 360.0, 0.06, 0.20, 1.0)
+                    rgb(0x2D3548)
                 })
                 .hover(|s| {
                     if !is_selected {
-                        s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
+                        s.bg(rgb(0x252C3D)).border_color(rgb(0x00E5BA))
                     } else {
                         s
                     }
@@ -73,7 +73,7 @@ pub fn render_entry_point_list(
                             div()
                                 .font_weight(FontWeight::BOLD)
                                 .text_size(px(12.0))
-                                .text_color(rgb(0xffffff))
+                                .text_color(if is_selected { rgb(0x00E5BA) } else { rgb(0xF1F5F9) })
                                 .child(title),
                         )
                         .child(
@@ -81,10 +81,10 @@ pub fn render_entry_point_list(
                                 .px_1p5()
                                 .py_0p5()
                                 .rounded_sm()
-                                .bg(hsla(0.0, 0.6, 0.40, 0.6))
+                                .bg(rgba(0x00e5ba20))
                                 .text_size(px(9.5))
                                 .font_weight(FontWeight::MEDIUM)
-                                .text_color(rgb(0xffffff))
+                                .text_color(rgb(0x00E5BA))
                                 .child(state.t("sidebar.jump_focus")),
                         ),
                 )

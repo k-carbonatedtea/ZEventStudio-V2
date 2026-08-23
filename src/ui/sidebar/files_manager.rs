@@ -35,8 +35,8 @@ pub fn render_files_manager(
                 .items_center()
                 .justify_between()
                 .border_b_1()
-                .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
-                .bg(hsla(240.0 / 360.0, 0.06, 0.05, 1.0))
+                .border_color(rgb(0x232838))
+                .bg(rgb(0x161922)) // 蓝灰表面 Panel Surface
                 // 项目名 / 封包名
                 .child(
                     div()
@@ -48,7 +48,7 @@ pub fn render_files_manager(
                             div()
                                 .font_weight(FontWeight::BOLD)
                                 .text_size(px(12.5))
-                                .text_color(rgb(0xffffff))
+                                .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
                                 .overflow_hidden()
                                 .child(project_name),
                         ),
@@ -101,18 +101,18 @@ pub fn render_files_manager(
                         .px_2p5()
                         .py_1()
                         .rounded_lg()
-                        .bg(hsla(240.0 / 360.0, 0.06, 0.11, 1.0))
+                        .bg(rgb(0x0F1117))
                         .border_1()
-                        .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
+                        .border_color(rgb(0x232838))
                         .child(div().text_size(px(11.0)).child("🔍"))
                         .child(
                             div()
                                 .flex_1()
                                 .text_size(px(11.0))
                                 .text_color(if search_val.is_empty() {
-                                    hsla(240.0 / 360.0, 0.05, 0.55, 1.0)
+                                    rgb(0x94A3B8)
                                 } else {
-                                    hsla(0.0, 0.0, 1.0, 1.0)
+                                    rgb(0xF1F5F9)
                                 })
                                 .child(if search_val.is_empty() {
                                     state.t("explorer.search_placeholder").to_string()
@@ -140,7 +140,7 @@ pub fn render_files_manager(
                         .child(
                             div()
                                 .text_size(px(11.5))
-                                .text_color(hsla(240.0 / 360.0, 0.05, 0.65, 1.0))
+                                .text_color(rgb(0x94A3B8))
                                 .child(state.t("welcome.no_folder_hint")),
                         )
                         // 打开 Mod 目录按钮
@@ -150,8 +150,8 @@ pub fn render_files_manager(
                                 .py_2()
                                 .px_3()
                                 .rounded_md()
-                                .bg(hsla(215.0 / 360.0, 0.60, 0.35, 1.0))
-                                .hover(|s| s.bg(hsla(215.0 / 360.0, 0.70, 0.42, 1.0)))
+                                .bg(rgb(0x00E5BA)) // 遗迹青蓝 Primary Accent
+                                .hover(|s| s.opacity(0.90))
                                 .cursor_pointer()
                                 .flex()
                                 .items_center()
@@ -159,7 +159,7 @@ pub fn render_files_manager(
                                 .gap_2()
                                 .text_size(px(11.5))
                                 .font_weight(FontWeight::BOLD)
-                                .text_color(hsla(0.0, 0.0, 1.0, 1.0))
+                                .text_color(rgb(0x0F1117)) // 高对比度深底
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_mod_folder(&model_open_mod, cx);
                                 })
@@ -173,17 +173,17 @@ pub fn render_files_manager(
                                 .py_1p5()
                                 .px_3()
                                 .rounded_md()
-                                .bg(hsla(240.0 / 360.0, 0.06, 0.12, 1.0))
+                                .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
                                 .border_1()
-                                .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
-                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.18, 1.0)))
+                                .border_color(rgb(0x2D3548))
+                                .hover(|s| s.bg(rgb(0x252C3D)).border_color(rgb(0x00E5BA)))
                                 .cursor_pointer()
                                 .flex()
                                 .items_center()
                                 .justify_center()
                                 .gap_2()
                                 .text_size(px(11.5))
-                                .text_color(hsla(240.0 / 360.0, 0.05, 0.85, 1.0))
+                                .text_color(rgb(0xF1F5F9))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_pack_file(&model_open_pack, cx);
                                 })
@@ -197,17 +197,17 @@ pub fn render_files_manager(
                                 .py_1p5()
                                 .px_3()
                                 .rounded_md()
-                                .bg(hsla(240.0 / 360.0, 0.06, 0.12, 1.0))
+                                .bg(rgb(0x1E2330)) // 浅层蓝灰 Card / Hover
                                 .border_1()
-                                .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
-                                .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.18, 1.0)))
+                                .border_color(rgb(0x2D3548))
+                                .hover(|s| s.bg(rgb(0x252C3D)).border_color(rgb(0x00E5BA)))
                                 .cursor_pointer()
                                 .flex()
                                 .items_center()
                                 .justify_center()
                                 .gap_2()
                                 .text_size(px(11.5))
-                                .text_color(hsla(240.0 / 360.0, 0.05, 0.85, 1.0))
+                                .text_color(rgb(0xF1F5F9))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     pick_and_load_file(&model_open_file, cx);
                                 })
@@ -231,10 +231,10 @@ where
         .rounded_md()
         .cursor_pointer()
         .text_size(px(11.0))
-        .text_color(hsla(240.0 / 360.0, 0.05, 0.70, 1.0))
+        .text_color(rgb(0x94A3B8))
         .hover(|s| {
-            s.bg(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
-                .text_color(rgb(0xffffff))
+            s.bg(rgb(0x1E2330))
+                .text_color(rgb(0xF1F5F9))
         })
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             on_click(cx);

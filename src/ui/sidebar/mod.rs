@@ -38,15 +38,17 @@ pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoEl
         .h_full()
         .flex()
         .flex_col()
-        .bg(hsla(240.0 / 360.0, 0.06, 0.07, 1.0))
+        .bg(rgb(0x161922)) // 蓝灰表面 Panel Surface
+        .border_r_1()
+        .border_color(rgb(0x232838))
         .overflow_hidden()
         // 顶部 Tab 选项卡栏
         .child(
             div()
                 .flex()
                 .border_b_1()
-                .border_color(hsla(240.0 / 360.0, 0.06, 0.16, 1.0))
-                .bg(hsla(240.0 / 360.0, 0.06, 0.05, 1.0))
+                .border_color(rgb(0x232838))
+                .bg(rgb(0x161922))
                 .p_1()
                 .gap_1()
                 // 0. 资源
@@ -105,18 +107,18 @@ pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoEl
                             .px_2p5()
                             .py_1()
                             .rounded_lg()
-                            .bg(hsla(240.0 / 360.0, 0.06, 0.11, 1.0))
+                            .bg(rgb(0x0F1117))
                             .border_1()
-                            .border_color(hsla(240.0 / 360.0, 0.06, 0.20, 1.0))
+                            .border_color(rgb(0x232838))
                             .child(div().text_size(px(11.0)).child("🔍"))
                             .child(
                                 div()
                                     .flex_1()
                                     .text_size(px(11.0))
                                     .text_color(if search_val.is_empty() {
-                                        hsla(240.0 / 360.0, 0.05, 0.55, 1.0)
+                                        rgb(0x94A3B8)
                                     } else {
-                                        hsla(0.0, 0.0, 1.0, 1.0)
+                                        rgb(0xF1F5F9)
                                     })
                                     .child(if search_val.is_empty() {
                                         placeholder.to_string()
@@ -160,9 +162,9 @@ fn render_tab_btn(
         .py_1p5()
         .rounded_md()
         .bg(if is_active {
-            hsla(240.0 / 360.0, 0.06, 0.18, 1.0)
+            rgb(0x1E2330) // 浅层蓝灰 Card / Hover
         } else {
-            hsla(0.0, 0.0, 0.0, 0.0)
+            rgba(0x00000000)
         })
         .text_size(px(10.5))
         .font_weight(if is_active {
@@ -171,15 +173,15 @@ fn render_tab_btn(
             FontWeight::NORMAL
         })
         .text_color(if is_active {
-            hsla(0.0, 0.0, 1.0, 1.0)
+            rgb(0x00E5BA) // 遗迹青蓝 Primary Accent
         } else {
-            hsla(240.0 / 360.0, 0.05, 0.65, 1.0)
+            rgb(0x94A3B8) // 蓝灰白 Text Secondary
         })
         .flex()
         .items_center()
         .justify_center()
         .cursor_pointer()
-        .hover(|s| s.bg(hsla(240.0 / 360.0, 0.06, 0.13, 1.0)))
+        .hover(|s| s.bg(rgb(0x1E2330)).text_color(rgb(0xF1F5F9)))
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             model_click.update(cx, |st, cx| {
                 st.active_sidebar_tab = target_tab;
@@ -204,11 +206,11 @@ pub fn render_sidebar_resize_handle(
         .flex_shrink_0()
         .cursor_col_resize()
         .bg(if is_resizing {
-            hsla(215.0 / 360.0, 0.95, 0.60, 1.0)
+            rgb(0x00E5BA) // 遗迹青蓝 Primary Accent
         } else {
-            hsla(240.0 / 360.0, 0.06, 0.16, 1.0)
+            rgb(0x232838) // 蓝灰边框
         })
-        .hover(|s| s.bg(hsla(215.0 / 360.0, 0.95, 0.60, 1.0)))
+        .hover(|s| s.bg(rgb(0x00E5BA)))
         .on_mouse_down(MouseButton::Left, move |_e, _, cx| {
             cx.stop_propagation();
             model_down.update(cx, |st, cx| {
