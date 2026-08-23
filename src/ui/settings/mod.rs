@@ -48,6 +48,18 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
         })
         .on_mouse_down(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
+        })
+        .on_mouse_down(MouseButton::Right, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Right, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_click(|_, _, cx| {
+            cx.stop_propagation();
         });
 
     if is_maximized {
@@ -64,6 +76,7 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
         .id("settings_modal_overlay")
         .absolute()
         .inset_0()
+        .occlude()
         .bg(hsla(0.0, 0.0, 0.0, 0.68))
         .flex()
         .items_center()
@@ -73,10 +86,23 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
             cx.stop_propagation();
         })
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+            cx.stop_propagation();
             model_backdrop.update(cx, |st, cx| {
                 st.close_settings();
                 cx.notify();
             });
+        })
+        .on_mouse_down(MouseButton::Right, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Right, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_click(|_, _, cx| {
+            cx.stop_propagation();
         })
         .child(
             card

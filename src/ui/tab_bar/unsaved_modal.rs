@@ -29,6 +29,7 @@ pub fn render_unsaved_changes_modal(
         .id("unsaved_changes_modal_overlay")
         .absolute()
         .inset_0()
+        .occlude()
         .bg(hsla(0.0, 0.0, 0.0, 0.68))
         .flex()
         .items_center()
@@ -37,10 +38,23 @@ pub fn render_unsaved_changes_modal(
             cx.stop_propagation();
         })
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+            cx.stop_propagation();
             model_backdrop_cancel.update(cx, |st, cx| {
                 st.cancel_unsaved_changes_modal();
                 cx.notify();
             });
+        })
+        .on_mouse_down(MouseButton::Right, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Right, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_click(|_, _, cx| {
+            cx.stop_propagation();
         })
         .child(
             div()
@@ -58,6 +72,18 @@ pub fn render_unsaved_changes_modal(
                     cx.stop_propagation();
                 })
                 .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_down(MouseButton::Right, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_up(MouseButton::Left, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_up(MouseButton::Right, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_click(|_, _, cx| {
                     cx.stop_propagation();
                 })
                 // 1. 顶部标题栏

@@ -99,6 +99,7 @@ pub fn render_node_editor_modal(
         .id("node_editor_modal_overlay")
         .absolute()
         .inset_0()
+        .occlude()
         .bg(hsla(0.0, 0.0, 0.0, 0.70))
         .flex()
         .items_center()
@@ -107,13 +108,27 @@ pub fn render_node_editor_modal(
             cx.stop_propagation();
         })
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+            cx.stop_propagation();
             model_cancel.update(cx, |st, cx| {
                 st.close_node_editor();
                 cx.notify();
             });
         })
+        .on_mouse_down(MouseButton::Right, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Right, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_click(|_, _, cx| {
+            cx.stop_propagation();
+        })
         .child(
             div()
+                .id("node_editor_modal_card")
                 .w(px(760.0))
                 .max_h(px(720.0))
                 .bg(hsla(240.0 / 360.0, 0.06, 0.10, 0.98))
@@ -129,6 +144,18 @@ pub fn render_node_editor_modal(
                     cx.stop_propagation();
                 })
                 .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_down(MouseButton::Right, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_up(MouseButton::Left, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_up(MouseButton::Right, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_click(|_, _, cx| {
                     cx.stop_propagation();
                 })
                 // 1. 模态框顶部标题栏
