@@ -101,15 +101,20 @@ impl Default for GamePathSettings {
 }
 
 impl GamePathSettings {
-    /// 获取全局设置文件存储路径 (%APPDATA%/ZEventStudio/settings.json)
+    /// 获取全局设置文件存储路径 (%LOCALAPPDATA%/Zevent/settings.json)
     pub fn get_settings_file_path() -> Option<PathBuf> {
-        if let Ok(appdata) = std::env::var("APPDATA") {
-            let dir = PathBuf::from(appdata).join("ZEventStudio");
+        if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+            let dir = PathBuf::from(local_appdata).join("Zevent");
             let _ = fs::create_dir_all(&dir);
             return Some(dir.join("settings.json"));
         }
         if let Ok(userprofile) = std::env::var("USERPROFILE") {
-            let dir = PathBuf::from(userprofile).join(".zevent");
+            let dir = PathBuf::from(userprofile).join("AppData").join("Local").join("Zevent");
+            let _ = fs::create_dir_all(&dir);
+            return Some(dir.join("settings.json"));
+        }
+        if let Ok(home) = std::env::var("HOME") {
+            let dir = PathBuf::from(home).join(".config").join("Zevent");
             let _ = fs::create_dir_all(&dir);
             return Some(dir.join("settings.json"));
         }
