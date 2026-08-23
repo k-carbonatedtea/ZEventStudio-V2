@@ -152,21 +152,38 @@ impl Render for AppView {
             .bg(state.theme().app_bg)
             .font_family(".SystemUIFont")
             .text_color(state.theme().text_primary)
-            // 侧边栏拖拽调宽全局鼠标移动监听
+            // 侧边栏与弹窗拖拽调宽全局鼠标移动监听
             .on_mouse_move(move |e, _window, cx| {
                 let mx: f32 = e.position.x.into();
+                let my: f32 = e.position.y.into();
                 model_root_move.update(cx, |st, cx| {
                     if st.is_resizing_sidebar {
                         st.set_sidebar_width(mx);
                         cx.notify();
+                    } else if let Some(((sx, sy), (w0, h0))) = st.settings_resize_start {
+                        let delta_x = (mx - sx) * 2.0;
+                        let delta_y = (my - sy) * 2.0;
+                        st.settings_modal_width = (w0 + delta_x).clamp(680.0, 1600.0);
+                        st.settings_modal_height = (h0 + delta_y).clamp(460.0, 1000.0);
+                        st.settings_modal_maximized = false;
+                        cx.notify();
                     }
                 });
             })
-            // 侧边栏拖拽调宽鼠标释放
+            // 鼠标释放监听
             .on_mouse_up(MouseButton::Left, move |_e, _window, cx| {
                 model_root_up.update(cx, |st, cx| {
+                    let mut changed = false;
                     if st.is_resizing_sidebar {
                         st.is_resizing_sidebar = false;
+                        changed = true;
+                    }
+                    if st.settings_resize_start.is_some() {
+                        st.settings_resize_start = None;
+                        st.is_resizing_settings = false;
+                        changed = true;
+                    }
+                    if changed {
                         cx.notify();
                     }
                 });

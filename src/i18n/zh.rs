@@ -397,6 +397,7 @@ pub fn get_zh(key: &str) -> &str {
         "settings.tab_canvas" => "编辑器与画布",
         "settings.save_btn" => "保存并应用",
         "settings.cancel_btn" => "取消",
+        "settings.reset_defaults" => "恢复默认",
         "settings.active_badge" => "当前生效平台",
         "settings.set_active_btn" => "设为当前平台",
         "settings.browse_btn" => "浏览...",

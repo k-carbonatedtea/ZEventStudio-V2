@@ -401,6 +401,7 @@ pub fn get_en(key: &str) -> &str {
         "settings.tab_canvas" => "Editor & Canvas",
         "settings.save_btn" => "Save & Apply",
         "settings.cancel_btn" => "Cancel",
+        "settings.reset_defaults" => "Reset Defaults",
         "settings.active_badge" => "Active Platform",
         "settings.set_active_btn" => "Set as Active",
         "settings.browse_btn" => "Browse...",

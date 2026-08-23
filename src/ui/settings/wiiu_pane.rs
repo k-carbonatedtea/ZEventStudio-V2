@@ -46,71 +46,80 @@ fn render_wiiu_tip_bar(
         .flex()
         .items_center()
         .justify_between()
+        .gap_3()
         .child(
             div()
+                .flex_1()
+                .min_w_0()
                 .flex()
                 .items_center()
                 .gap_2()
-                .child(div().text_size(px(14.0)).child("💡"))
+                .child(div().flex_shrink_0().text_size(px(14.0)).child("💡"))
                 .child(
                     div()
+                        .flex_1()
+                        .min_w_0()
                         .text_size(px(11.5))
                         .text_color(pal.text_secondary)
                         .child(state.t("settings.wiiu_tip")),
                 ),
         )
         .child(
-            if is_active {
-                div()
-                    .px_2p5()
-                    .py_1()
-                    .rounded_md()
-                    .bg(pal.primary_accent.opacity(0.18))
-                    .border_1()
-                    .border_color(pal.primary_accent)
-                    .flex()
-                    .items_center()
-                    .gap_1p5()
-                    .child(
+            div()
+                .flex_shrink_0()
+                .child(
+                    if is_active {
                         div()
-                            .text_size(px(11.0))
-                            .font_weight(FontWeight::BOLD)
-                            .text_color(pal.primary_accent)
-                            .child("✓"),
-                    )
-                    .child(
+                            .px_3()
+                            .py_1()
+                            .rounded_md()
+                            .bg(pal.primary_accent.opacity(0.18))
+                            .border_1()
+                            .border_color(pal.primary_accent)
+                            .flex()
+                            .items_center()
+                            .gap_1p5()
+                            .child(
+                                div()
+                                    .text_size(px(11.0))
+                                    .font_weight(FontWeight::BOLD)
+                                    .text_color(pal.primary_accent)
+                                    .child("✓"),
+                            )
+                            .child(
+                                div()
+                                    .text_size(px(11.0))
+                                    .font_weight(FontWeight::BOLD)
+                                    .text_color(pal.primary_accent)
+                                    .child(state.t("settings.active_badge")),
+                            )
+                            .into_any_element()
+                    } else {
                         div()
-                            .text_size(px(11.0))
-                            .font_weight(FontWeight::BOLD)
-                            .text_color(pal.primary_accent)
-                            .child(state.t("settings.active_badge")),
-                    )
-                    .into_any_element()
-            } else {
-                div()
-                    .px_2p5()
-                    .py_1()
-                    .rounded_md()
-                    .bg(pal.app_bg)
-                    .border_1()
-                    .border_color(pal.panel_border)
-                    .cursor_pointer()
-                    .hover(|s| s.border_color(pal.primary_accent))
-                    .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                        cx.stop_propagation();
-                        model_set.update(cx, |st, cx| {
-                            st.settings_draft.current_platform = PlatformType::WiiU;
-                            cx.notify();
-                        });
-                    })
-                    .child(
-                        div()
-                            .text_size(px(11.0))
-                            .text_color(pal.text_secondary)
-                            .child(state.t("settings.set_active_btn")),
-                    )
-                    .into_any_element()
-            },
+                            .px_3()
+                            .py_1()
+                            .rounded_md()
+                            .bg(pal.app_bg)
+                            .border_1()
+                            .border_color(pal.panel_border)
+                            .cursor_pointer()
+                            .hover(|s| s.border_color(pal.primary_accent))
+                            .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                                cx.stop_propagation();
+                                model_set.update(cx, |st, cx| {
+                                    st.settings_draft.current_platform = PlatformType::WiiU;
+                                    cx.notify();
+                                });
+                            })
+                            .child(
+                                div()
+                                    .text_size(px(11.0))
+                                    .text_color(pal.text_secondary)
+                                    .child(state.t("settings.set_active_btn")),
+                            )
+                            .into_any_element()
+                    },
+                ),
         )
 }
 

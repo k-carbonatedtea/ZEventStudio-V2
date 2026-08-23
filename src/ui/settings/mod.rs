@@ -20,11 +20,45 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
 
     let pal = state.theme();
     let current_tab = state.settings_active_tab;
+    let is_maximized = state.settings_modal_maximized;
+    let modal_w = state.settings_modal_width;
+    let modal_h = state.settings_modal_height;
+
     let model_backdrop = model.clone();
-    let model_close = model.clone();
+    let model_header = model.clone();
     let model_reset = model.clone();
     let model_cancel = model.clone();
     let model_save = model.clone();
+    let model_resize = model.clone();
+
+    // 模态弹窗外层全屏半透明遮罩
+    let mut card = div()
+        .id("settings_modal_card")
+        .bg(pal.panel_surface)
+        .border_1()
+        .border_color(pal.panel_border)
+        .rounded_xl()
+        .shadow_2xl()
+        .flex()
+        .flex_col()
+        .overflow_hidden()
+        .relative()
+        .on_scroll_wheel(|_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_down(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        });
+
+    if is_maximized {
+        card = card.size_full();
+    } else {
+        card = card
+            .w(px(modal_w))
+            .h(px(modal_h))
+            .min_w(px(680.0))
+            .min_h(px(460.0));
+    }
 
     div()
         .id("settings_modal_overlay")
@@ -34,6 +68,7 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
         .flex()
         .items_center()
         .justify_center()
+        .p_4()
         .on_scroll_wheel(|_, _, cx| {
             cx.stop_propagation();
         })
@@ -44,26 +79,9 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
             });
         })
         .child(
-            div()
-                .id("settings_modal_card")
-                .w(px(780.0))
-                .h(px(540.0))
-                .bg(pal.panel_surface)
-                .border_1()
-                .border_color(pal.panel_border)
-                .rounded_xl()
-                .shadow_2xl()
-                .flex()
-                .flex_col()
-                .overflow_hidden()
-                .on_scroll_wheel(|_, _, cx| {
-                    cx.stop_propagation();
-                })
-                .on_mouse_down(MouseButton::Left, |_, _, cx| {
-                    cx.stop_propagation();
-                })
-                // 1. 顶部标题栏 (Header)
-                .child(render_settings_header(state, &model_close, &pal))
+            card
+                // 1. 顶部标题栏与窗口控制按钮 (Header)
+                .child(render_settings_header(state, &model_header, &pal, is_maximized))
                 // 2. 中间主体区 (左侧分类栏 + 右侧配置面板)
                 .child(
                     div()
@@ -76,6 +94,7 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
                         .child(
                             div()
                                 .flex_1()
+                                .min_w_0()
                                 .flex()
                                 .flex_col()
                                 .p_5()
@@ -96,13 +115,15 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
                                 }),
                         ),
                 )
-                // 3. 底部操作按钮栏 (Footer: 恢复默认 + 取消 + 保存并应用)
+                // 3. 底部操作按钮栏与角标拖拽缩放手柄 (Footer)
                 .child(render_settings_footer(
                     state,
                     &model_reset,
                     &model_cancel,
                     &model_save,
+                    &model_resize,
                     &pal,
+                    is_maximized,
                 )),
         )
         .into_any_element()
@@ -111,10 +132,12 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
 /// 渲染设置窗口标题栏
 fn render_settings_header(
     state: &AppState,
-    model_close: &Entity<AppState>,
+    model: &Entity<AppState>,
     pal: &crate::ui::theme::ThemePalette,
+    is_maximized: bool,
 ) -> impl IntoElement {
-    let m = model_close.clone();
+    let m_max = model.clone();
+    let m_close = model.clone();
 
     div()
         .h(px(52.0))
@@ -125,14 +148,19 @@ fn render_settings_header(
         .flex()
         .items_center()
         .justify_between()
+        .gap_3()
         .child(
             div()
+                .flex_1()
+                .min_w_0()
                 .flex()
                 .items_center()
                 .gap_2p5()
-                .child(div().text_size(px(17.0)).child("⚙️"))
+                .child(div().flex_shrink_0().text_size(px(17.0)).child("⚙️"))
                 .child(
                     div()
+                        .flex_1()
+                        .min_w_0()
                         .flex()
                         .flex_col()
                         .child(
@@ -152,22 +180,50 @@ fn render_settings_header(
         )
         .child(
             div()
-                .size(px(24.0))
-                .rounded_md()
+                .flex_shrink_0()
                 .flex()
                 .items_center()
-                .justify_center()
-                .cursor_pointer()
-                .text_size(px(12.0))
-                .text_color(pal.text_secondary)
-                .hover(|s| s.bg(pal.card_surface).text_color(pal.text_primary))
-                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                    m.update(cx, |st, cx| {
-                        st.close_settings();
-                        cx.notify();
-                    });
-                })
-                .child("✕"),
+                .gap_1p5()
+                // 最大化 / 还原按钮
+                .child(
+                    div()
+                        .size(px(26.0))
+                        .rounded_md()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .cursor_pointer()
+                        .text_size(px(12.0))
+                        .text_color(pal.text_secondary)
+                        .hover(|s| s.bg(pal.card_surface).text_color(pal.text_primary))
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            m_max.update(cx, |st, cx| {
+                                st.settings_modal_maximized = !st.settings_modal_maximized;
+                                cx.notify();
+                            });
+                        })
+                        .child(if is_maximized { "🗗" } else { "🗖" }),
+                )
+                // 关闭按钮
+                .child(
+                    div()
+                        .size(px(26.0))
+                        .rounded_md()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .cursor_pointer()
+                        .text_size(px(13.0))
+                        .text_color(pal.text_secondary)
+                        .hover(|s| s.bg(pal.card_surface).text_color(pal.text_primary))
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            m_close.update(cx, |st, cx| {
+                                st.close_settings();
+                                cx.notify();
+                            });
+                        })
+                        .child("✕"),
+                ),
         )
 }
 
@@ -197,7 +253,7 @@ fn render_settings_category_sidebar(
     ];
 
     div()
-        .w(px(200.0))
+        .w(px(215.0))
         .h_full()
         .bg(pal.app_bg)
         .border_r_1()
@@ -222,12 +278,13 @@ fn render_settings_category_sidebar(
 
             div()
                 .h(px(38.0))
-                .px_3()
+                .px_2p5()
                 .rounded_lg()
                 .bg(bg_color)
                 .flex()
                 .items_center()
                 .justify_between()
+                .gap_1p5()
                 .cursor_pointer()
                 .hover(|s| s.bg(pal.card_hover).text_color(pal.text_primary))
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
@@ -239,12 +296,16 @@ fn render_settings_category_sidebar(
                 })
                 .child(
                     div()
+                        .flex_1()
+                        .min_w_0()
                         .flex()
                         .items_center()
-                        .gap_2p5()
-                        .child(div().text_size(px(14.0)).child(icon))
+                        .gap_2()
+                        .child(div().flex_shrink_0().text_size(px(14.0)).child(icon))
                         .child(
                             div()
+                                .flex_1()
+                                .min_w_0()
                                 .font_weight(if is_selected {
                                     FontWeight::BOLD
                                 } else {
@@ -258,6 +319,7 @@ fn render_settings_category_sidebar(
                 .child(
                     if is_active_plat {
                         div()
+                            .flex_shrink_0()
                             .px_1p5()
                             .py_0p5()
                             .rounded_sm()
@@ -269,6 +331,7 @@ fn render_settings_category_sidebar(
                             .into_any_element()
                     } else if is_selected {
                         div()
+                            .flex_shrink_0()
                             .size(px(5.0))
                             .rounded_full()
                             .bg(pal.primary_accent)
@@ -280,17 +343,20 @@ fn render_settings_category_sidebar(
         }))
 }
 
-/// 渲染底部操作栏 (恢复默认 + 取消 + 保存并应用)
+/// 渲染底部操作栏 (恢复默认 + 取消 + 保存并应用 + 拖拽调宽手柄)
 fn render_settings_footer(
     state: &AppState,
     model_reset: &Entity<AppState>,
     model_cancel: &Entity<AppState>,
     model_save: &Entity<AppState>,
+    model_resize: &Entity<AppState>,
     pal: &crate::ui::theme::ThemePalette,
+    is_maximized: bool,
 ) -> impl IntoElement {
     let m_reset = model_reset.clone();
     let m_cancel = model_cancel.clone();
     let m_save = model_save.clone();
+    let m_resize = model_resize.clone();
 
     div()
         .h(px(52.0))
@@ -301,6 +367,7 @@ fn render_settings_footer(
         .flex()
         .items_center()
         .justify_between()
+        .relative()
         // 恢复默认按钮
         .child(
             div()
@@ -391,5 +458,38 @@ fn render_settings_footer(
                         .child(div().text_size(px(12.0)).child("💾"))
                         .child(state.t("settings.save_btn")),
                 ),
+        )
+        // 右下角弹窗缩放手柄 (非最大化状态下可自由拖拽调节窗口宽高)
+        .child(
+            if !is_maximized {
+                div()
+                    .absolute()
+                    .bottom_1()
+                    .right_1()
+                    .size(px(14.0))
+                    .flex()
+                    .items_end()
+                    .justify_end()
+                    .cursor_nwse_resize()
+                    .on_mouse_down(MouseButton::Left, move |e, _window, cx| {
+                        cx.stop_propagation();
+                        let mx: f32 = e.position.x.into();
+                        let my: f32 = e.position.y.into();
+                        m_resize.update(cx, |st, cx| {
+                            st.is_resizing_settings = true;
+                            st.settings_resize_start = Some(((mx, my), (st.settings_modal_width, st.settings_modal_height)));
+                            cx.notify();
+                        });
+                    })
+                    .child(
+                        div()
+                            .text_size(px(10.0))
+                            .text_color(pal.text_secondary.opacity(0.6))
+                            .child("⤡"),
+                    )
+                    .into_any_element()
+            } else {
+                div().into_any_element()
+            },
         )
 }
