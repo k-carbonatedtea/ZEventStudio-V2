@@ -1,5 +1,5 @@
 use gpui::*;
-use crate::ui::components::render_file_tree;
+use crate::ui::components::{render_file_search_and_sort_bar, render_file_tree};
 use crate::ui::state::AppState;
 use crate::ui::views::welcome::quick_tab::{pick_and_load_file, pick_and_load_mod_folder, pick_and_load_pack_file};
 
@@ -87,41 +87,9 @@ pub fn render_files_manager(
                         })),
                 ),
         )
-        // 2. 搜索过滤栏 (仅当有文件时显示)
+        // 2. 搜索与排序工具栏 (仅当有文件时显示)
         .children(has_tree.then(|| {
-            let search_val = state.file_search_query.clone();
-            div()
-                .px_2p5()
-                .pt_2()
-                .pb_1()
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap_2()
-                        .px_2p5()
-                        .py_1()
-                        .rounded_lg()
-                        .bg(pal.app_bg)
-                        .border_1()
-                        .border_color(pal.panel_border)
-                        .child(div().text_size(px(11.0)).child("🔍"))
-                        .child(
-                            div()
-                                .flex_1()
-                                .text_size(px(11.0))
-                                .text_color(if search_val.is_empty() {
-                                    pal.text_secondary
-                                } else {
-                                    pal.text_primary
-                                })
-                                .child(if search_val.is_empty() {
-                                    state.t("explorer.search_placeholder").to_string()
-                                } else {
-                                    search_val
-                                }),
-                        ),
-                )
+            render_file_search_and_sort_bar(state, model)
         }))
         // 3. 文件树主体列表 / 空白引导区
         .child(

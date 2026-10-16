@@ -1,5 +1,5 @@
 use gpui::*;
-use crate::ui::components::render_file_tree;
+use crate::ui::components::{render_file_search_and_sort_bar, render_file_tree};
 use crate::ui::state::AppState;
 use crate::ui::views::welcome::quick_tab::{pick_and_load_file, pick_and_load_mod_folder, pick_and_load_pack_file};
 
@@ -140,8 +140,16 @@ pub fn render_welcome_sidebar(
                     div()
                         .flex_1()
                         .overflow_hidden()
-                        .p_1()
-                        .child(render_file_tree(&state.file_tree, state, model, 0))
+                        .flex()
+                        .flex_col()
+                        .child(render_file_search_and_sort_bar(state, model))
+                        .child(
+                            div()
+                                .flex_1()
+                                .overflow_hidden()
+                                .p_1()
+                                .child(render_file_tree(&state.file_tree, state, model, 0)),
+                        )
                         .into_any_element()
                 } else {
                     // 无文件时展示快捷引导按钮

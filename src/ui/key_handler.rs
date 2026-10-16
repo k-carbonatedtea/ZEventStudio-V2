@@ -34,6 +34,19 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
         return true;
     }
 
+    // 4.1 快捷键: Ctrl+F 聚焦文件资源管理器搜索框
+    if event.keystroke.modifiers.control && event.keystroke.key == "f" {
+        state.file_search_focused = true;
+        state.file_tree_sort_menu_open = false;
+        return true;
+    }
+
+    // 4.2 文件树排序下拉菜单拦截 (Esc 关闭)
+    if state.file_tree_sort_menu_open && event.keystroke.key == "escape" {
+        state.file_tree_sort_menu_open = false;
+        return true;
+    }
+
     // 5. 标签页右键菜单拦截 (Esc 关闭)
     if state.tab_context_menu.is_some() && event.keystroke.key == "escape" {
         state.tab_context_menu = None;
@@ -166,6 +179,16 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
             }
         }
         return should_notify;
+    }
+
+    // 6.5 文件树搜索输入框键盘输入拦截
+    if state.file_search_focused {
+        if event.keystroke.key == "escape" || event.keystroke.key == "enter" {
+            state.file_search_focused = false;
+            return true;
+        }
+        let (changed, _, _) = handle_text_key_event(&mut state.file_search_query, event);
+        return changed;
     }
 
     // 4. 角色与事件快速输入框键盘事件

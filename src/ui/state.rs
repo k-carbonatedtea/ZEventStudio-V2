@@ -83,6 +83,83 @@ pub enum ActiveSettingsField {
     AiDumpDir,
 }
 
+/// 文件资源管理器排序模式
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FileSortMode {
+    #[default]
+    NameAsc,       // 名称升序 (A → Z)
+    NameDesc,      // 名称降序 (Z → A)
+    FileType,      // 按文件类型
+    ModifiedFirst, // 已修改置顶
+}
+
+#[allow(dead_code)]
+impl FileSortMode {
+    pub fn label_key(&self) -> &'static str {
+        match self {
+            Self::NameAsc => "explorer.sort_name_asc",
+            Self::NameDesc => "explorer.sort_name_desc",
+            Self::FileType => "explorer.sort_type",
+            Self::ModifiedFirst => "explorer.sort_modified",
+        }
+    }
+
+    pub fn short_label(&self) -> &'static str {
+        match self {
+            Self::NameAsc => "A → Z",
+            Self::NameDesc => "Z → A",
+            Self::FileType => "类型",
+            Self::ModifiedFirst => "修改优先",
+        }
+    }
+
+    pub fn icon(&self) -> &'static str {
+        match self {
+            Self::NameAsc => "🔤",
+            Self::NameDesc => "🔤",
+            Self::FileType => "🏷️",
+            Self::ModifiedFirst => "📝",
+        }
+    }
+}
+
+/// 文件资源管理器类型筛选
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FileFilterType {
+    #[default]
+    All,        // 全部文件
+    EventFlow,  // 事件流 (.bfevfl, .evfl)
+    Msbt,       // 文本对话 (.msbt, .smsbt)
+    Param,      // 参数文件 (.byml, .bgyml, .aamp, ...)
+    Sarc,       // 归档封包 (.sarc, .pack, ...)
+    Modified,   // 仅已修改
+}
+
+#[allow(dead_code)]
+impl FileFilterType {
+    pub fn label_key(&self) -> &'static str {
+        match self {
+            Self::All => "explorer.filter_all",
+            Self::EventFlow => "explorer.filter_event",
+            Self::Msbt => "explorer.filter_msbt",
+            Self::Param => "explorer.filter_param",
+            Self::Sarc => "explorer.filter_sarc",
+            Self::Modified => "explorer.filter_modified",
+        }
+    }
+
+    pub fn icon(&self) -> &'static str {
+        match self {
+            Self::All => "📁",
+            Self::EventFlow => "⚡",
+            Self::Msbt => "💬",
+            Self::Param => "⚙️",
+            Self::Sarc => "🗃️",
+            Self::Modified => "●",
+        }
+    }
+}
+
 pub struct AppState {
     pub graph: Graph,
     pub pan: (f32, f32),
@@ -162,7 +239,6 @@ pub struct AppState {
 
     // 资源管理器与项目目录/封包状态
     pub project_path: Option<String>,
-    
     // 游戏 AI 定义缓存 (用于自动填充事件参数)
     #[allow(dead_code)]
     pub ai_cache_manager: crate::model::ai_def::AiCacheManager,
@@ -171,6 +247,11 @@ pub struct AppState {
     pub expanded_tree_paths: std::collections::HashSet<String>,
     pub selected_file_path: Option<String>,
     pub file_search_query: String,
+    pub file_search_focused: bool,
+    pub file_search_case_sensitive: bool,
+    pub file_tree_filter_type: FileFilterType,
+    pub file_sort_mode: FileSortMode,
+    pub file_tree_sort_menu_open: bool,
     pub file_tree_scroll_handle: gpui::UniformListScrollHandle,
 
     // 多文档标签页状态 (Document Tabs)
@@ -261,6 +342,11 @@ impl AppState {
             expanded_tree_paths: std::collections::HashSet::new(),
             selected_file_path: None,
             file_search_query: String::new(),
+            file_search_focused: false,
+            file_search_case_sensitive: false,
+            file_tree_filter_type: FileFilterType::All,
+            file_sort_mode: FileSortMode::NameAsc,
+            file_tree_sort_menu_open: false,
             file_tree_scroll_handle: gpui::UniformListScrollHandle::new(),
         };
 
