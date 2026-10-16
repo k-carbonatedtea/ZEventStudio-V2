@@ -160,6 +160,15 @@ impl FileFilterType {
     }
 }
 
+/// 活动栏功能面板枚举 (Activity Bar Tabs)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ActivityBarTab {
+    #[default]
+    Explorer,      // 资源管理器
+    Search,        // 全局搜索
+    SourceControl, // 源文件管理
+}
+
 pub struct AppState {
     pub graph: Graph,
     pub pan: (f32, f32),
@@ -253,6 +262,17 @@ pub struct AppState {
     pub file_sort_mode: FileSortMode,
     pub file_tree_sort_menu_open: bool,
     pub file_tree_scroll_handle: gpui::UniformListScrollHandle,
+
+    // 活动栏当前功能 (Activity Bar: 资源管理器, 搜索, 源文件管理)
+    pub active_activity_tab: ActivityBarTab,
+    pub global_search_query: String,
+    pub global_search_focused: bool,
+    pub global_search_case_sensitive: bool,
+    pub global_search_whole_word: bool,
+    pub global_search_use_regex: bool,
+    pub global_search_include: String,
+    pub global_search_exclude: String,
+    pub global_search_show_filters: bool,
 
     // 多文档标签页状态 (Document Tabs)
     pub open_tabs: Vec<crate::model::OpenDocumentTab>,
@@ -348,6 +368,15 @@ impl AppState {
             file_sort_mode: FileSortMode::NameAsc,
             file_tree_sort_menu_open: false,
             file_tree_scroll_handle: gpui::UniformListScrollHandle::new(),
+            active_activity_tab: ActivityBarTab::Explorer,
+            global_search_query: String::new(),
+            global_search_focused: false,
+            global_search_case_sensitive: false,
+            global_search_whole_word: false,
+            global_search_use_regex: false,
+            global_search_include: String::new(),
+            global_search_exclude: String::new(),
+            global_search_show_filters: false,
         };
 
         state.fit_view();

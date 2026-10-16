@@ -1,10 +1,49 @@
 use gpui::*;
 use crate::ui::components::{render_file_search_and_sort_bar, render_file_tree};
-use crate::ui::state::AppState;
+use crate::ui::sidebar::{render_activity_bar, render_search_panel, render_source_control_panel};
+use crate::ui::state::{ActivityBarTab, AppState};
 use crate::ui::views::welcome::quick_tab::{pick_and_load_file, pick_and_load_mod_folder, pick_and_load_pack_file};
 
-/// 渲染 VS Code 风格的左侧「资源管理器」侧边栏面板
+/// 渲染 VS Code 风格的左侧功能侧边栏面板 (垂直活动栏 + 资源管理器/搜索/源文件管理)
 pub fn render_welcome_sidebar(
+    state: &AppState,
+    model: &Entity<AppState>,
+) -> impl IntoElement {
+    let pal = state.theme();
+    let current_activity = state.active_activity_tab;
+    let sidebar_open = state.sidebar_open;
+
+    div()
+        .flex()
+        .h_full()
+        // 1. 最左侧垂直活动栏 (48px)
+        .child(render_activity_bar(state, model))
+        // 2. 侧边栏主体面板 (仅展开时显示)
+        .children(sidebar_open.then(|| {
+            div()
+                .w(px(state.sidebar_width))
+                .flex_shrink_0()
+                .h_full()
+                .bg(pal.panel_surface)
+                .border_r_1()
+                .border_color(pal.panel_border)
+                .overflow_hidden()
+                .child(match current_activity {
+                    ActivityBarTab::Explorer => {
+                        render_welcome_explorer_content(state, model).into_any_element()
+                    }
+                    ActivityBarTab::Search => {
+                        render_search_panel(state, model).into_any_element()
+                    }
+                    ActivityBarTab::SourceControl => {
+                        render_source_control_panel(state, model).into_any_element()
+                    }
+                })
+        }))
+}
+
+/// 渲染启动页资源管理器面板内容
+fn render_welcome_explorer_content(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
@@ -23,12 +62,7 @@ pub fn render_welcome_sidebar(
         .unwrap_or_else(|| state.t("welcome.no_folder").to_string());
 
     div()
-        .w(px(state.sidebar_width))
-        .flex_shrink_0()
-        .h_full()
-        .bg(pal.panel_surface) // 蓝灰表面 Panel Surface
-        .border_r_1()
-        .border_color(pal.panel_border)
+        .size_full()
         .overflow_hidden()
         .flex()
         .flex_col()

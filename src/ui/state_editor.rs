@@ -475,4 +475,92 @@ impl AppState {
             }
         }
     }
+
+    /// 同步当前活跃文档的修改状态并重算 is_modified
+    pub fn sync_active_tab_modified(&mut self) {
+        if let Some(cur_id) = self.active_tab_id.as_deref() {
+            if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == cur_id) {
+                if tab.tab_kind == DocumentTabKind::Flowchart {
+                    tab.graph = Some(self.graph.clone());
+                }
+                tab.recompute_modified();
+            }
+        }
+    }
+
+    /// 获取当前所有已修改（未保存）标签页的数量
+    pub fn modified_tabs_count(&self) -> usize {
+        self.open_tabs.iter().filter(|t| t.is_modified).count()
+    }
+
+    /// 保存所有包含未保存修改的文档标签页，返回成功保存的文件数量
+    pub fn save_all_modified_documents(&mut self) -> usize {
+        self.sync_active_tab_modified();
+        let dirty_ids: Vec<String> = self
+            .open_tabs
+            .iter()
+            .filter(|t| t.is_modified)
+            .map(|t| t.id.clone())
+            .collect();
+
+        let mut saved_count = 0;
+        for tid in &dirty_ids {
+            if self.save_document_tab(tid) {
+                saved_count += 1;
+            }
+        }
+
+        if saved_count > 0 {
+            self.toast = Some(Toast::success(format!("{} ({} 项)", self.t("toast.save_success"), saved_count)));
+        }
+        saved_count
+    }
+
+    /// 放弃指定文档标签页的所有未保存修改
+    pub fn discard_document_changes(&mut self, tab_id: &str) {
+        let is_active = self.active_tab_id.as_deref() == Some(tab_id);
+        let mut reverted_graph = None;
+
+        if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
+            match tab.tab_kind {
+                DocumentTabKind::Flowchart => {
+                    if let Some(ref orig) = tab.original_graph {
+                        tab.graph = Some(orig.clone());
+                        reverted_graph = Some(orig.clone());
+                    }
+                    tab.is_modified = false;
+                }
+                DocumentTabKind::CodeEditor => {
+                    if let Some(ref mut code) = tab.code_state {
+                        code.revert();
+                    }
+                    tab.is_modified = false;
+                }
+            }
+        }
+
+        if is_active {
+            if let Some(g) = reverted_graph {
+                self.graph = g;
+                self.fit_view();
+            }
+        }
+
+        self.toast = Some(Toast::info(self.t("toast.revert_success")));
+    }
+
+    /// 放弃所有文档标签页的未保存修改
+    pub fn discard_all_modified_documents(&mut self) {
+        let dirty_ids: Vec<String> = self
+            .open_tabs
+            .iter()
+            .filter(|t| t.is_modified)
+            .map(|t| t.id.clone())
+            .collect();
+
+        for tid in dirty_ids {
+            self.discard_document_changes(&tid);
+        }
+    }
 }
+

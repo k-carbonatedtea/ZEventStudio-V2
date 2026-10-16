@@ -24,8 +24,8 @@ pub fn render_welcome_view(
         .flex()
         // 左侧：资源管理器面板 (VS Code Explorer Sidebar)
         .child(render_welcome_sidebar(state, model))
-        // 侧边栏宽度拖拽调整手柄
-        .child(render_sidebar_resize_handle(state, model))
+        // 侧边栏宽度拖拽调整手柄 (仅当侧边栏展开时显示)
+        .children(state.sidebar_open.then(|| render_sidebar_resize_handle(state, model)))
         // 右侧：欢迎主内容编辑区 (VS Code Welcome Editor Area)
         .child(render_welcome_main_content(state, model))
 }

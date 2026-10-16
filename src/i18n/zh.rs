@@ -481,6 +481,25 @@ pub fn get_zh(key: &str) -> &str {
         "settings.status_bar_title" => "状态栏性能监控",
         "settings.status_bar_desc" => "在顶部工具栏常驻显示实时 FPS 帧率与渲染耗时",
 
+        // ---------------- 垂直活动栏与功能面板 (Activity Bar & Panels) ----------------
+        "activity_bar.explorer" => "资源管理器 (Ctrl+Shift+E)",
+        "activity_bar.search" => "全局搜索 (Ctrl+Shift+F)",
+        "activity_bar.source_control" => "源文件管理 (Ctrl+Shift+G)",
+        "activity_bar.settings" => "首选项设置",
+
+        "search.title" => "搜索",
+        "search.placeholder" => "在项目中搜索文件与内容...",
+        "search.filters_hint" => "过滤包含与排除模式 (区分大小写 / 全字匹配)",
+        "search.empty_hint" => "输入关键字在当前项目中搜索文件与内容",
+        "search.shortcut_hint" => "支持快捷键 Ctrl+Shift+F 快速唤醒搜索",
+        "search.no_match" => "未找到匹配项",
+        "search.results_found" => "匹配结果",
+
+        "source_control.title" => "源文件管理",
+        "source_control.changes" => "更改",
+        "source_control.no_changes" => "无未保存更改",
+        "source_control.all_saved_hint" => "当前所有打开的文件均已同步保存",
+
         _ => key,
     }
 }

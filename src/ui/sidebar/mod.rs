@@ -1,15 +1,22 @@
+pub mod activity_bar;
 pub mod actors_manager;
 pub mod entry_points;
 pub mod events_list;
 pub mod files_manager;
 pub mod node_palette;
+pub mod search_panel;
+pub mod source_control_panel;
+
+pub use activity_bar::render_activity_bar;
+pub use search_panel::render_search_panel;
+pub use source_control_panel::render_source_control_panel;
 
 use crate::ui::sidebar::actors_manager::render_actors_manager;
 use crate::ui::sidebar::entry_points::render_entry_point_list;
 use crate::ui::sidebar::events_list::render_events_list;
 use crate::ui::sidebar::files_manager::render_files_manager;
 use crate::ui::sidebar::node_palette::render_node_palette;
-use crate::ui::state::AppState;
+use crate::ui::state::{ActivityBarTab, AppState};
 use gpui::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -21,8 +28,45 @@ pub enum SidebarTab {
     Palette,
 }
 
-/// 渲染左侧导航侧边栏 (支持资源文件/流程入口/事件列表/角色管理/组件库)
+/// 渲染左侧导航侧边栏 (整合垂直活动栏与功能面板)
 pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
+    let pal = state.theme();
+    let current_activity = state.active_activity_tab;
+    let sidebar_open = state.sidebar_open;
+
+    div()
+        .flex()
+        .h_full()
+        // 1. 最左侧垂直活动栏 (48px)
+        .child(render_activity_bar(state, model))
+        // 2. 侧边栏主体面板 (仅在展开时显示)
+        .children(sidebar_open.then(|| {
+            div()
+                .w(px(state.sidebar_width))
+                .flex_shrink_0()
+                .h_full()
+                .flex()
+                .flex_col()
+                .bg(pal.panel_surface)
+                .border_r_1()
+                .border_color(pal.panel_border)
+                .overflow_hidden()
+                .child(match current_activity {
+                    ActivityBarTab::Explorer => {
+                        render_sidebar_explorer_content(state, model).into_any_element()
+                    }
+                    ActivityBarTab::Search => {
+                        render_search_panel(state, model).into_any_element()
+                    }
+                    ActivityBarTab::SourceControl => {
+                        render_source_control_panel(state, model).into_any_element()
+                    }
+                })
+        }))
+}
+
+/// 渲染侧边栏资源与事件流程图专属浏览器内容
+fn render_sidebar_explorer_content(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
     let pal = state.theme();
     let active_tab = state.active_sidebar_tab;
     let search_val = state.search_query.clone();
@@ -34,14 +78,10 @@ pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoEl
     let model_tab_pal = model.clone();
 
     div()
-        .w(px(state.sidebar_width))
-        .flex_shrink_0()
-        .h_full()
+        .size_full()
         .flex()
         .flex_col()
         .bg(pal.panel_surface)
-        .border_r_1()
-        .border_color(pal.panel_border)
         .overflow_hidden()
         // 顶部 Tab 选项卡栏
         .child(

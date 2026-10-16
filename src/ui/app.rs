@@ -119,7 +119,8 @@ impl Render for AppView {
 
         // 默认极速性能模式调度：活跃窗口高刷新流畅渲染，或文本框处于激活状态（用于闪烁光标动画）
         let has_active_field = state.active_settings_field != crate::ui::state::ActiveSettingsField::None
-            || state.file_search_focused;
+            || state.file_search_focused
+            || state.global_search_focused;
         if is_active || has_active_field {
             cx.on_next_frame(window, |_, _, cx| {
                 cx.notify();
@@ -222,7 +223,7 @@ impl Render for AppView {
                             .size_full()
                             .overflow_hidden()
                             .child(render_sidebar(state, &self.model))
-                            .child(crate::ui::sidebar::render_sidebar_resize_handle(state, &self.model))
+                            .children(state.sidebar_open.then(|| crate::ui::sidebar::render_sidebar_resize_handle(state, &self.model)))
                             .child(
                                 div()
                                     .flex_1()
@@ -260,7 +261,7 @@ impl Render for AppView {
                             .size_full()
                             .overflow_hidden()
                             .child(render_sidebar(state, &self.model))
-                            .child(crate::ui::sidebar::render_sidebar_resize_handle(state, &self.model))
+                            .children(state.sidebar_open.then(|| crate::ui::sidebar::render_sidebar_resize_handle(state, &self.model)))
                             .child(
                                 div()
                                     .flex_1()

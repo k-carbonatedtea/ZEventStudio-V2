@@ -486,6 +486,25 @@ pub fn get_en(key: &str) -> &str {
         "settings.status_bar_title" => "Status Bar Performance Monitor",
         "settings.status_bar_desc" => "Display realtime FPS and frame render time in the top toolbar",
 
+        // ---------------- Activity Bar & Functional Panels ----------------
+        "activity_bar.explorer" => "Explorer (Ctrl+Shift+E)",
+        "activity_bar.search" => "Global Search (Ctrl+Shift+F)",
+        "activity_bar.source_control" => "Source Control (Ctrl+Shift+G)",
+        "activity_bar.settings" => "Preferences & Settings",
+
+        "search.title" => "Search",
+        "search.placeholder" => "Search files and content in project...",
+        "search.filters_hint" => "Filter include and exclude patterns (Match Case / Whole Word)",
+        "search.empty_hint" => "Type keywords to search files and content across project",
+        "search.shortcut_hint" => "Press Ctrl+Shift+F to open search anytime",
+        "search.no_match" => "No matching results",
+        "search.results_found" => "Results Found",
+
+        "source_control.title" => "Source Control",
+        "source_control.changes" => "Changes",
+        "source_control.no_changes" => "No Unsaved Changes",
+        "source_control.all_saved_hint" => "All open files are currently saved",
+
         _ => key,
     }
 }

@@ -34,8 +34,37 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
         return true;
     }
 
-    // 4.1 快捷键: Ctrl+F 聚焦文件资源管理器搜索框
-    if event.keystroke.modifiers.control && event.keystroke.key == "f" {
+    // 4.1 快捷键: Ctrl+Shift+E 切换至资源管理器
+    if event.keystroke.modifiers.control && event.keystroke.modifiers.shift && event.keystroke.key == "e" {
+        state.active_activity_tab = crate::ui::state::ActivityBarTab::Explorer;
+        state.sidebar_open = true;
+        return true;
+    }
+
+    // 4.2 快捷键: Ctrl+Shift+F 切换至全局搜索并自动聚焦
+    if event.keystroke.modifiers.control && event.keystroke.modifiers.shift && event.keystroke.key == "f" {
+        state.active_activity_tab = crate::ui::state::ActivityBarTab::Search;
+        state.sidebar_open = true;
+        state.global_search_focused = true;
+        return true;
+    }
+
+    // 4.3 快捷键: Ctrl+Shift+G 切换至源文件管理
+    if event.keystroke.modifiers.control && event.keystroke.modifiers.shift && event.keystroke.key == "g" {
+        state.active_activity_tab = crate::ui::state::ActivityBarTab::SourceControl;
+        state.sidebar_open = true;
+        state.sync_active_tab_modified();
+        return true;
+    }
+
+    // 4.4 快捷键: Ctrl+B 切换侧边栏展开/折叠
+    if event.keystroke.modifiers.control && !event.keystroke.modifiers.shift && event.keystroke.key == "b" {
+        state.sidebar_open = !state.sidebar_open;
+        return true;
+    }
+
+    // 4.5 快捷键: Ctrl+F 聚焦文件资源管理器搜索框
+    if event.keystroke.modifiers.control && !event.keystroke.modifiers.shift && event.keystroke.key == "f" {
         state.file_search_focused = true;
         state.file_tree_sort_menu_open = false;
         return true;
@@ -188,6 +217,16 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
             return true;
         }
         let (changed, _, _) = handle_text_key_event(&mut state.file_search_query, event);
+        return changed;
+    }
+
+    // 6.6 全局搜索输入框键盘输入拦截
+    if state.global_search_focused {
+        if event.keystroke.key == "escape" || event.keystroke.key == "enter" {
+            state.global_search_focused = false;
+            return true;
+        }
+        let (changed, _, _) = handle_text_key_event(&mut state.global_search_query, event);
         return changed;
     }
 
