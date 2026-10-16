@@ -216,43 +216,7 @@ impl AppState {
             }
         }
 
-        // 2. 优先将 BAI Program 打开为节点流程图模式
-        if crate::model::is_baiprog_extension(&raw_name) || crate::model::is_baiprog_extension(path) {
-            match crate::model::baiprog::load_baiprog_from_bytes(&bytes, &raw_name) {
-                Ok(mut loaded_graph) => {
-                    loaded_graph.name = raw_name.clone();
-                    self.graph = loaded_graph.clone();
-
-                    let new_id = uuid::Uuid::new_v4().to_string();
-                    let new_tab = OpenDocumentTab::new(
-                        new_id.clone(),
-                        raw_name.clone(),
-                        path.to_string(),
-                        "baiprog".to_string(),
-                        Some(loaded_graph.clone()),
-                        Some(loaded_graph),
-                    );
-                    self.open_tabs.push(new_tab);
-                    self.active_tab_id = Some(new_id);
-
-                    let is_physical = !path.contains("//") && std::path::Path::new(path).exists();
-                    if is_physical {
-                        self.add_recent_project(raw_name.clone(), path.to_string(), "baiprog".to_string());
-                    }
-
-                    self.fit_view();
-                    self.current_tab = AppWorkspaceTab::Flowchart;
-                    self.toast = Some(Toast::success(format!("{} {}", self.t("toast.file_loaded"), raw_name)));
-                    return;
-                }
-                Err(err) => {
-                    self.toast = Some(Toast::error(format!("{} {}", self.t("toast.file_load_error"), err)));
-                    return;
-                }
-            }
-        }
-
-        // 3. 通用代码编辑器解析：支持 MSBT, BYML, AAMP, JSON, YAML, TXT 等任意可打开文件
+        // 2. 通用代码编辑器解析：支持 MSBT, BYML, AAMP, BAIPROG, JSON, YAML, TXT 等任意可打开文件
         match parse_file_to_code(&bytes, path) {
             Ok((code_text, format, endian)) => {
                 let code_state = CodeDocumentState::new(

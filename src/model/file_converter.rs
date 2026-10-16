@@ -39,11 +39,25 @@ pub fn parse_file_to_code(
     let decompressed = decompress_if_yaz0(data);
     let lower_path = file_path.to_lowercase();
 
-    // 1. AAMP 格式识别 (Magic: "AAMP")
+    // 1. AAMP / BAIPROG 二进制格式识别 (Magic: "AAMP")
     if decompressed.len() >= 4 && &decompressed[0..4] == b"AAMP" {
         let pio = ParameterIO::from_binary(&decompressed)
-            .map_err(|e| format!("解析 AAMP 失败: {:?}", e))?;
+            .map_err(|e| format!("解析 AAMP / BAIPROG 失败: {:?}", e))?;
         return Ok((pio.to_text(), CodeFormat::Aamp, CodeEndian::Little));
+    }
+
+    // 1.1 AAMP / BAIPROG 文本格式识别 (如以 !io 开头，或扩展名为 .baiprog / .sbaiprog / .aamp)
+    if lower_path.ends_with(".baiprog")
+        || lower_path.ends_with(".sbaiprog")
+        || lower_path.ends_with(".aamp")
+        || lower_path.ends_with(".bxml")
+        || lower_path.ends_with(".bactparam")
+    {
+        if let Ok(text) = String::from_utf8(decompressed.clone()) {
+            if text.trim_start().starts_with("!io") || ParameterIO::from_text(&text).is_ok() {
+                return Ok((text, CodeFormat::Aamp, CodeEndian::Little));
+            }
+        }
     }
 
     // 2. BYML / BGYML 格式识别 (Magic: "BY" 或 "YB")
@@ -215,5 +229,18 @@ mod tests {
         assert_eq!(fmt, CodeFormat::Msbt);
         assert_eq!(end, CodeEndian::Little);
         assert!(parsed_yaml.contains("entries"));
+    }
+
+    #[test]
+    fn test_baiprog_roundtrip() {
+        let pio = ParameterIO::new();
+        let aamp_src = pio.to_text();
+        let compiled = compile_code_to_bytes(&aamp_src, CodeFormat::Aamp, CodeEndian::Little, "Lynel.baiprog").unwrap();
+        assert!(!compiled.is_empty());
+        assert_eq!(&compiled[0..4], b"AAMP");
+
+        let (parsed_yaml, fmt, _) = parse_file_to_code(&compiled, "Lynel.baiprog").unwrap();
+        assert_eq!(fmt, CodeFormat::Aamp);
+        assert!(parsed_yaml.contains("param_root"));
     }
 }

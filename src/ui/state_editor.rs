@@ -286,7 +286,7 @@ impl AppState {
             (tab.tab_kind, tab.file_path.clone(), file_type, code_info, graph_to_save)
         };
 
-        let (tab_kind, file_path, file_type, code_info, graph_to_save) = tab_info;
+        let (tab_kind, file_path, _file_type, code_info, graph_to_save) = tab_info;
 
         match tab_kind {
             DocumentTabKind::Flowchart => {
@@ -298,13 +298,7 @@ impl AppState {
                     }
                 };
 
-                let is_bai = file_type == "baiprog" || crate::model::is_baiprog_extension(&file_path);
-                let compile_res = if is_bai {
-                    let is_text = file_path.ends_with(".txt") || file_path.ends_with(".yaml") || file_path.ends_with(".yml");
-                    crate::model::baiprog::save_baiprog_to_bytes(&target_graph, is_text)
-                } else {
-                    crate::model::evfl::save_bfevfl_to_bytes(&target_graph)
-                };
+                let compile_res = crate::model::evfl::save_bfevfl_to_bytes(&target_graph);
 
                 match compile_res {
                     Ok(bytes) => {

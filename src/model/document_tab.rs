@@ -75,10 +75,9 @@ impl OpenDocumentTab {
         }
         match self.file_type.to_lowercase().as_str() {
             "msbt" | "smsbt" => "💬",
-            "byml" | "bgyml" | "sbyml" | "aamp" | "bxml" | "baev" => "⚙️",
+            "byml" | "bgyml" | "sbyml" | "aamp" | "bxml" | "baev" | "baiprog" | "sbaiprog" => "⚙️",
             "json" => "{}",
             "bfevfl" | "evfl" => "⚡",
-            "baiprog" | "sbaiprog" => "🧠",
             "yaml" | "yml" => "📜",
             "txt" | "log" => "≡",
             "sarc" | "pack" | "sbeventpack" | "sbactorpack" | "ssarc" => "📦",

@@ -14,13 +14,11 @@ pub mod port;
 pub mod sarc_writer;
 pub mod settings;
 pub mod ai_def;
-pub mod baiprog;
 
 pub use bcml::import_bcml_paths;
 pub use settings::{GamePathSettings, PlatformType, RecentProjectItem};
 
 pub use actor::*;
-pub use baiprog::is_baiprog_extension;
 pub use code_document::CodeDocumentState;
 pub use document_tab::{DocumentTabKind, OpenDocumentTab};
 pub use edge::Edge;

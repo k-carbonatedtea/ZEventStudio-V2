@@ -312,6 +312,8 @@ fn get_node_icon_by_name(name: &str, is_dir: bool, is_sarc: bool) -> &'static st
             || lower.ends_with(".baglbl")
             || lower.ends_with(".bglcl")
             || lower.ends_with(".bactparam")
+            || lower.ends_with(".baiprog")
+            || lower.ends_with(".sbaiprog")
         {
             "⚙️"
         } else if lower.ends_with(".json") {
