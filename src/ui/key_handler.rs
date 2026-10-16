@@ -73,18 +73,6 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
         }
 
         match state.active_settings_field {
-            ActiveSettingsField::LlmBaseUrl => {
-                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.llm.base_url, event);
-                should_notify = changed;
-            }
-            ActiveSettingsField::LlmModelName => {
-                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.llm.model_name, event);
-                should_notify = changed;
-            }
-            ActiveSettingsField::LlmApiKey => {
-                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.llm.api_key, event);
-                should_notify = changed;
-            }
             ActiveSettingsField::SwitchGameDir => {
                 let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.switch.game_dir, event);
                 should_notify = changed;

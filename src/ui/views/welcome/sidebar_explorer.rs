@@ -118,7 +118,7 @@ pub fn render_welcome_sidebar(
                 .id("welcome_sidebar_scroll")
                 .group("file-tree-container")
                 .flex_1()
-                .overflow_y_scroll()
+                .overflow_hidden()
                 .flex()
                 .flex_col()
                 // 折叠头
@@ -138,6 +138,8 @@ pub fn render_welcome_sidebar(
                 )
                 .child(if has_tree {
                     div()
+                        .flex_1()
+                        .overflow_hidden()
                         .p_1()
                         .child(render_file_tree(&state.file_tree, state, model, 0))
                         .into_any_element()

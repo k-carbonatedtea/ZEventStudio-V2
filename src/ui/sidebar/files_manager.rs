@@ -129,7 +129,7 @@ pub fn render_files_manager(
                 .id("files_explorer_scroll_area")
                 .group("file-tree-container")
                 .flex_1()
-                .overflow_y_scroll()
+                .overflow_hidden()
                 .p_1()
                 .child(if has_tree {
                     render_file_tree(&state.file_tree, state, model, 0).into_any_element()

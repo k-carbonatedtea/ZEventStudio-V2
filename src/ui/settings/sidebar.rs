@@ -13,7 +13,7 @@ pub fn render_settings_category_sidebar(
     let cur_plat = state.settings_draft.current_platform;
     let categories = [
         (SettingsTab::General, "⚙️", state.t("settings.tab_general"), false),
-        (SettingsTab::Llm, "✨", state.t("settings.tab_llm"), false),
+        (SettingsTab::GameAi, "🤖", state.t("settings.tab_game_ai"), false),
         (
             SettingsTab::Switch,
             "🎮",

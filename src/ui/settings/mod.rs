@@ -2,8 +2,8 @@ pub mod canvas_helpers;
 pub mod canvas_pane;
 pub mod general_helpers;
 pub mod general_pane;
-pub mod llm_helpers;
-pub mod llm_pane;
+pub mod game_ai_helpers;
+pub mod game_ai_pane;
 pub mod switch_pane;
 pub mod wiiu_pane;
 pub mod header;
@@ -13,7 +13,7 @@ pub mod footer;
 use gpui::*;
 use canvas_pane::render_canvas_pane;
 use general_pane::render_general_pane;
-use llm_pane::render_llm_pane;
+use game_ai_pane::render_game_ai_pane;
 use switch_pane::render_switch_pane;
 use wiiu_pane::render_wiiu_pane;
 use header::render_settings_header;
@@ -202,8 +202,8 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
                                     SettingsTab::General => {
                                         render_general_pane(state, model).into_any_element()
                                     }
-                                    SettingsTab::Llm => {
-                                        render_llm_pane(state, model).into_any_element()
+                                    SettingsTab::GameAi => {
+                                        render_game_ai_pane(state, model).into_any_element()
                                     }
                                     SettingsTab::Switch => {
                                         render_switch_pane(state, model).into_any_element()

@@ -8,7 +8,7 @@ use crate::ui::state::AppState;
 pub enum SettingsTab {
     #[default]
     General,
-    Llm,
+    GameAi,
     Switch,
     WiiU,
     Canvas,

@@ -15,18 +15,13 @@ impl AppState {
                 self.project_name = Some(name.clone());
                 self.file_tree = nodes;
 
-                // 默认展开顶层前两级容器
+                // 默认展开顶层前几个容器，避免深层递归展开导致的卡顿
                 self.expanded_tree_paths.clear();
+                let mut expand_count = 0;
                 for node in &self.file_tree {
-                    if node.is_dir || node.is_sarc {
+                    if (node.is_dir || node.is_sarc) && expand_count < 15 {
                         self.expanded_tree_paths.insert(node.path.clone());
-                        if let Some(children) = &node.children {
-                            for child in children {
-                                if child.is_dir || child.is_sarc {
-                                    self.expanded_tree_paths.insert(child.path.clone());
-                                }
-                            }
-                        }
+                        expand_count += 1;
                     }
                 }
 

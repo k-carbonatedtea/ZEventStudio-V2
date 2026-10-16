@@ -73,9 +73,6 @@ pub struct UnsavedChangesModalState {
 pub enum ActiveSettingsField {
     #[default]
     None,
-    LlmBaseUrl,
-    LlmModelName,
-    LlmApiKey,
     SwitchGameDir,
     SwitchDlcDir,
     SwitchExportDir,
@@ -174,6 +171,7 @@ pub struct AppState {
     pub expanded_tree_paths: std::collections::HashSet<String>,
     pub selected_file_path: Option<String>,
     pub file_search_query: String,
+    pub file_tree_scroll_handle: gpui::UniformListScrollHandle,
 
     // 多文档标签页状态 (Document Tabs)
     pub open_tabs: Vec<crate::model::OpenDocumentTab>,
@@ -263,6 +261,7 @@ impl AppState {
             expanded_tree_paths: std::collections::HashSet::new(),
             selected_file_path: None,
             file_search_query: String::new(),
+            file_tree_scroll_handle: gpui::UniformListScrollHandle::new(),
         };
 
         state.fit_view();

@@ -34,6 +34,13 @@ pub fn is_sarc_extension(name: &str) -> bool {
 
 /// 从内存字节流中解析 SARC 内部文件树结构（支持多层嵌套解压）
 pub fn get_sarc_nodes(data: &[u8], base_path: &str) -> Vec<FileNode> {
+    get_sarc_nodes_impl(data, base_path, 0, 4)
+}
+
+fn get_sarc_nodes_impl(data: &[u8], base_path: &str, depth: usize, max_depth: usize) -> Vec<FileNode> {
+    if depth > max_depth {
+        return Vec::new();
+    }
     #[derive(Default)]
     struct TempNode {
         children: HashMap<String, TempNode>,
@@ -57,8 +64,8 @@ pub fn get_sarc_nodes(data: &[u8], base_path: &str) -> Vec<FileNode> {
                 let is_last = i == parts.len() - 1;
                 if is_last {
                     let is_nested_sarc = is_sarc_extension(part);
-                    let nested_children = if is_nested_sarc {
-                        Some(get_sarc_nodes(&file_bytes, &format!("{}//{}", base_path, inner_name)))
+                    let nested_children = if is_nested_sarc && depth < max_depth {
+                        Some(get_sarc_nodes_impl(&file_bytes, &format!("{}//{}", base_path, inner_name), depth + 1, max_depth))
                     } else {
                         None
                     };
@@ -113,7 +120,11 @@ pub fn get_sarc_nodes(data: &[u8], base_path: &str) -> Vec<FileNode> {
 
 /// 递归扫描物理目录，自动解构内部 SARC 封包并返回排序后的文件树
 pub fn read_dir_recursive(dir_path: &Path) -> Result<Vec<FileNode>, String> {
-    if !dir_path.is_dir() {
+    read_dir_recursive_impl(dir_path, 0, 16)
+}
+
+fn read_dir_recursive_impl(dir_path: &Path, depth: usize, max_depth: usize) -> Result<Vec<FileNode>, String> {
+    if !dir_path.is_dir() || depth > max_depth {
         return Ok(Vec::new());
     }
 
@@ -135,11 +146,15 @@ pub fn read_dir_recursive(dir_path: &Path) -> Result<Vec<FileNode>, String> {
             let is_sarc = !is_dir && is_sarc_extension(&name);
 
             let (path_str, children) = if is_dir {
-                (path.to_string_lossy().to_string(), Some(read_dir_recursive(&path)?))
+                (path.to_string_lossy().to_string(), Some(read_dir_recursive_impl(&path, depth + 1, max_depth)?))
             } else if is_sarc {
-                let data = fs::read(&path).map_err(|e| e.to_string())?;
                 let sarc_prefix = format!("SARC:{}", path.to_string_lossy());
-                (sarc_prefix.clone(), Some(get_sarc_nodes(&data, &sarc_prefix)))
+                let children = if let Ok(data) = fs::read(&path) {
+                    Some(get_sarc_nodes(&data, &sarc_prefix))
+                } else {
+                    None
+                };
+                (sarc_prefix, children)
             } else {
                 (path.to_string_lossy().to_string(), None)
             };
