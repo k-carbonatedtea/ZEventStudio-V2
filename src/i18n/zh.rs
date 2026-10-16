@@ -46,7 +46,6 @@ pub fn get_zh(key: &str) -> &str {
         "menu.view_json" => "JSON 源码",
         "menu.toggle_sidebar" => "切换预设侧边栏",
         "menu.toggle_inspector" => "切换属性面板",
-        "menu.toggle_perf" => "切换极速性能模式",
         "menu.fit_view" => "自适应居中视口",
         "menu.zoom_in" => "放大画布",
         "menu.zoom_out" => "缩小画布",
@@ -75,8 +74,6 @@ pub fn get_zh(key: &str) -> &str {
         "toolbar.collapse_params" => "折叠参数",
         "toolbar.knife_mode" => "切刀工具",
         "toolbar.knife_active" => "剪断模式中",
-        "toolbar.perf_mode" => "性能模式",
-        "toolbar.perf_active" => "极速性能",
         "toolbar.fit_view" => "自适应视口",
         "toolbar.zoom_in" => "放大",
         "toolbar.zoom_out" => "缩小",
@@ -312,8 +309,6 @@ pub fn get_zh(key: &str) -> &str {
         // ---------------- Toast 提示信息 (Toast Notifications) ----------------
         "toast.auto_layout_done" => "✨ 已完成 DAG 拓扑分层自动排版",
 
-        "toast.perf_on" => "🔥 极速性能模式已开启：GPU 全速无锁帧渲染",
-        "toast.perf_off" => "🌿 标准模式已恢复：动态按需省电渲染",
         "toast.expand_params_on" => "📋 已展开全部节点参数详情",
         "toast.expand_params_off" => "📋 已折叠节点参数详情",
         "toast.focus_node" => "已跳转聚焦至: ",
@@ -476,8 +471,6 @@ pub fn get_zh(key: &str) -> &str {
         "settings.edge_bezier" => "三阶贝塞尔曲线 (Bezier)",
         "settings.edge_smooth" => "平滑圆角折线 (Smooth)",
 
-        "settings.perf_mode_title" => "极限性能模式",
-        "settings.perf_mode_desc" => "开启 60FPS 极速渲染，关闭复杂背景模糊以提升响应速度",
         "settings.culling_title" => "视口边界裁剪 (Viewport Culling)",
         "settings.culling_desc" => "自动跳过可视区域外的节点与连线计算，保持高帧率运行",
         "settings.culling_active" => "始终启用 (硬件加速)",

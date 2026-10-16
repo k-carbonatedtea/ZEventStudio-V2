@@ -45,7 +45,6 @@ pub fn get_en(key: &str) -> &str {
         "menu.view_json" => "JSON Viewer",
         "menu.toggle_sidebar" => "Toggle Sidebar",
         "menu.toggle_inspector" => "Toggle Inspector",
-        "menu.toggle_perf" => "Toggle Extreme Perf Mode",
         "menu.fit_view" => "Fit / Center View",
         "menu.zoom_in" => "Zoom In",
         "menu.zoom_out" => "Zoom Out",
@@ -74,8 +73,6 @@ pub fn get_en(key: &str) -> &str {
         "toolbar.collapse_params" => "Collapse Params",
         "toolbar.knife_mode" => "Knife Tool",
         "toolbar.knife_active" => "Cutting Mode",
-        "toolbar.perf_mode" => "Performance Mode",
-        "toolbar.perf_active" => "Extreme Perf",
         "toolbar.fit_view" => "Fit View",
         "toolbar.zoom_in" => "Zoom In",
         "toolbar.zoom_out" => "Zoom Out",
@@ -316,8 +313,7 @@ pub fn get_en(key: &str) -> &str {
 
         // ---------------- Toast 提示信息 (Toast Notifications) ----------------
         "toast.auto_layout_done" => "✨ DAG hierarchical layout completed",
-        "toast.perf_on" => "🔥 Extreme Perf Mode Enabled (Uncapped GPU Rendering)",
-        "toast.perf_off" => "🌿 Standard Mode Restored (Dynamic Power Saving)",
+
         "toast.expand_params_on" => "📋 Expanded all node parameters",
         "toast.expand_params_off" => "📋 Collapsed node parameters",
         "toast.focus_node" => "Focused on node: ",
@@ -480,8 +476,6 @@ pub fn get_en(key: &str) -> &str {
         "settings.edge_bezier" => "Cubic Bezier (Smooth)",
         "settings.edge_smooth" => "Rounded Orthogonal (Step)",
 
-        "settings.perf_mode_title" => "Extreme Performance Mode",
-        "settings.perf_mode_desc" => "Enable 60FPS high refresh rendering and simplify blurs for faster response",
         "settings.culling_title" => "Viewport Culling",
         "settings.culling_desc" => "Automatically skip off-screen node & edge calculations to maintain high framerate",
         "settings.culling_active" => "Always Enabled (Hardware Accelerated)",

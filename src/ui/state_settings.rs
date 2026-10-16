@@ -106,7 +106,6 @@ impl AppState {
         self.expand_all_params = false;
         self.grid_style = GridStyle::Dots;
         self.edge_curve_style = EdgeCurveStyle::Bezier;
-        self.performance_mode = false;
         self.show_perf_stats = true;
         self.target_engine = TargetEngine::BotW;
         self.auto_backup = true;

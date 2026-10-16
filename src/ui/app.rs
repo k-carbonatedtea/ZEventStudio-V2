@@ -104,7 +104,6 @@ impl Render for AppView {
         }
 
         let state = self.model.read(cx);
-        let is_perf = state.performance_mode;
 
         // 采样并计算真实渲染帧率
         self.frame_count += 1;
@@ -118,9 +117,9 @@ impl Render for AppView {
             self.last_fps_update = now;
         }
 
-        // 极速性能模式调度，或文本框处于激活状态（用于闪烁光标动画）
+        // 默认极速性能模式调度：活跃窗口高刷新流畅渲染，或文本框处于激活状态（用于闪烁光标动画）
         let has_active_field = state.active_settings_field != crate::ui::state::ActiveSettingsField::None;
-        if (is_perf && is_active) || has_active_field {
+        if is_active || has_active_field {
             cx.on_next_frame(window, |_, _, cx| {
                 cx.notify();
             });

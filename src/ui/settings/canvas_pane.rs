@@ -3,7 +3,7 @@ use gpui::*;
 use crate::ui::state::AppState;
 use crate::ui::state_settings::{EdgeCurveStyle, GridStyle};
 use super::canvas_helpers::{
-    render_culling_info_card, render_icon_choice_chip, render_perf_mode_card,
+    render_culling_info_card, render_icon_choice_chip,
     render_perf_stats_card,
 };
 
@@ -23,11 +23,9 @@ pub fn render_canvas_pane(state: &AppState, model: &Entity<AppState>) -> impl In
         .child(render_grid_style_card(state, model))
         // 3. 连线曲线拟合算法
         .child(render_edge_style_card(state, model))
-        // 4. 极限性能模式
-        .child(render_perf_mode_card(state, model))
-        // 5. 硬件加速视口边界裁剪说明与状态
+        // 4. 硬件加速视口边界裁剪说明与状态
         .child(render_culling_info_card(state))
-        // 6. 状态栏性能监视器常驻开关
+        // 5. 状态栏性能监视器常驻开关
         .child(render_perf_stats_card(state, model))
 }
 

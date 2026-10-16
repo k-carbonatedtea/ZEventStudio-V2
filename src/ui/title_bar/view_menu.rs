@@ -16,7 +16,6 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
     let model_json = model.clone();
     let model_sidebar = model.clone();
     let model_inspector = model.clone();
-    let model_perf = model.clone();
     let model_fit = model.clone();
     let model_zoom_in = model.clone();
     let model_zoom_out = model.clone();
@@ -30,7 +29,6 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
     let label_json = state.t("menu.view_json").to_string();
     let label_sidebar = state.t("menu.toggle_sidebar").to_string();
     let label_inspector = state.t("menu.toggle_inspector").to_string();
-    let label_perf = state.t("menu.toggle_perf").to_string();
     let label_fit = state.t("menu.fit_view").to_string();
     let label_zoom_in = state.t("menu.zoom_in").to_string();
     let label_zoom_out = state.t("menu.zoom_out").to_string();
@@ -62,7 +60,6 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
             let m_js = model_json.clone();
             let m_sb = model_sidebar.clone();
             let m_ins = model_inspector.clone();
-            let m_pf = model_perf.clone();
             let m_fit = model_fit.clone();
             let m_zi = model_zoom_in.clone();
             let m_zo = model_zoom_out.clone();
@@ -140,15 +137,6 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                         .on_click(move |_, _, cx| {
                             m_ins.update(cx, |st, cx| {
                                 st.inspector_open = !st.inspector_open;
-                                cx.notify();
-                            });
-                        }),
-                )
-                .item(
-                    PopupMenuItem::new(label_perf.clone())
-                        .on_click(move |_, _, cx| {
-                            m_pf.update(cx, |st, cx| {
-                                st.toggle_performance_mode();
                                 cx.notify();
                             });
                         }),

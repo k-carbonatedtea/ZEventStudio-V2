@@ -139,7 +139,6 @@ pub struct AppState {
     pub is_resizing_sidebar: bool,
     pub search_query: String,
     pub expand_all_params: bool,
-    pub performance_mode: bool,
     #[allow(dead_code)]
     pub frame_time_ms: f32,
     pub show_welcome_on_startup: bool,
@@ -237,7 +236,6 @@ impl AppState {
             is_resizing_sidebar: false,
             search_query: String::new(),
             expand_all_params: false,
-            performance_mode: false,
             frame_time_ms: 1.0,
             show_welcome_on_startup: true,
             lang: crate::i18n::Language::Zh,
@@ -307,15 +305,6 @@ impl AppState {
     /// 获取当前语言环境下的本地化文本
     pub fn t<'a>(&self, key: &'a str) -> &'a str {
         crate::i18n::t(key, self.lang)
-    }
-
-    pub fn toggle_performance_mode(&mut self) {
-        self.performance_mode = !self.performance_mode;
-        if self.performance_mode {
-            self.toast = Some(Toast::success(self.t("toast.perf_on")));
-        } else {
-            self.toast = Some(Toast::info(self.t("toast.perf_off")));
-        }
     }
 
     pub fn toggle_expand_params(&mut self) {

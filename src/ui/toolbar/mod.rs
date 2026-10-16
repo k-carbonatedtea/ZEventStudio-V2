@@ -27,7 +27,7 @@ pub fn render_toolbar(
         .shadow_md()
         // Left: Logo & Active Graph Tag
         .child(render_branding(state))
-        // Right: Language Switch & FPS / Performance Pill (点击切换性能/省电模式)
+        // Right: Language Switch & Realtime FPS Pill
         .child(render_status_pill(state, fps, frame_time, model))
 }
 
