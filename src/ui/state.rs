@@ -273,6 +273,8 @@ pub struct AppState {
     pub global_search_include: String,
     pub global_search_exclude: String,
     pub global_search_show_filters: bool,
+    pub global_search_results: Vec<crate::ui::sidebar::search_panel::SearchResultItem>,
+    pub global_search_scroll_handle: gpui::UniformListScrollHandle,
 
     // 多文档标签页状态 (Document Tabs)
     pub open_tabs: Vec<crate::model::OpenDocumentTab>,
@@ -377,6 +379,8 @@ impl AppState {
             global_search_include: String::new(),
             global_search_exclude: String::new(),
             global_search_show_filters: false,
+            global_search_results: Vec::new(),
+            global_search_scroll_handle: gpui::UniformListScrollHandle::new(),
         };
 
         state.fit_view();

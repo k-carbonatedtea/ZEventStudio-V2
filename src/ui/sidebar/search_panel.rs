@@ -1,7 +1,10 @@
 use gpui::*;
+use std::sync::Arc;
 use crate::model::FileNode;
 use crate::ui::components::render_blinking_cursor;
 use crate::ui::state::AppState;
+
+const MAX_SEARCH_RESULTS: usize = 500;
 
 /// 匹配搜索结果项
 #[derive(Clone, Debug)]
@@ -10,9 +13,32 @@ pub struct SearchResultItem {
     pub path: String,
     pub dir_path: String,
     pub icon: &'static str,
+    pub is_sarc: bool,
 }
 
-/// 渲染 VS Code 风格的全局搜索侧边栏面板 (Global Search Panel)
+impl AppState {
+    /// 触发全局搜索结果增量计算并缓存 (毫秒级响应，避免每帧渲染反复遍历)
+    pub fn update_global_search_results(&mut self) {
+        let query = self.global_search_query.trim();
+        if query.is_empty() {
+            self.global_search_results.clear();
+            return;
+        }
+
+        self.global_search_results = search_project_files(
+            &self.file_tree,
+            query,
+            self.global_search_case_sensitive,
+            self.global_search_whole_word,
+            self.global_search_use_regex,
+            self.global_search_include.trim(),
+            self.global_search_exclude.trim(),
+            self.project_path.as_deref(),
+        );
+    }
+}
+
+/// 渲染 VS Code 风格的全局搜索侧边栏面板 (采用高性能虚拟列表 uniform_list 渲染)
 pub fn render_search_panel(
     state: &AppState,
     model: &Entity<AppState>,
@@ -24,8 +50,6 @@ pub fn render_search_panel(
     let whole_word = state.global_search_whole_word;
     let use_regex = state.global_search_use_regex;
     let show_filters = state.global_search_show_filters;
-    let include_filter = state.global_search_include.trim().to_string();
-    let exclude_filter = state.global_search_exclude.trim().to_string();
 
     let model_input = model.clone();
     let model_clear = model.clone();
@@ -35,22 +59,7 @@ pub fn render_search_panel(
     let model_filter_toggle = model.clone();
     let model_refresh = model.clone();
 
-    // 收集匹配结果
-    let results = if !query.is_empty() {
-        search_project_files(
-            &state.file_tree,
-            &query,
-            case_sensitive,
-            whole_word,
-            use_regex,
-            &include_filter,
-            &exclude_filter,
-        )
-    } else {
-        Vec::new()
-    };
-
-    let result_count = results.len();
+    let result_count = state.global_search_results.len();
 
     div()
         .flex()
@@ -94,7 +103,10 @@ pub fn render_search_panel(
                                 .text_color(pal.text_secondary)
                                 .hover(move |s| s.bg(pal.card_hover).text_color(pal.text_primary))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                                    model_refresh.update(cx, |_, cx| cx.notify());
+                                    model_refresh.update(cx, |st, cx| {
+                                        st.update_global_search_results();
+                                        cx.notify();
+                                    });
                                 })
                                 .child("🔄"),
                         )
@@ -112,6 +124,7 @@ pub fn render_search_panel(
                                     model_clear.update(cx, |st, cx| {
                                         st.global_search_query.clear();
                                         st.global_search_focused = true;
+                                        st.update_global_search_results();
                                         cx.notify();
                                     });
                                 })
@@ -246,6 +259,7 @@ pub fn render_search_panel(
                                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                             model_case.update(cx, |st, cx| {
                                                 st.global_search_case_sensitive = !st.global_search_case_sensitive;
+                                                st.update_global_search_results();
                                                 cx.notify();
                                             });
                                         })
@@ -274,6 +288,7 @@ pub fn render_search_panel(
                                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                             model_word.update(cx, |st, cx| {
                                                 st.global_search_whole_word = !st.global_search_whole_word;
+                                                st.update_global_search_results();
                                                 cx.notify();
                                             });
                                         })
@@ -302,11 +317,12 @@ pub fn render_search_panel(
                                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                             model_regex.update(cx, |st, cx| {
                                                 st.global_search_use_regex = !st.global_search_use_regex;
+                                                st.update_global_search_results();
                                                 cx.notify();
                                             });
                                         })
                                         .child(".*"),
-                                ),
+                                )
                         ),
                 )
 
@@ -326,12 +342,12 @@ pub fn render_search_panel(
                 })),
         )
 
-        // 4. 搜索结果概览与列表渲染
+        // 4. 搜索结果概览与虚拟化列表渲染 (统一采用 uniform_list 实现极速丝滑渲染)
         .child(
             div()
-                .id("search_panel_scroll")
+                .id("search_panel_scroll_area")
                 .flex_1()
-                .overflow_y_scroll()
+                .overflow_hidden()
                 .child(if query.is_empty() {
                     // 空输入引导提示
                     div()
@@ -377,88 +393,142 @@ pub fn render_search_panel(
                         )
                         .into_any_element()
                 } else {
-                    // 匹配结果列表
+                    // 匹配结果虚拟化列表
+                    let flat_entries = Arc::new(state.global_search_results.clone());
+                    let model_clone = model.clone();
+                    let count_label = if result_count >= MAX_SEARCH_RESULTS {
+                        format!("{} ({} 项+)", state.t("search.results_found"), MAX_SEARCH_RESULTS)
+                    } else {
+                        format!("{} ({} 项)", state.t("search.results_found"), result_count)
+                    };
+
                     div()
                         .flex()
                         .flex_col()
+                        .h_full()
                         .child(
                             div()
+                                .h(px(26.0))
                                 .px_3()
-                                .py_1p5()
                                 .bg(pal.card_surface)
                                 .flex()
                                 .items_center()
                                 .justify_between()
+                                .border_b_1()
+                                .border_color(pal.panel_border)
                                 .child(
                                     div()
                                         .text_size(px(10.5))
                                         .font_weight(FontWeight::BOLD)
                                         .text_color(pal.text_secondary)
-                                        .child(format!("{} ({} 项)", state.t("search.results_found"), result_count)),
+                                        .child(count_label),
                                 ),
                         )
                         .child(
                             div()
+                                .flex_1()
+                                .overflow_hidden()
                                 .p_1()
-                                .flex()
-                                .flex_col()
-                                .gap_0p5()
-                                .children(results.into_iter().map(|item| {
-                                    let model_jump = model.clone();
-                                    let path_to_load = item.path.clone();
-                                    div()
-                                        .px_2()
-                                        .py_1p5()
-                                        .rounded_md()
-                                        .cursor_pointer()
-                                        .hover(|s| s.bg(pal.card_hover))
-                                        .flex()
-                                        .items_center()
-                                        .gap_2()
-                                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                                            let p = path_to_load.clone();
-                                            model_jump.update(cx, |st, cx| {
-                                                st.load_file_by_path(&p);
-                                                cx.notify();
-                                            });
-                                        })
-                                        .child(
-                                            div()
-                                                .text_size(px(13.0))
-                                                .child(item.icon),
-                                        )
-                                        .child(
-                                            div()
-                                                .flex()
-                                                .flex_col()
-                                                .overflow_hidden()
-                                                .child(
-                                                    div()
-                                                        .text_size(px(11.5))
-                                                        .font_weight(FontWeight::BOLD)
-                                                        .text_color(pal.text_primary)
-                                                        .overflow_hidden()
-                                                        .whitespace_nowrap()
-                                                        .child(item.name),
-                                                )
-                                                .children((!item.dir_path.is_empty()).then(|| {
-                                                    div()
-                                                        .text_size(px(9.5))
-                                                        .text_color(pal.text_secondary)
-                                                        .overflow_hidden()
-                                                        .whitespace_nowrap()
-                                                        .child(item.dir_path)
-                                                })),
-                                        )
-                                })),
+                                .child(
+                                    uniform_list(
+                                        "search_panel_virtual_list",
+                                        result_count,
+                                        move |range, _window, _cx| {
+                                            let entries = flat_entries.clone();
+                                            let m = model_clone.clone();
+                                            range
+                                                .map(|ix| {
+                                                    if let Some(item) = entries.get(ix) {
+                                                        render_search_row(item, &m, &pal).into_any_element()
+                                                    } else {
+                                                        div().into_any_element()
+                                                    }
+                                                })
+                                                .collect()
+                                        },
+                                    )
+                                    .track_scroll(&state.global_search_scroll_handle)
+                                    .size_full()
+                                ),
                         )
                         .into_any_element()
                 }),
         )
 }
 
-/// 递归遍历项目文件树并提取匹配项
-fn search_project_files(
+/// 渲染单行全局搜索结果条目 (固定高度 36px，满足 uniform_list 约束)
+fn render_search_row(
+    item: &SearchResultItem,
+    model: &Entity<AppState>,
+    pal: &crate::ui::theme::ThemePalette,
+) -> impl IntoElement {
+    let model_jump = model.clone();
+    let path_to_load = item.path.clone();
+    let is_sarc = item.is_sarc;
+    let name = item.name.clone();
+    let dir_path = item.dir_path.clone();
+    let icon = item.icon;
+
+    div()
+        .h(px(36.0))
+        .w_full()
+        .px_2()
+        .rounded_md()
+        .cursor_pointer()
+        .hover(|s| s.bg(pal.card_hover))
+        .flex()
+        .items_center()
+        .gap_2()
+        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+            let p = path_to_load.clone();
+            model_jump.update(cx, |st, cx| {
+                if is_sarc {
+                    st.expanded_tree_paths.insert(p.clone());
+                    st.selected_file_path = Some(p.clone());
+                    st.active_activity_tab = crate::ui::state::ActivityBarTab::Explorer;
+                } else {
+                    st.load_file_by_path(&p);
+                }
+                cx.notify();
+            });
+        })
+        .child(
+            div()
+                .w(px(16.0))
+                .flex()
+                .items_center()
+                .justify_center()
+                .text_size(px(12.0))
+                .child(icon),
+        )
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .overflow_hidden()
+                .justify_center()
+                .child(
+                    div()
+                        .text_size(px(11.0))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(pal.text_primary)
+                        .overflow_hidden()
+                        .whitespace_nowrap()
+                        .child(name),
+                )
+                .children((!dir_path.is_empty()).then(|| {
+                    div()
+                        .text_size(px(9.0))
+                        .text_color(pal.text_secondary)
+                        .overflow_hidden()
+                        .whitespace_nowrap()
+                        .child(dir_path)
+                })),
+        )
+}
+
+/// 递归遍历项目文件树并提取匹配项 (毫秒级极速检索与精准智能排序)
+pub fn search_project_files(
     nodes: &[FileNode],
     query: &str,
     case_sensitive: bool,
@@ -466,99 +536,286 @@ fn search_project_files(
     use_regex: bool,
     include_filter: &str,
     exclude_filter: &str,
+    project_root: Option<&str>,
 ) -> Vec<SearchResultItem> {
     let mut results = Vec::new();
-    collect_search_results(
+    let query_has_separator = query.contains('/') || query.contains('\\');
+
+    let compiled_regex = if use_regex {
+        regex::RegexBuilder::new(query)
+            .case_insensitive(!case_sensitive)
+            .build()
+            .ok()
+    } else {
+        None
+    };
+
+    let query_lower = if case_sensitive {
+        query.to_string()
+    } else {
+        query.to_lowercase()
+    };
+
+    collect_search_results_fast(
         nodes,
         query,
+        &query_lower,
+        query_has_separator,
         case_sensitive,
         whole_word,
-        use_regex,
+        compiled_regex.as_ref(),
         include_filter,
         exclude_filter,
+        project_root,
         &mut results,
     );
+
+    // 智能相关性排序：
+    // 1. 文件名前缀匹配排在最前 (例如搜 "lin"，"Link.bfevfl" 优于 "Player_Link.bfevfl")
+    // 2. 文件名包含匹配次之
+    // 3. 相对路径匹配排在后面
+    results.sort_by(|a, b| {
+        let a_starts = a.name.to_lowercase().starts_with(&query_lower);
+        let b_starts = b.name.to_lowercase().starts_with(&query_lower);
+        if a_starts != b_starts {
+            return b_starts.cmp(&a_starts);
+        }
+        let a_name_has = a.name.to_lowercase().contains(&query_lower);
+        let b_name_has = b.name.to_lowercase().contains(&query_lower);
+        if a_name_has != b_name_has {
+            return b_name_has.cmp(&a_name_has);
+        }
+        a.name.len().cmp(&b.name.len())
+    });
+
     results
 }
 
-fn collect_search_results(
+fn collect_search_results_fast(
     nodes: &[FileNode],
     query: &str,
+    query_lower: &str,
+    query_has_separator: bool,
     case_sensitive: bool,
     whole_word: bool,
-    use_regex: bool,
+    compiled_regex: Option<&regex::Regex>,
     include_filter: &str,
     exclude_filter: &str,
+    project_root: Option<&str>,
     out: &mut Vec<SearchResultItem>,
 ) {
+    if out.len() >= MAX_SEARCH_RESULTS {
+        return;
+    }
+
     for node in nodes {
-        if node.is_dir || node.is_sarc {
+        if out.len() >= MAX_SEARCH_RESULTS {
+            return;
+        }
+
+        if node.is_dir {
+            // 普通目录：直接递归子节点，无多余分配
             if let Some(children) = &node.children {
-                collect_search_results(
+                collect_search_results_fast(
                     children,
                     query,
+                    query_lower,
+                    query_has_separator,
                     case_sensitive,
                     whole_word,
-                    use_regex,
+                    compiled_regex,
                     include_filter,
                     exclude_filter,
+                    project_root,
+                    out,
+                );
+            }
+        } else if node.is_sarc {
+            // SARC 封包节点：检查封包名本身是否匹配
+            if matches_filters_fast(&node.name, include_filter, exclude_filter) {
+                let matched = check_name_match(
+                    &node.name,
+                    query,
+                    query_lower,
+                    case_sensitive,
+                    whole_word,
+                    compiled_regex,
+                );
+                if matched {
+                    let (_, display_dir) = parse_display_dir(&node.path, project_root);
+                    out.push(SearchResultItem {
+                        name: node.name.clone(),
+                        path: node.path.clone(),
+                        dir_path: display_dir,
+                        icon: "📦",
+                        is_sarc: true,
+                    });
+                }
+            }
+
+            // 递归遍历 SARC 内部文件
+            if let Some(children) = &node.children {
+                collect_search_results_fast(
+                    children,
+                    query,
+                    query_lower,
+                    query_has_separator,
+                    case_sensitive,
+                    whole_word,
+                    compiled_regex,
+                    include_filter,
+                    exclude_filter,
+                    project_root,
                     out,
                 );
             }
         } else {
-            // 叶子文件节点
-            let name = &node.name;
-            let path = &node.path;
-
-            // 过滤器匹配
-            if !include_filter.is_empty() && !name.to_lowercase().contains(&include_filter.to_lowercase()) {
-                continue;
-            }
-            if !exclude_filter.is_empty() && name.to_lowercase().contains(&exclude_filter.to_lowercase()) {
+            // 叶子数据文件 (物理文件或 SARC 内部文件)
+            if !matches_filters_fast(&node.name, include_filter, exclude_filter) {
                 continue;
             }
 
-            // 搜索关键字匹配
-            let matched = if whole_word {
-                is_whole_word_match(name, query, case_sensitive)
-                    || is_whole_word_match(path, query, case_sensitive)
-            } else if case_sensitive {
-                name.contains(query) || path.contains(query)
-            } else {
-                name.to_lowercase().contains(&query.to_lowercase())
-                    || path.to_lowercase().contains(&query.to_lowercase())
-            };
+            // 1. 优先极速检查文件名 (0 堆内存分配)
+            let name_matched = check_name_match(
+                &node.name,
+                query,
+                query_lower,
+                case_sensitive,
+                whole_word,
+                compiled_regex,
+            );
 
-            if matched {
-                let dir_path = std::path::Path::new(path)
-                    .parent()
-                    .and_then(|p| p.to_str())
-                    .unwrap_or("")
-                    .to_string();
-
-                let icon = get_search_icon_by_name(name);
-                out.push(SearchResultItem {
-                    name: name.clone(),
-                    path: path.clone(),
-                    dir_path,
-                    icon,
-                });
-            }
-
-            if let Some(children) = &node.children {
-                collect_search_results(
-                    children,
+            // 2. 若文件名未命中，且用户输入了路径分隔符 '/' 或 '\\'，才检查相对路径
+            let path_matched = if !name_matched && query_has_separator {
+                let (rel_path, _) = parse_display_dir(&node.path, project_root);
+                check_name_match(
+                    &rel_path,
                     query,
+                    query_lower,
                     case_sensitive,
                     whole_word,
-                    use_regex,
-                    include_filter,
-                    exclude_filter,
-                    out,
-                );
+                    compiled_regex,
+                )
+            } else {
+                false
+            };
+
+            if name_matched || path_matched {
+                let (_, display_dir) = parse_display_dir(&node.path, project_root);
+                let icon = get_search_icon_by_name(&node.name);
+                out.push(SearchResultItem {
+                    name: node.name.clone(),
+                    path: node.path.clone(),
+                    dir_path: display_dir,
+                    icon,
+                    is_sarc: false,
+                });
             }
         }
     }
+}
+
+/// 解析用于展示的相对目录路径 (仅在匹配成功时调用，绝不在遍历树时反复调用)
+fn parse_display_dir(path: &str, project_root: Option<&str>) -> (String, String) {
+    if path.starts_with("SARC:") {
+        let clean = path.trim_start_matches("SARC:");
+        if let Some((sarc_path, inner_path)) = clean.split_once("//") {
+            let sarc_name = std::path::Path::new(sarc_path)
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or(sarc_path);
+            let inner_parent = std::path::Path::new(inner_path)
+                .parent()
+                .and_then(|p| p.to_str())
+                .unwrap_or("")
+                .replace('\\', "/");
+            let display_dir = if inner_parent.is_empty() {
+                sarc_name.to_string()
+            } else {
+                format!("{} › {}", sarc_name, inner_parent)
+            };
+            return (inner_path.replace('\\', "/"), display_dir);
+        }
+    }
+
+    let norm_path = path.replace('\\', "/");
+    let (rel_path, display_dir) = if let Some(root) = project_root {
+        let norm_root = root.replace('\\', "/");
+        if let Some(stripped) = norm_path.strip_prefix(&norm_root) {
+            let clean_rel = stripped.trim_start_matches('/');
+            let parent_dir = std::path::Path::new(clean_rel)
+                .parent()
+                .and_then(|p| p.to_str())
+                .unwrap_or("")
+                .replace('\\', "/");
+            (clean_rel.to_string(), parent_dir)
+        } else {
+            let parent_dir = std::path::Path::new(path)
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_string();
+            (norm_path.clone(), parent_dir)
+        }
+    } else {
+        let parent_dir = std::path::Path::new(path)
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_string();
+        (norm_path.clone(), parent_dir)
+    };
+
+    (rel_path, display_dir)
+}
+
+/// 检查名称是否匹配查询条件
+fn check_name_match(
+    name: &str,
+    query: &str,
+    query_lower: &str,
+    case_sensitive: bool,
+    whole_word: bool,
+    compiled_regex: Option<&regex::Regex>,
+) -> bool {
+    if let Some(re) = compiled_regex {
+        return re.is_match(name);
+    }
+
+    if whole_word {
+        is_whole_word_match(name, query, case_sensitive)
+    } else if case_sensitive {
+        name.contains(query)
+    } else {
+        name.to_lowercase().contains(query_lower)
+    }
+}
+
+/// 快速检查包含/排除过滤条件
+fn matches_filters_fast(
+    name: &str,
+    include_filter: &str,
+    exclude_filter: &str,
+) -> bool {
+    if !include_filter.is_empty() {
+        let inc = include_filter.to_lowercase();
+        let inc_clean = inc.trim_start_matches('*');
+        if !name.to_lowercase().contains(inc_clean) {
+            return false;
+        }
+    }
+
+    if !exclude_filter.is_empty() {
+        let exc = exclude_filter.to_lowercase();
+        let exc_clean = exc.trim_start_matches('*');
+        if name.to_lowercase().contains(exc_clean) {
+            return false;
+        }
+    }
+
+    true
 }
 
 /// 检查是否为全字单词匹配
@@ -574,13 +831,15 @@ fn is_whole_word_match(text: &str, pattern: &str, case_sensitive: bool) -> bool 
         let prev_ok = if abs_idx == 0 {
             true
         } else {
-            !t[..abs_idx].chars().last().unwrap_or(' ').is_alphanumeric()
+            let ch = t[..abs_idx].chars().last().unwrap_or(' ');
+            !ch.is_alphanumeric() && ch != '_'
         };
 
         let next_ok = if end_idx >= t.len() {
             true
         } else {
-            !t[end_idx..].chars().next().unwrap_or(' ').is_alphanumeric()
+            let ch = t[end_idx..].chars().next().unwrap_or(' ');
+            !ch.is_alphanumeric() && ch != '_'
         };
 
         if prev_ok && next_ok {
@@ -603,6 +862,14 @@ fn get_search_icon_by_name(name: &str) -> &'static str {
         || lower.ends_with(".sbyml")
         || lower.ends_with(".aamp")
         || lower.ends_with(".bxml")
+        || lower.ends_with(".baev")
+        || lower.ends_with(".baglbl")
+        || lower.ends_with(".bglcl")
+        || lower.ends_with(".bactparam")
+        || lower.ends_with(".baiprog")
+        || lower.ends_with(".sbaiprog")
+        || lower.ends_with(".bgparamlist")
+        || lower.ends_with(".brecipe")
     {
         "⚙️"
     } else if lower.ends_with(".json") {

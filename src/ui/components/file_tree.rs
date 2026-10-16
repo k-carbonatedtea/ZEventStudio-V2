@@ -413,7 +413,6 @@ pub fn render_file_tree(
             filter_type,
             state,
             &mut matching_paths,
-            false,
         );
     }
 
@@ -538,20 +537,18 @@ fn collect_matching_paths(
     filter_type: FileFilterType,
     state: &AppState,
     matching_paths: &mut std::collections::HashSet<String>,
-    parent_matched_query: bool,
 ) -> bool {
+    let query_lower = if case_sensitive { String::new() } else { query.to_lowercase() };
     let mut any_match = false;
     for node in nodes {
         let is_container = node.is_dir || node.is_sarc;
 
         let name_matches_query = if query.is_empty() {
             true
-        } else if parent_matched_query {
-            true
         } else if case_sensitive {
             node.name.contains(query)
         } else {
-            node.name.to_lowercase().contains(&query.to_lowercase())
+            node.name.to_lowercase().contains(&query_lower)
         };
 
         let type_matches = if is_container {
@@ -571,7 +568,6 @@ fn collect_matching_paths(
                 filter_type,
                 state,
                 matching_paths,
-                container_self_matched,
             )
         } else {
             false

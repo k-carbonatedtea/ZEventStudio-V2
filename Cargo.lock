@@ -4262,6 +4262,7 @@ dependencies = [
  "gpui_platform",
  "msyt",
  "rayon",
+ "regex",
  "revfl",
  "rfd",
  "roead",

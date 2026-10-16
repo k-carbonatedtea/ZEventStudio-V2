@@ -14,6 +14,7 @@ impl AppState {
                 self.project_path = Some(path.to_string());
                 self.project_name = Some(name.clone());
                 self.file_tree = nodes;
+                self.update_global_search_results();
 
                 // 默认展开顶层前几个容器，避免深层递归展开导致的卡顿
                 self.expanded_tree_paths.clear();
@@ -42,6 +43,7 @@ impl AppState {
                 self.project_path = Some(path.to_string());
                 self.project_name = Some(name.clone());
                 self.file_tree = nodes;
+                self.update_global_search_results();
 
                 self.expanded_tree_paths.clear();
                 for node in &self.file_tree {
@@ -66,6 +68,7 @@ impl AppState {
         if let Some(path) = self.project_path.clone() {
             if let Ok((_name, nodes)) = scan_project_path(&path) {
                 self.file_tree = nodes;
+                self.update_global_search_results();
                 self.toast = Some(Toast::info(self.t("explorer.refresh_done")));
             }
         }

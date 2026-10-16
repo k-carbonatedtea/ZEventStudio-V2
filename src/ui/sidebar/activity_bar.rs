@@ -162,6 +162,8 @@ where
                             st.active_activity_tab = ActivityBarTab::Search;
                             st.sidebar_open = true;
                             st.global_search_focused = true;
+                            st.file_search_focused = false;
+                            st.update_global_search_results();
                         }
                     }
                     ActivityBarTab::SourceControl => {

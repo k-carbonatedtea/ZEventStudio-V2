@@ -227,6 +227,9 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
             return true;
         }
         let (changed, _, _) = handle_text_key_event(&mut state.global_search_query, event);
+        if changed {
+            state.update_global_search_results();
+        }
         return changed;
     }
 

@@ -18,6 +18,7 @@ smol = "2.0"
 rfd = "0.17.2"
 serde_yaml = "0.9"
 msyt = { git = "https://github.com/NiceneNerd/msyt", tag = "v1.3.0" }
+regex = "1"
 
 [profile.release]
 opt-level = 3
