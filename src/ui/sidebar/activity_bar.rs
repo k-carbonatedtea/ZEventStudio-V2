@@ -10,7 +10,12 @@ pub fn render_activity_bar(
     let pal = state.theme();
     let current_tab = state.active_activity_tab;
     let sidebar_open = state.sidebar_open;
-    let modified_count = state.modified_tabs_count();
+    let git_count = state.git_staged.len() + state.git_unstaged.len();
+    let source_control_badge = if state.git_is_repo {
+        git_count
+    } else {
+        state.modified_tabs_count()
+    };
 
     let model_settings = model.clone();
 
@@ -66,7 +71,7 @@ pub fn render_activity_bar(
                     ActivityBarTab::SourceControl,
                     current_tab == ActivityBarTab::SourceControl,
                     sidebar_open,
-                    modified_count,
+                    source_control_badge,
                     |color, pal| render_source_control_icon(color, pal),
                 )),
         )
@@ -172,6 +177,7 @@ where
                         } else {
                             st.active_activity_tab = ActivityBarTab::SourceControl;
                             st.sidebar_open = true;
+                            st.refresh_git_status();
                             st.sync_active_tab_modified();
                         }
                     }

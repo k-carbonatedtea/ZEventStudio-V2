@@ -37,6 +37,10 @@ impl Toast {
         Self::new(msg, ToastKind::Info)
     }
 
+    pub fn warning(msg: impl Into<String>) -> Self {
+        Self::new(msg, ToastKind::Warning)
+    }
+
     pub fn error(msg: impl Into<String>) -> Self {
         Self::new(msg, ToastKind::Error)
     }

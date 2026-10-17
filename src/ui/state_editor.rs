@@ -517,6 +517,7 @@ impl AppState {
     }
 
     /// 放弃指定文档标签页的所有未保存修改
+    #[allow(dead_code)]
     pub fn discard_document_changes(&mut self, tab_id: &str) {
         let is_active = self.active_tab_id.as_deref() == Some(tab_id);
         let mut reverted_graph = None;
@@ -550,6 +551,7 @@ impl AppState {
     }
 
     /// 放弃所有文档标签页的未保存修改
+    #[allow(dead_code)]
     pub fn discard_all_modified_documents(&mut self) {
         let dirty_ids: Vec<String> = self
             .open_tabs

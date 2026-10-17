@@ -14,6 +14,7 @@ pub mod port;
 pub mod sarc_writer;
 pub mod settings;
 pub mod ai_def;
+pub mod git;
 
 pub use bcml::import_bcml_paths;
 pub use settings::{GamePathSettings, PlatformType, RecentProjectItem};

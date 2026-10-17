@@ -16,6 +16,7 @@ pub fn render_file_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
     let model_revert = model.clone();
     let model_close_tab = model.clone();
     let model_close_all = model.clone();
+    let model_close_folder = model.clone();
     let model_exit = model.clone();
 
     let label_new = state.t("menu.new_flow").to_string();
@@ -26,6 +27,7 @@ pub fn render_file_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
     let label_revert = state.t("menu.revert").to_string();
     let label_close_tab = state.t("menu.close_tab").to_string();
     let label_close_all = state.t("menu.close_all_tabs").to_string();
+    let label_close_folder = state.t("menu.close_folder").to_string();
     let label_exit = state.t("menu.exit").to_string();
 
     Button::new("titlebar_menu_file")
@@ -41,6 +43,7 @@ pub fn render_file_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
             let m_revert = model_revert.clone();
             let m_close_tab = model_close_tab.clone();
             let m_close_all = model_close_all.clone();
+            let m_close_folder = model_close_folder.clone();
             let m_exit = model_exit.clone();
 
             menu.min_w(px(220.0))
@@ -107,6 +110,15 @@ pub fn render_file_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                         .on_click(move |_, _, cx| {
                             m_close_all.update(cx, |st, cx| {
                                 st.close_all_document_tabs();
+                                cx.notify();
+                            });
+                        }),
+                )
+                .item(
+                    PopupMenuItem::new(label_close_folder.clone())
+                        .on_click(move |_, _, cx| {
+                            m_close_folder.update(cx, |st, cx| {
+                                st.close_project();
                                 cx.notify();
                             });
                         }),

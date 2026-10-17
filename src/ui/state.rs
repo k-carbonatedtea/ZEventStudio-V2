@@ -169,6 +169,15 @@ pub enum ActivityBarTab {
     SourceControl, // 源文件管理
 }
 
+/// Git 提交输入框焦点
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum GitCommitFocus {
+    #[default]
+    None,
+    Title,
+    Description,
+}
+
 pub struct AppState {
     pub graph: Graph,
     pub pan: (f32, f32),
@@ -282,6 +291,19 @@ pub struct AppState {
     // 多文档标签页状态 (Document Tabs)
     pub open_tabs: Vec<crate::model::OpenDocumentTab>,
     pub active_tab_id: Option<String>,
+
+    // Git 源代码管理状态
+    pub git_is_repo: bool,
+    pub git_branch: Option<String>,
+    pub git_staged: std::sync::Arc<Vec<crate::model::git::GitFileItem>>,
+    pub git_unstaged: std::sync::Arc<Vec<crate::model::git::GitFileItem>>,
+    pub git_staged_collapsed: bool,
+    pub git_unstaged_collapsed: bool,
+    pub git_commit_title: String,
+    pub git_commit_desc: String,
+    pub git_commit_focus: GitCommitFocus,
+    pub git_show_desc_field: bool,
+    pub source_control_scroll_handle: gpui::UniformListScrollHandle,
 }
 
 #[allow(dead_code)]
@@ -384,6 +406,17 @@ impl AppState {
             global_search_show_filters: false,
             global_search_results: Vec::new(),
             global_search_scroll_handle: gpui::UniformListScrollHandle::new(),
+            git_is_repo: false,
+            git_branch: None,
+            git_staged: std::sync::Arc::new(Vec::new()),
+            git_unstaged: std::sync::Arc::new(Vec::new()),
+            git_staged_collapsed: false,
+            git_unstaged_collapsed: false,
+            git_commit_title: String::new(),
+            git_commit_desc: String::new(),
+            git_commit_focus: GitCommitFocus::None,
+            git_show_desc_field: false,
+            source_control_scroll_handle: gpui::UniformListScrollHandle::new(),
         };
 
         state.fit_view();
@@ -449,6 +482,205 @@ impl AppState {
 
     pub fn is_file_modified(&self, path: &str) -> bool {
         self.open_tabs.iter().any(|t| t.file_path == path && t.is_modified)
+    }
+
+    /// 获取当前可用于 Git 操作的工作目录 (必须是打开的项目文件夹，封包或单文件不作为 Git 仓库)
+    pub fn get_git_working_dir(&self) -> Option<String> {
+        if let Some(p) = &self.project_path {
+            let path = std::path::Path::new(p);
+            if path.is_dir() {
+                Some(p.clone())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// 关闭当前打开的 Mod 项目文件夹或封包，彻底清理项目资源与 Git 状态
+    pub fn close_project(&mut self) {
+        self.project_path = None;
+        self.project_name = None;
+        self.file_tree.clear();
+        self.expanded_tree_paths.clear();
+        self.selected_file_path = None;
+        self.git_is_repo = false;
+        self.git_branch = None;
+        self.git_staged = std::sync::Arc::new(Vec::new());
+        self.git_unstaged = std::sync::Arc::new(Vec::new());
+        self.git_commit_title.clear();
+        self.git_commit_desc.clear();
+        self.git_commit_focus = GitCommitFocus::None;
+        self.update_global_search_results();
+        self.refresh_git_status();
+        self.toast = Some(Toast::info(self.t("toast.project_closed")));
+    }
+
+    /// 刷新 Git 仓库状态
+    pub fn refresh_git_status(&mut self) {
+        if let Some(dir) = self.get_git_working_dir() {
+            match crate::model::git::get_repo_status(&dir) {
+                Ok(status) => {
+                    self.git_is_repo = status.is_repo;
+                    self.git_branch = status.branch;
+                    self.git_staged = status.staged;
+                    self.git_unstaged = status.unstaged;
+                }
+                Err(_) => {
+                    self.git_is_repo = false;
+                    self.git_branch = None;
+                    self.git_staged = std::sync::Arc::new(Vec::new());
+                    self.git_unstaged = std::sync::Arc::new(Vec::new());
+                }
+            }
+        } else {
+            self.git_is_repo = false;
+            self.git_branch = None;
+            self.git_staged = std::sync::Arc::new(Vec::new());
+            self.git_unstaged = std::sync::Arc::new(Vec::new());
+        }
+    }
+
+    /// 初始化 Git 仓库 (git init)
+    pub fn git_init_repository(&mut self) {
+        if let Some(dir) = self.get_git_working_dir() {
+            match crate::model::git::init_repo(&dir) {
+                Ok(()) => {
+                    self.refresh_git_status();
+                    self.toast = Some(Toast::success(format!("已成功为 {} 初始化 Git 仓库", dir)));
+                }
+                Err(err) => {
+                    self.toast = Some(Toast::error(format!("初始化 Git 仓库失败: {}", err)));
+                }
+            }
+        } else {
+            self.toast = Some(Toast::warning("请先在资源管理器中打开 Mod 项目目录"));
+        }
+    }
+
+    /// 暂存单个文件
+    pub fn git_stage_file(&mut self, rel_path: &str) {
+        if let Some(dir) = self.get_git_working_dir() {
+            match crate::model::git::stage_file(&dir, rel_path) {
+                Ok(()) => {
+                    self.refresh_git_status();
+                }
+                Err(e) => {
+                    self.toast = Some(Toast::error(format!("暂存文件失败: {}", e)));
+                }
+            }
+        }
+    }
+
+    /// 暂存所有变更
+    pub fn git_stage_all(&mut self) {
+        if let Some(dir) = self.get_git_working_dir() {
+            match crate::model::git::stage_all(&dir) {
+                Ok(()) => {
+                    self.refresh_git_status();
+                }
+                Err(e) => {
+                    self.toast = Some(Toast::error(format!("暂存全部失败: {}", e)));
+                }
+            }
+        }
+    }
+
+    /// 取消暂存单个文件
+    pub fn git_unstage_file(&mut self, rel_path: &str) {
+        if let Some(dir) = self.get_git_working_dir() {
+            match crate::model::git::unstage_file(&dir, rel_path) {
+                Ok(()) => {
+                    self.refresh_git_status();
+                }
+                Err(e) => {
+                    self.toast = Some(Toast::error(format!("取消暂存失败: {}", e)));
+                }
+            }
+        }
+    }
+
+    /// 取消暂存所有变更
+    pub fn git_unstage_all(&mut self) {
+        if let Some(dir) = self.get_git_working_dir() {
+            match crate::model::git::unstage_all(&dir) {
+                Ok(()) => {
+                    self.refresh_git_status();
+                }
+                Err(e) => {
+                    self.toast = Some(Toast::error(format!("取消全部暂存失败: {}", e)));
+                }
+            }
+        }
+    }
+
+    /// 放弃单个文件的修改
+    pub fn git_discard_file(&mut self, rel_path: &str, is_untracked: bool) {
+        if let Some(dir) = self.get_git_working_dir() {
+            match crate::model::git::discard_file(&dir, rel_path, is_untracked) {
+                Ok(()) => {
+                    self.refresh_git_status();
+                    self.toast = Some(Toast::info(format!("已放弃更改: {}", rel_path)));
+                }
+                Err(e) => {
+                    self.toast = Some(Toast::error(format!("放弃更改失败: {}", e)));
+                }
+            }
+        }
+    }
+
+    /// 放弃所有修改
+    pub fn git_discard_all(&mut self) {
+        if let Some(dir) = self.get_git_working_dir() {
+            match crate::model::git::discard_all(&dir) {
+                Ok(()) => {
+                    self.refresh_git_status();
+                    self.toast = Some(Toast::info("已放弃所有未暂存更改"));
+                }
+                Err(e) => {
+                    self.toast = Some(Toast::error(format!("放弃所有更改失败: {}", e)));
+                }
+            }
+        }
+    }
+
+    /// 提交暂存的修改 (如果只有工作区未暂存修改，且用户点击提交，自动暂存所有并提交)
+    pub fn git_commit(&mut self) {
+        if let Some(dir) = self.get_git_working_dir() {
+            let title = self.git_commit_title.trim().to_string();
+            if title.is_empty() {
+                self.toast = Some(Toast::warning("请输入提交信息 (Commit Title)"));
+                self.git_commit_focus = GitCommitFocus::Title;
+                return;
+            }
+
+            // 若暂存区为空，但工作区有改动，则先自动暂存所有
+            if self.git_staged.is_empty() && !self.git_unstaged.is_empty() {
+                if let Err(e) = crate::model::git::stage_all(&dir) {
+                    self.toast = Some(Toast::error(format!("自动暂存失败: {}", e)));
+                    return;
+                }
+            }
+
+            let desc = self.git_commit_desc.trim().to_string();
+            match crate::model::git::commit(&dir, &title, &desc) {
+                Ok(msg) => {
+                    self.git_commit_title.clear();
+                    self.git_commit_desc.clear();
+                    self.git_commit_focus = GitCommitFocus::None;
+                    self.git_show_desc_field = false;
+                    self.refresh_git_status();
+                    let summary = msg.lines().next().unwrap_or("提交成功").to_string();
+                    self.toast = Some(Toast::success(format!("Git 提交成功: {}", summary)));
+                }
+                Err(e) => {
+                    self.toast = Some(Toast::error(format!("Git 提交失败: {}", e)));
+                }
+            }
+        } else {
+            self.toast = Some(Toast::warning("请先打开 Mod 项目工作区"));
+        }
     }
 }
 

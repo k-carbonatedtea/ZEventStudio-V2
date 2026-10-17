@@ -53,6 +53,7 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
     if event.keystroke.modifiers.control && event.keystroke.modifiers.shift && event.keystroke.key == "g" {
         state.active_activity_tab = crate::ui::state::ActivityBarTab::SourceControl;
         state.sidebar_open = true;
+        state.refresh_git_status();
         state.sync_active_tab_modified();
         return true;
     }
@@ -224,6 +225,59 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
             state.update_global_search_results();
         }
         return changed;
+    }
+
+    // 6.7 Git 源代码管理提交输入框键盘输入拦截
+    match state.git_commit_focus {
+        crate::ui::state::GitCommitFocus::Title => {
+            if (event.keystroke.modifiers.control && event.keystroke.key == "enter")
+                || (!event.keystroke.modifiers.shift && !event.keystroke.modifiers.control && event.keystroke.key == "enter")
+            {
+                state.git_commit();
+                return true;
+            }
+            if event.keystroke.key == "escape" {
+                state.git_commit_focus = crate::ui::state::GitCommitFocus::None;
+                return true;
+            }
+            if event.keystroke.key == "tab" {
+                state.git_show_desc_field = true;
+                state.git_commit_focus = crate::ui::state::GitCommitFocus::Description;
+                return true;
+            }
+            let (changed, _, _) = handle_text_key_event(&mut state.git_commit_title, event);
+            return changed;
+        }
+        crate::ui::state::GitCommitFocus::Description => {
+            if event.keystroke.modifiers.control && event.keystroke.key == "enter" {
+                state.git_commit();
+                return true;
+            }
+            if event.keystroke.key == "escape" {
+                state.git_commit_focus = crate::ui::state::GitCommitFocus::None;
+                return true;
+            }
+            if event.keystroke.key == "tab" {
+                state.git_commit_focus = crate::ui::state::GitCommitFocus::Title;
+                return true;
+            }
+            let (changed, is_enter, _) = handle_text_key_event(&mut state.git_commit_desc, event);
+            if is_enter {
+                state.git_commit_desc.push('\n');
+                return true;
+            }
+            return changed;
+        }
+        crate::ui::state::GitCommitFocus::None => {}
+    }
+
+    // 6.8 在源文件管理面板激活时按下 Ctrl+Enter 直接提交
+    if state.active_activity_tab == crate::ui::state::ActivityBarTab::SourceControl
+        && event.keystroke.modifiers.control
+        && event.keystroke.key == "enter"
+    {
+        state.git_commit();
+        return true;
     }
 
     // 4. 角色与事件快速输入框键盘事件

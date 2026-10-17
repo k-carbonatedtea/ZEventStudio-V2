@@ -9,6 +9,15 @@ use crate::ui::state::{AppState, AppWorkspaceTab, RecentProjectItem};
 impl AppState {
     /// 打开并解析指定 Mod 根目录 (如 content 或 romfs)
     pub fn open_project_directory(&mut self, path: &str) {
+        // 彻底重置前一个项目的 Git 状态与提交草稿，确保项目间彻底独立隔离
+        self.git_is_repo = false;
+        self.git_branch = None;
+        self.git_staged = std::sync::Arc::new(Vec::new());
+        self.git_unstaged = std::sync::Arc::new(Vec::new());
+        self.git_commit_title.clear();
+        self.git_commit_desc.clear();
+        self.git_commit_focus = crate::ui::state::GitCommitFocus::None;
+
         match scan_project_path(path) {
             Ok((name, nodes)) => {
                 self.project_path = Some(path.to_string());
@@ -28,6 +37,7 @@ impl AppState {
 
                 self.add_recent_project(name.clone(), path.to_string(), "mod".to_string());
                 self.active_sidebar_tab = SidebarTab::Files;
+                self.refresh_git_status();
                 self.toast = Some(Toast::success(format!("{} {}", self.t("toast.project_loaded"), name)));
             }
             Err(e) => {
@@ -38,6 +48,15 @@ impl AppState {
 
     /// 打开并解析单个 SARC 封包文件 (如 .sbeventpack / .sbactorpack / .pack)
     pub fn open_pack_file(&mut self, path: &str) {
+        // 打开独立封包文件时，彻底重置旧项目的 Git 状态 (封包不是 Git 仓库)
+        self.git_is_repo = false;
+        self.git_branch = None;
+        self.git_staged = std::sync::Arc::new(Vec::new());
+        self.git_unstaged = std::sync::Arc::new(Vec::new());
+        self.git_commit_title.clear();
+        self.git_commit_desc.clear();
+        self.git_commit_focus = crate::ui::state::GitCommitFocus::None;
+
         match scan_project_path(path) {
             Ok((name, nodes)) => {
                 self.project_path = Some(path.to_string());
@@ -55,6 +74,7 @@ impl AppState {
                 let ext = path.split('.').next_back().unwrap_or("pack").to_string();
                 self.add_recent_project(name.clone(), path.to_string(), ext);
                 self.active_sidebar_tab = SidebarTab::Files;
+                self.refresh_git_status();
                 self.toast = Some(Toast::success(format!("{} {}", self.t("toast.project_loaded"), name)));
             }
             Err(e) => {
@@ -69,6 +89,7 @@ impl AppState {
             if let Ok((_name, nodes)) = scan_project_path(&path) {
                 self.file_tree = nodes;
                 self.update_global_search_results();
+                self.refresh_git_status();
                 self.toast = Some(Toast::info(self.t("explorer.refresh_done")));
             }
         }
