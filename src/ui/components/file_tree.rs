@@ -1,6 +1,5 @@
 use gpui::*;
 use crate::model::FileNode;
-use crate::ui::components::render_blinking_cursor;
 use crate::ui::state::{AppState, FileFilterType, FileSortMode};
 use std::sync::Arc;
 
@@ -17,21 +16,14 @@ pub struct FlatFileEntry {
     pub is_modified: bool,
 }
 
-/// 渲染文件资源管理器顶部搜索、排序与类型过滤工具栏
+/// 渲染文件资源管理器顶部排序与类型过滤工具栏
 pub fn render_file_search_and_sort_bar(
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
     let pal = state.theme();
-    let model_search = model.clone();
-    let model_clear = model.clone();
-    let model_case = model.clone();
     let model_sort = model.clone();
 
-    let is_focused = state.file_search_focused;
-    let query = &state.file_search_query;
-    let has_query = !query.is_empty();
-    let case_sens = state.file_search_case_sensitive;
     let sort_mode = state.file_sort_mode;
     let sort_menu_open = state.file_tree_sort_menu_open;
     let active_filter = state.file_tree_filter_type;
@@ -47,137 +39,6 @@ pub fn render_file_search_and_sort_bar(
         .border_b_1()
         .border_color(pal.panel_border)
         .bg(pal.panel_surface)
-        // 1. 搜索框 (包含搜索图标、输入光标、清除按钮与大小写切换)
-        .child(
-            div()
-                .id("file_search_box")
-                .h(px(26.0))
-                .w_full()
-                .flex()
-                .items_center()
-                .gap_1p5()
-                .px_2()
-                .rounded_md()
-                .bg(pal.app_bg)
-                .border_1()
-                .border_color(if is_focused {
-                    pal.primary_accent
-                } else {
-                    pal.panel_border
-                })
-                .child(
-                    div()
-                        .text_size(px(10.5))
-                        .text_color(if is_focused {
-                            pal.primary_accent
-                        } else {
-                            pal.text_secondary
-                        })
-                        .child("🔍"),
-                )
-                // 搜索文本输入区
-                .child(
-                    div()
-                        .id("file_search_text_input")
-                        .flex_1()
-                        .h_full()
-                        .flex()
-                        .items_center()
-                        .overflow_hidden()
-                        .cursor_text()
-                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                            model_search.update(cx, |st, cx| {
-                                st.file_search_focused = true;
-                                st.file_tree_sort_menu_open = false;
-                                cx.notify();
-                            });
-                        })
-                        .children(if query.is_empty() {
-                            if is_focused {
-                                vec![render_blinking_cursor(pal.primary_accent.into()).into_any_element()]
-                            } else {
-                                vec![
-                                    div()
-                                        .text_size(px(10.5))
-                                        .text_color(pal.text_secondary)
-                                        .child(state.t("explorer.search_placeholder"))
-                                        .into_any_element(),
-                                ]
-                            }
-                        } else {
-                            let mut elems = vec![
-                                div()
-                                    .text_size(px(10.5))
-                                    .text_color(pal.text_primary)
-                                    .child(query.clone())
-                                    .into_any_element(),
-                            ];
-                            if is_focused {
-                                elems.push(render_blinking_cursor(pal.primary_accent.into()).into_any_element());
-                            }
-                            elems
-                        }),
-                )
-                // 清空搜索内容按钮 (✕)
-                .children(has_query.then(|| {
-                    div()
-                        .px_1()
-                        .py_0p5()
-                        .rounded_xs()
-                        .cursor_pointer()
-                        .text_size(px(9.5))
-                        .text_color(pal.text_secondary)
-                        .hover(move |s| s.bg(pal.card_hover).text_color(pal.text_primary))
-                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                            model_clear.update(cx, |st, cx| {
-                                st.file_search_query.clear();
-                                st.file_search_focused = true;
-                                cx.notify();
-                            });
-                        })
-                        .child("✕")
-                }))
-                // 大小写敏感切换按钮 (Aa)
-                .child(
-                    div()
-                        .px_1p5()
-                        .py_0p5()
-                        .rounded_xs()
-                        .cursor_pointer()
-                        .text_size(px(9.5))
-                        .font_weight(FontWeight::BOLD)
-                        .bg(if case_sens {
-                            pal.primary_accent.opacity(0.25)
-                        } else {
-                            rgba(0x00000000)
-                        })
-                        .text_color(if case_sens {
-                            pal.primary_accent
-                        } else {
-                            pal.text_secondary
-                        })
-                        .border_1()
-                        .border_color(if case_sens {
-                            pal.primary_accent
-                        } else {
-                            rgba(0x00000000)
-                        })
-                        .hover(move |s| {
-                            if !case_sens {
-                                s.bg(pal.card_hover).text_color(pal.text_primary)
-                            } else {
-                                s
-                            }
-                        })
-                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                            model_case.update(cx, |st, cx| {
-                                st.file_search_case_sensitive = !st.file_search_case_sensitive;
-                                cx.notify();
-                            });
-                        })
-                        .child("Aa"),
-                ),
-        )
         // 2. 排序与操作栏
         .child(
             div()
@@ -231,8 +92,8 @@ pub fn render_file_search_and_sort_bar(
                                 .child(if sort_menu_open { "▴" } else { "▾" }),
                         ),
                 )
-                // 过滤状态指示与重置快捷按钮 (当有过滤时显示)
-                .children((has_query || active_filter != FileFilterType::All).then(|| {
+                // 过滤状态指示与重置快捷按钮 (当有类型过滤时显示)
+                .children((active_filter != FileFilterType::All).then(|| {
                     let model_reset_all = model.clone();
                     div()
                         .flex()
@@ -250,7 +111,6 @@ pub fn render_file_search_and_sort_bar(
                                 .text_color(pal.secondary_accent)
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     model_reset_all.update(cx, |st, cx| {
-                                        st.file_search_query.clear();
                                         st.file_tree_filter_type = FileFilterType::All;
                                         cx.notify();
                                     });
@@ -398,9 +258,8 @@ pub fn render_file_tree(
     model: &Entity<AppState>,
     _level: usize,
 ) -> impl IntoElement {
-    let query = state.file_search_query.trim();
     let filter_type = state.file_tree_filter_type;
-    let is_filtering = !query.is_empty() || filter_type != FileFilterType::All;
+    let is_filtering = filter_type != FileFilterType::All;
     let selected_path = state.selected_file_path.as_deref().unwrap_or("");
     let pal = state.theme();
 
@@ -408,8 +267,6 @@ pub fn render_file_tree(
     if is_filtering {
         collect_matching_paths(
             nodes,
-            query,
-            state.file_search_case_sensitive,
             filter_type,
             state,
             &mut matching_paths,
@@ -529,27 +386,16 @@ fn node_matches_filter_type(node: &FileNode, filter_type: FileFilterType, state:
     }
 }
 
-/// 收集所有自身或后代匹配过滤字符的节点路径 (单次 O(N) 遍历)
+/// 收集所有自身或后代匹配类型过滤器的节点路径 (单次 O(N) 遍历)
 fn collect_matching_paths(
     nodes: &[FileNode],
-    query: &str,
-    case_sensitive: bool,
     filter_type: FileFilterType,
     state: &AppState,
     matching_paths: &mut std::collections::HashSet<String>,
 ) -> bool {
-    let query_lower = if case_sensitive { String::new() } else { query.to_lowercase() };
     let mut any_match = false;
     for node in nodes {
         let is_container = node.is_dir || node.is_sarc;
-
-        let name_matches_query = if query.is_empty() {
-            true
-        } else if case_sensitive {
-            node.name.contains(query)
-        } else {
-            node.name.to_lowercase().contains(&query_lower)
-        };
 
         let type_matches = if is_container {
             true
@@ -557,14 +403,11 @@ fn collect_matching_paths(
             node_matches_filter_type(node, filter_type, state)
         };
 
-        let self_leaf_matches = !is_container && name_matches_query && type_matches;
-        let container_self_matched = is_container && name_matches_query;
+        let self_leaf_matches = !is_container && type_matches;
 
         let children_match = if let Some(children) = &node.children {
             collect_matching_paths(
                 children,
-                query,
-                case_sensitive,
                 filter_type,
                 state,
                 matching_paths,
@@ -573,7 +416,7 @@ fn collect_matching_paths(
             false
         };
 
-        let container_passes = is_container && (children_match || (container_self_matched && filter_type == FileFilterType::All));
+        let container_passes = is_container && children_match;
 
         if self_leaf_matches || container_passes {
             matching_paths.insert(node.path.clone());
@@ -662,7 +505,7 @@ fn sort_nodes(
 }
 
 /// 将树结构中当前可见的节点扁平化收集为一维数组 (只遍历展开的目录)
-fn flatten_visible_nodes(
+pub fn flatten_visible_nodes(
     nodes: &[FileNode],
     expanded_paths: &std::collections::HashSet<String>,
     is_filtering: bool,
@@ -745,6 +588,12 @@ fn render_flat_file_row(
         .cursor_pointer()
         .bg(if is_selected {
             pal.card_surface
+        } else {
+            rgba(0x00000000)
+        })
+        .border_l_2()
+        .border_color(if is_selected {
+            pal.primary_accent
         } else {
             rgba(0x00000000)
         })

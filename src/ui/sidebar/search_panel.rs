@@ -396,6 +396,7 @@ pub fn render_search_panel(
                     // 匹配结果虚拟化列表
                     let flat_entries = Arc::new(state.global_search_results.clone());
                     let model_clone = model.clone();
+                    let current_selected_path = state.selected_file_path.clone();
                     let count_label = if result_count >= MAX_SEARCH_RESULTS {
                         format!("{} ({} 项+)", state.t("search.results_found"), MAX_SEARCH_RESULTS)
                     } else {
@@ -422,7 +423,7 @@ pub fn render_search_panel(
                                         .font_weight(FontWeight::BOLD)
                                         .text_color(pal.text_secondary)
                                         .child(count_label),
-                                ),
+                                 ),
                         )
                         .child(
                             div()
@@ -436,10 +437,12 @@ pub fn render_search_panel(
                                         move |range, _window, _cx| {
                                             let entries = flat_entries.clone();
                                             let m = model_clone.clone();
+                                            let cur_selected = current_selected_path.clone();
                                             range
                                                 .map(|ix| {
                                                     if let Some(item) = entries.get(ix) {
-                                                        render_search_row(item, &m, &pal).into_any_element()
+                                                        let is_sel = cur_selected.as_deref() == Some(&item.path);
+                                                        render_search_row(item, is_sel, &m, &pal).into_any_element()
                                                     } else {
                                                         div().into_any_element()
                                                     }
@@ -459,6 +462,7 @@ pub fn render_search_panel(
 /// 渲染单行全局搜索结果条目 (固定高度 36px，满足 uniform_list 约束)
 fn render_search_row(
     item: &SearchResultItem,
+    is_selected: bool,
     model: &Entity<AppState>,
     pal: &crate::ui::theme::ThemePalette,
 ) -> impl IntoElement {
@@ -475,19 +479,37 @@ fn render_search_row(
         .px_2()
         .rounded_md()
         .cursor_pointer()
-        .hover(|s| s.bg(pal.card_hover))
+        .bg(if is_selected {
+            pal.card_surface
+        } else {
+            rgba(0x00000000)
+        })
+        .border_l_2()
+        .border_color(if is_selected {
+            pal.primary_accent
+        } else {
+            rgba(0x00000000)
+        })
+        .hover(move |s| {
+            if is_selected {
+                s.bg(pal.card_hover)
+            } else {
+                s.bg(pal.card_surface)
+            }
+        })
         .flex()
         .items_center()
         .gap_2()
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             let p = path_to_load.clone();
             model_jump.update(cx, |st, cx| {
-                if is_sarc {
-                    st.expanded_tree_paths.insert(p.clone());
-                    st.selected_file_path = Some(p.clone());
-                    st.active_activity_tab = crate::ui::state::ActivityBarTab::Explorer;
-                } else {
+                if !is_sarc {
                     st.load_file_by_path(&p);
+                    // 从搜索界面打开文件：保持在搜索界面，不跳转回资源管理器界面
+                    st.reveal_file_in_tree(&p, false);
+                } else {
+                    // 若点击纯 SARC 封包容器节点，在资源管理器中定位展开
+                    st.reveal_file_in_tree(&p, true);
                 }
                 cx.notify();
             });

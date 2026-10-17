@@ -255,8 +255,11 @@ pub struct AppState {
     pub file_tree: Vec<crate::model::FileNode>,
     pub expanded_tree_paths: std::collections::HashSet<String>,
     pub selected_file_path: Option<String>,
+    #[allow(dead_code)]
     pub file_search_query: String,
+    #[allow(dead_code)]
     pub file_search_focused: bool,
+    #[allow(dead_code)]
     pub file_search_case_sensitive: bool,
     pub file_tree_filter_type: FileFilterType,
     pub file_sort_mode: FileSortMode,

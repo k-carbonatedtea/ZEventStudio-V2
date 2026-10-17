@@ -35,6 +35,10 @@ impl AppState {
                     self.current_tab = AppWorkspaceTab::CodeEditor;
                 }
             }
+
+            if self.active_activity_tab == crate::ui::state::ActivityBarTab::Explorer {
+                self.reveal_file_in_tree(&target_tab.file_path, false);
+            }
         }
     }
 

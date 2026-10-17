@@ -63,10 +63,12 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
         return true;
     }
 
-    // 4.5 快捷键: Ctrl+F 聚焦文件资源管理器搜索框
+    // 4.5 快捷键: Ctrl+F 聚焦全局搜索面板
     if event.keystroke.modifiers.control && !event.keystroke.modifiers.shift && event.keystroke.key == "f" {
-        state.file_search_focused = true;
-        state.file_tree_sort_menu_open = false;
+        state.active_activity_tab = crate::ui::state::ActivityBarTab::Search;
+        state.sidebar_open = true;
+        state.global_search_focused = true;
+        state.update_global_search_results();
         return true;
     }
 
@@ -210,15 +212,6 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
         return should_notify;
     }
 
-    // 6.5 文件树搜索输入框键盘输入拦截
-    if state.file_search_focused {
-        if event.keystroke.key == "escape" || event.keystroke.key == "enter" {
-            state.file_search_focused = false;
-            return true;
-        }
-        let (changed, _, _) = handle_text_key_event(&mut state.file_search_query, event);
-        return changed;
-    }
 
     // 6.6 全局搜索输入框键盘输入拦截
     if state.global_search_focused {
