@@ -91,6 +91,12 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipb
         return true;
     }
 
+    // 5.2 Git 差异对比模态框拦截 (Esc 关闭)
+    if state.active_diff_modal.is_some() && event.keystroke.key == "escape" {
+        state.close_diff_modal();
+        return true;
+    }
+
     // 6. 未保存修改确认模态框键盘事件拦截 (Esc 取消, Enter 保存并关闭)
     if state.unsaved_changes_modal.is_some() {
         if event.keystroke.key == "escape" {
@@ -224,6 +230,16 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipb
         if changed {
             state.update_global_search_results();
         }
+        return changed;
+    }
+
+    // 6.61 Git 历史提交搜索框键盘输入拦截
+    if state.git_history_search_focused {
+        if event.keystroke.key == "escape" || event.keystroke.key == "enter" {
+            state.git_history_search_focused = false;
+            return true;
+        }
+        let (changed, _, _) = handle_text_key_event(&mut state.git_history_search_query, event, clipboard);
         return changed;
     }
 

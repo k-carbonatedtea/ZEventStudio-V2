@@ -521,6 +521,13 @@ pub fn get_zh(key: &str) -> &str {
         "source_control.save_all_tabs" => "全部保存到磁盘",
         "source_control.no_folder_open" => "未打开项目文件夹",
         "source_control.no_folder_open_hint" => "请打开一个 Mod 目录以使用源代码管理与版本控制",
+        "source_control.history" => "提交历史与分支图谱",
+        "source_control.search_commits_placeholder" => "搜索提交记录、作者或哈希...",
+        "source_control.load_more" => "加载更多历史提交...",
+        "source_control.no_commits" => "暂无提交历史记录",
+        "source_control.no_matching_commits" => "未找到匹配的提交记录",
+        "source_control.view_diff" => "对比修改差异",
+        "source_control.files_changed" => "个文件变更",
         "toast.project_closed" => "已关闭当前项目文件夹",
 
         _ => key,

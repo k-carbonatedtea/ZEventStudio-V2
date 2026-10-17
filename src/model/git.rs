@@ -46,8 +46,58 @@ pub struct GitRepoStatus {
     pub unstaged: std::sync::Arc<Vec<GitFileItem>>,
 }
 
+/// Git 提交记录条目
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GitCommitItem {
+    pub hash: String,
+    pub short_hash: String,
+    pub parents: Vec<String>,
+    pub author: String,
+    pub author_email: String,
+    pub relative_time: String,
+    pub subject: String,
+    pub refs: Vec<String>,
+    pub graph_prefix: String,
+}
+
+/// 某次提交中发生变更的文件
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GitCommitFileChange {
+    pub status: GitFileStatusKind,
+    pub path: String,
+    pub old_path: Option<String>,
+}
+
+/// 代码差异行类型
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GitDiffLineType {
+    Context,
+    Addition,
+    Deletion,
+    Header,
+}
+
+/// 单行差异信息
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GitDiffLine {
+    pub line_type: GitDiffLineType,
+    pub old_line_num: Option<usize>,
+    pub new_line_num: Option<usize>,
+    pub text: String,
+}
+
+/// 单个文件的完整差异对比数据
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub struct GitFileDiff {
+    pub file_path: String,
+    pub lines: Vec<GitDiffLine>,
+    pub additions: usize,
+    pub deletions: usize,
+}
+
 fn run_git_cmd(repo_dir: &str, args: &[&str]) -> Result<std::process::Output, String> {
     let mut cmd = Command::new("git");
+    cmd.arg("-c").arg("core.quotepath=false");
     cmd.args(args);
     cmd.current_dir(repo_dir);
     #[cfg(windows)]
@@ -56,6 +106,83 @@ fn run_git_cmd(repo_dir: &str, args: &[&str]) -> Result<std::process::Output, St
         cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW: 避免黑色终端弹窗闪烁
     }
     cmd.output().map_err(|e| format!("执行 Git 命令失败: {}", e))
+}
+
+/// 解码 Git 路径中可能包含的八进制转义序列（例如 "\346\266\205"）及 C 风格转义字符
+pub fn unquote_git_path(raw: &str) -> String {
+    let s = raw.trim();
+    if !s.starts_with('"') || !s.ends_with('"') || s.len() < 2 {
+        return s.to_string();
+    }
+    let inner = &s[1..s.len() - 1];
+    let bytes = inner.as_bytes();
+    let mut out_bytes = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'\\' && i + 1 < bytes.len() {
+            i += 1;
+            match bytes[i] {
+                b'\\' => {
+                    out_bytes.push(b'\\');
+                    i += 1;
+                }
+                b'"' => {
+                    out_bytes.push(b'"');
+                    i += 1;
+                }
+                b'n' => {
+                    out_bytes.push(b'\n');
+                    i += 1;
+                }
+                b't' => {
+                    out_bytes.push(b'\t');
+                    i += 1;
+                }
+                b'r' => {
+                    out_bytes.push(b'\r');
+                    i += 1;
+                }
+                b'a' => {
+                    out_bytes.push(0x07);
+                    i += 1;
+                }
+                b'b' => {
+                    out_bytes.push(0x08);
+                    i += 1;
+                }
+                b'v' => {
+                    out_bytes.push(0x0B);
+                    i += 1;
+                }
+                b'f' => {
+                    out_bytes.push(0x0C);
+                    i += 1;
+                }
+                b'0'..=b'7' => {
+                    let mut val = (bytes[i] - b'0') as u8;
+                    i += 1;
+                    for _ in 0..2 {
+                        if i < bytes.len() && (b'0'..=b'7').contains(&bytes[i]) {
+                            val = (val << 3) | (bytes[i] - b'0') as u8;
+                            i += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    out_bytes.push(val);
+                }
+                other => {
+                    out_bytes.push(b'\\');
+                    out_bytes.push(other);
+                    i += 1;
+                }
+            }
+        } else {
+            out_bytes.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8_lossy(&out_bytes).to_string()
 }
 
 /// 检查指定目录是否为独立的 Git 仓库根目录 (必须在该目录下直接存在 .git)
@@ -133,26 +260,26 @@ pub fn get_repo_status(dir: &str) -> Result<GitRepoStatus, String> {
 
         let x = line.chars().nth(0).unwrap_or(' ');
         let y = line.chars().nth(1).unwrap_or(' ');
-        let raw_path = &line[3..].trim();
-        let clean_path = raw_path.trim_matches('"');
-        let actual_path = if let Some((_, new_p)) = clean_path.split_once(" -> ") {
-            new_p.trim()
+        let raw_path = line[3..].trim();
+        let actual_path = if let Some((_, new_p)) = raw_path.split_once(" -> ") {
+            unquote_git_path(new_p.trim())
         } else {
-            clean_path
+            unquote_git_path(raw_path)
         };
+        let actual_path = actual_path.replace('\\', "/");
 
-        let path_obj = Path::new(actual_path);
+        let path_obj = Path::new(&actual_path);
         let file_name = path_obj
             .file_name()
             .and_then(|s| s.to_str())
-            .unwrap_or(actual_path)
+            .unwrap_or(&actual_path)
             .to_string();
         let dir_name = path_obj
             .parent()
             .and_then(|p| p.to_str())
             .unwrap_or("")
             .replace('\\', "/");
-        let full_path = root_path.join(actual_path).to_string_lossy().to_string();
+        let full_path = root_path.join(&actual_path).to_string_lossy().to_string();
 
         // 1. 暂存区变更 (Staged Changes)
         if x != ' ' && x != '?' {
@@ -212,7 +339,8 @@ pub fn get_repo_status(dir: &str) -> Result<GitRepoStatus, String> {
 
 /// 暂存单个文件 (git add -A -- <path>)
 pub fn stage_file(dir: &str, rel_path: &str) -> Result<(), String> {
-    let output = run_git_cmd(dir, &["add", "-A", "--", rel_path])?;
+    let norm_path = rel_path.replace('\\', "/");
+    let output = run_git_cmd(dir, &["add", "-A", "--", &norm_path])?;
     if output.status.success() {
         Ok(())
     } else {
@@ -232,13 +360,14 @@ pub fn stage_all(dir: &str) -> Result<(), String> {
 
 /// 取消暂存单个文件 (git restore --staged -- <path>)
 pub fn unstage_file(dir: &str, rel_path: &str) -> Result<(), String> {
-    let output = run_git_cmd(dir, &["restore", "--staged", "--", rel_path]);
+    let norm_path = rel_path.replace('\\', "/");
+    let output = run_git_cmd(dir, &["restore", "--staged", "--", &norm_path]);
     if let Ok(out) = output {
         if out.status.success() {
             return Ok(());
         }
     }
-    let output = run_git_cmd(dir, &["reset", "HEAD", "--", rel_path])?;
+    let output = run_git_cmd(dir, &["reset", "HEAD", "--", &norm_path])?;
     if output.status.success() {
         Ok(())
     } else {
@@ -264,32 +393,46 @@ pub fn unstage_all(dir: &str) -> Result<(), String> {
 
 /// 放弃工作区文件变更 (git restore / git clean)
 pub fn discard_file(dir: &str, rel_path: &str, is_untracked: bool) -> Result<(), String> {
+    let norm_path = rel_path.replace('\\', "/");
     if is_untracked {
-        let output = run_git_cmd(dir, &["clean", "-f", "-d", "--", rel_path])?;
+        let output = run_git_cmd(dir, &["clean", "-f", "-d", "--", &norm_path])?;
         if output.status.success() {
             return Ok(());
         }
-        let _ = std::fs::remove_file(Path::new(dir).join(rel_path));
+        let p = Path::new(dir).join(&norm_path);
+        if p.is_dir() {
+            let _ = std::fs::remove_dir_all(&p);
+        } else {
+            let _ = std::fs::remove_file(&p);
+        }
         return Ok(());
     }
 
-    let output = run_git_cmd(dir, &["restore", "--", rel_path]);
+    let output = run_git_cmd(dir, &["restore", "--", &norm_path]);
     if let Ok(out) = output {
         if out.status.success() {
             return Ok(());
         }
     }
-    let output = run_git_cmd(dir, &["checkout", "--", rel_path])?;
+    let output = run_git_cmd(dir, &["checkout", "--", &norm_path])?;
     if output.status.success() {
         Ok(())
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+        let err = String::from_utf8_lossy(&output.stderr);
+        let out = String::from_utf8_lossy(&output.stdout);
+        let msg = if !err.trim().is_empty() {
+            err.trim()
+        } else {
+            out.trim()
+        };
+        Err(msg.to_string())
     }
 }
 
 /// 放弃所有工作区变更 (git restore . && git clean -fd)
 pub fn discard_all(dir: &str) -> Result<(), String> {
     let _ = run_git_cmd(dir, &["restore", "."]);
+    let _ = run_git_cmd(dir, &["checkout", "--", "."]);
     let _ = run_git_cmd(dir, &["clean", "-fd"]);
     Ok(())
 }
@@ -321,6 +464,284 @@ pub fn commit(dir: &str, title: &str, description: &str) -> Result<String, Strin
         };
         Err(msg.to_string())
     }
+}
+
+/// 解析统一差异格式 (Unified Diff) 输出
+pub fn parse_unified_diff(diff_output: &str, file_path: &str) -> GitFileDiff {
+    let mut lines = Vec::new();
+    let mut additions = 0;
+    let mut deletions = 0;
+    let mut old_num = 1;
+    let mut new_num = 1;
+
+    for raw_line in diff_output.lines() {
+        if raw_line.starts_with("diff --git")
+            || raw_line.starts_with("index ")
+            || raw_line.starts_with("--- ")
+            || raw_line.starts_with("+++ ")
+        {
+            continue;
+        }
+
+        if raw_line.starts_with("@@") {
+            // 解析 Hunk 头部，提取起始行号例如 @@ -12,4 +15,6 @@
+            if let Some(pos) = raw_line.find('-') {
+                let rest = &raw_line[pos + 1..];
+                if let Some(comma_or_space) = rest.find(|c: char| c == ',' || c == ' ') {
+                    if let Ok(n) = rest[..comma_or_space].parse::<usize>() {
+                        old_num = n;
+                    }
+                }
+            }
+            if let Some(pos) = raw_line.find('+') {
+                let rest = &raw_line[pos + 1..];
+                if let Some(comma_or_space) = rest.find(|c: char| c == ',' || c == ' ') {
+                    if let Ok(n) = rest[..comma_or_space].parse::<usize>() {
+                        new_num = n;
+                    }
+                }
+            }
+            lines.push(GitDiffLine {
+                line_type: GitDiffLineType::Header,
+                old_line_num: None,
+                new_line_num: None,
+                text: raw_line.to_string(),
+            });
+            continue;
+        }
+
+        if let Some(stripped) = raw_line.strip_prefix('+') {
+            additions += 1;
+            lines.push(GitDiffLine {
+                line_type: GitDiffLineType::Addition,
+                old_line_num: None,
+                new_line_num: Some(new_num),
+                text: stripped.to_string(),
+            });
+            new_num += 1;
+        } else if let Some(stripped) = raw_line.strip_prefix('-') {
+            deletions += 1;
+            lines.push(GitDiffLine {
+                line_type: GitDiffLineType::Deletion,
+                old_line_num: Some(old_num),
+                new_line_num: None,
+                text: stripped.to_string(),
+            });
+            old_num += 1;
+        } else if let Some(stripped) = raw_line.strip_prefix(' ') {
+            lines.push(GitDiffLine {
+                line_type: GitDiffLineType::Context,
+                old_line_num: Some(old_num),
+                new_line_num: Some(new_num),
+                text: stripped.to_string(),
+            });
+            old_num += 1;
+            new_num += 1;
+        } else if raw_line.starts_with('\\') {
+            // \ No newline at end of file
+            lines.push(GitDiffLine {
+                line_type: GitDiffLineType::Context,
+                old_line_num: None,
+                new_line_num: None,
+                text: raw_line.to_string(),
+            });
+        } else {
+            lines.push(GitDiffLine {
+                line_type: GitDiffLineType::Context,
+                old_line_num: Some(old_num),
+                new_line_num: Some(new_num),
+                text: raw_line.to_string(),
+            });
+            old_num += 1;
+            new_num += 1;
+        }
+    }
+
+    GitFileDiff {
+        file_path: file_path.to_string(),
+        lines,
+        additions,
+        deletions,
+    }
+}
+
+/// 获取提交历史与分支图谱 (git log --graph)
+pub fn get_commit_history(dir: &str, max_count: usize) -> Result<Vec<GitCommitItem>, String> {
+    let count_str = max_count.to_string();
+    let output = run_git_cmd(
+        dir,
+        &[
+            "log",
+            "-n",
+            &count_str,
+            "--graph",
+            "--date=relative",
+            "--pretty=format:__COMMIT__%H\x1f%h\x1f%P\x1f%an\x1f%ar\x1f%s\x1f%D",
+        ],
+    )?;
+
+    if !output.status.success() {
+        return Ok(Vec::new());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut items = Vec::new();
+
+    for line in stdout.lines() {
+        if let Some(pos) = line.find("__COMMIT__") {
+            let graph_part = line[..pos].trim_end();
+            let commit_part = &line[pos + "__COMMIT__".len()..];
+            let fields: Vec<&str> = commit_part.split('\x1f').collect();
+            if fields.len() >= 6 {
+                let hash = fields[0].trim().to_string();
+                let short_hash = fields[1].trim().to_string();
+                let parents = fields[2]
+                    .split_whitespace()
+                    .map(|s| s.to_string())
+                    .collect();
+                let author = fields[3].trim().to_string();
+                let relative_time = fields[4].trim().to_string();
+                let subject = fields[5].trim().to_string();
+                let refs_str = fields.get(6).unwrap_or(&"").trim();
+                let refs = if !refs_str.is_empty() {
+                    refs_str
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+
+                let graph_prefix = if graph_part.is_empty() {
+                    "*".to_string()
+                } else {
+                    graph_part.to_string()
+                };
+
+                items.push(GitCommitItem {
+                    hash,
+                    short_hash,
+                    parents,
+                    author,
+                    author_email: String::new(),
+                    relative_time,
+                    subject,
+                    refs,
+                    graph_prefix,
+                });
+            }
+        }
+    }
+
+    Ok(items)
+}
+
+/// 获取指定提交中修改的文件列表 (git show --name-status)
+pub fn get_commit_files(dir: &str, commit_hash: &str) -> Result<Vec<GitCommitFileChange>, String> {
+    let output = run_git_cmd(
+        dir,
+        &["show", "--name-status", "--format=", commit_hash],
+    )?;
+
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        return Err(err.trim().to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut list = Vec::new();
+
+    for line in stdout.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = trimmed.split('\t').collect();
+        if parts.len() >= 2 {
+            let status_char = parts[0].chars().next().unwrap_or('M');
+            let status = match status_char {
+                'A' => GitFileStatusKind::Added,
+                'D' => GitFileStatusKind::Deleted,
+                'R' => GitFileStatusKind::Renamed,
+                'U' => GitFileStatusKind::Untracked,
+                _ => GitFileStatusKind::Modified,
+            };
+            if status == GitFileStatusKind::Renamed && parts.len() >= 3 {
+                list.push(GitCommitFileChange {
+                    status,
+                    path: unquote_git_path(parts[2]).replace('\\', "/"),
+                    old_path: Some(unquote_git_path(parts[1]).replace('\\', "/")),
+                });
+            } else {
+                list.push(GitCommitFileChange {
+                    status,
+                    path: unquote_git_path(parts[1]).replace('\\', "/"),
+                    old_path: None,
+                });
+            }
+        }
+    }
+
+    Ok(list)
+}
+
+/// 获取指定提交中某个文件的差异代码 (git show <hash> -- <path>)
+pub fn get_commit_file_diff(dir: &str, commit_hash: &str, file_path: &str) -> Result<GitFileDiff, String> {
+    let norm_path = file_path.replace('\\', "/");
+    let output = run_git_cmd(
+        dir,
+        &["show", "--format=", commit_hash, "--", &norm_path],
+    )?;
+
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        return Err(err.trim().to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(parse_unified_diff(&stdout, &norm_path))
+}
+
+/// 获取当前工作区或暂存区中某个文件的修改差异
+pub fn get_working_tree_file_diff(dir: &str, file_path: &str, is_staged: bool) -> Result<GitFileDiff, String> {
+    let norm_path = file_path.replace('\\', "/");
+    let output = if is_staged {
+        run_git_cmd(dir, &["diff", "--cached", "--", &norm_path])?
+    } else {
+        run_git_cmd(dir, &["diff", "--", &norm_path])?
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !stdout.trim().is_empty() {
+        return Ok(parse_unified_diff(&stdout, &norm_path));
+    }
+
+    // 若 Git diff 为空，但文件是新添加或未跟踪的，直接读取文件内容展示全行新增
+    let full_path = Path::new(dir).join(&norm_path);
+    if full_path.exists() && full_path.is_file() {
+        if let Ok(content) = std::fs::read_to_string(&full_path) {
+            let mut lines = Vec::new();
+            let mut additions = 0;
+            for (idx, line) in content.lines().enumerate() {
+                additions += 1;
+                lines.push(GitDiffLine {
+                    line_type: GitDiffLineType::Addition,
+                    old_line_num: None,
+                    new_line_num: Some(idx + 1),
+                    text: line.to_string(),
+                });
+            }
+            return Ok(GitFileDiff {
+                file_path: norm_path,
+                lines,
+                additions,
+                deletions: 0,
+            });
+        }
+    }
+
+    Ok(parse_unified_diff(&stdout, &norm_path))
 }
 
 #[cfg(test)]
@@ -382,5 +803,15 @@ mod tests {
 
         // Cleanup
         let _ = std::fs::remove_dir_all(&tmp_dir);
+    }
+
+    #[test]
+    fn test_unquote_git_path() {
+        assert_eq!(unquote_git_path("simple.txt"), "simple.txt");
+        assert_eq!(unquote_git_path("\"simple.txt\""), "simple.txt");
+        assert_eq!(unquote_git_path("\"path with spaces/file.txt\""), "path with spaces/file.txt");
+        // "\346\266\205\346\231\256\351\241\277" is "涅普顿"
+        let quoted_chinese = "\"0187_\\346\\266\\205\\346\\231\\256\\351\\241\\277/file.txt\"";
+        assert_eq!(unquote_git_path(quoted_chinese), "0187_涅普顿/file.txt");
     }
 }

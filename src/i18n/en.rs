@@ -526,6 +526,13 @@ pub fn get_en(key: &str) -> &str {
         "source_control.save_all_tabs" => "Save all to disk",
         "source_control.no_folder_open" => "No Folder Opened",
         "source_control.no_folder_open_hint" => "Open a Mod folder to enable source control and version tracking",
+        "source_control.history" => "Commit History & Graph",
+        "source_control.search_commits_placeholder" => "Search commits, author, or hash...",
+        "source_control.load_more" => "Load more commits...",
+        "source_control.no_commits" => "No commit records found",
+        "source_control.no_matching_commits" => "No matching commits found",
+        "source_control.view_diff" => "View Diff Changes",
+        "source_control.files_changed" => "files changed",
         "toast.project_closed" => "Closed current project folder",
 
         _ => key,

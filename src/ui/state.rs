@@ -304,6 +304,16 @@ pub struct AppState {
     pub git_commit_focus: GitCommitFocus,
     pub git_show_desc_field: bool,
     pub source_control_scroll_handle: gpui::UniformListScrollHandle,
+
+    // Git 提交历史、分支图谱与修改差异状态
+    pub git_commits: std::sync::Arc<Vec<crate::model::git::GitCommitItem>>,
+    pub git_history_collapsed: bool,
+    pub git_history_search_query: String,
+    pub git_history_search_focused: bool,
+    pub git_expanded_commit_hash: Option<String>,
+    pub git_expanded_commit_files: Vec<crate::model::git::GitCommitFileChange>,
+    pub git_history_limit: usize,
+    pub active_diff_modal: Option<crate::ui::sidebar::diff_modal::GitDiffModalState>,
 }
 
 #[allow(dead_code)]
@@ -417,6 +427,14 @@ impl AppState {
             git_commit_focus: GitCommitFocus::None,
             git_show_desc_field: false,
             source_control_scroll_handle: gpui::UniformListScrollHandle::new(),
+            git_commits: std::sync::Arc::new(Vec::new()),
+            git_history_collapsed: false,
+            git_history_search_query: String::new(),
+            git_history_search_focused: false,
+            git_expanded_commit_hash: None,
+            git_expanded_commit_files: Vec::new(),
+            git_history_limit: 50,
+            active_diff_modal: None,
         };
 
         state.fit_view();
@@ -517,7 +535,7 @@ impl AppState {
         self.toast = Some(Toast::info(self.t("toast.project_closed")));
     }
 
-    /// 刷新 Git 仓库状态
+    /// 刷新 Git 仓库状态与提交历史
     pub fn refresh_git_status(&mut self) {
         if let Some(dir) = self.get_git_working_dir() {
             match crate::model::git::get_repo_status(&dir) {
@@ -534,12 +552,134 @@ impl AppState {
                     self.git_unstaged = std::sync::Arc::new(Vec::new());
                 }
             }
+            self.refresh_git_history();
         } else {
             self.git_is_repo = false;
             self.git_branch = None;
             self.git_staged = std::sync::Arc::new(Vec::new());
             self.git_unstaged = std::sync::Arc::new(Vec::new());
+            self.git_commits = std::sync::Arc::new(Vec::new());
         }
+    }
+
+    /// 刷新 Git 提交历史与分支图谱
+    pub fn refresh_git_history(&mut self) {
+        if let Some(dir) = self.get_git_working_dir() {
+            if self.git_is_repo {
+                if let Ok(commits) = crate::model::git::get_commit_history(&dir, self.git_history_limit) {
+                    self.git_commits = std::sync::Arc::new(commits);
+                    return;
+                }
+            }
+        }
+        self.git_commits = std::sync::Arc::new(Vec::new());
+    }
+
+    /// 加载更多历史提交
+    pub fn load_more_git_history(&mut self) {
+        self.git_history_limit += 50;
+        self.refresh_git_history();
+    }
+
+    /// 展开或收起某次提交的文件列表
+    pub fn toggle_expand_commit(&mut self, hash: &str) {
+        if self.git_expanded_commit_hash.as_deref() == Some(hash) {
+            self.git_expanded_commit_hash = None;
+            self.git_expanded_commit_files.clear();
+        } else {
+            self.git_expanded_commit_hash = Some(hash.to_string());
+            if let Some(dir) = self.get_git_working_dir() {
+                if let Ok(files) = crate::model::git::get_commit_files(&dir, hash) {
+                    self.git_expanded_commit_files = files;
+                } else {
+                    self.git_expanded_commit_files.clear();
+                }
+            }
+        }
+    }
+
+    /// 打开指定提交中某个文件的差异对比弹窗
+    pub fn open_commit_file_diff(&mut self, hash: &str, rel_path: &str) {
+        if let Some(dir) = self.get_git_working_dir() {
+            let fname = std::path::Path::new(rel_path)
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or(rel_path)
+                .to_string();
+
+            let subject = self
+                .git_commits
+                .iter()
+                .find(|c| c.hash == hash || c.short_hash == hash)
+                .map(|c| c.subject.clone())
+                .unwrap_or_default();
+
+            let subtitle = if subject.is_empty() {
+                format!("提交: {}", &hash[..7.min(hash.len())])
+            } else {
+                format!("提交: {} · {}", &hash[..7.min(hash.len())], subject)
+            };
+
+            let all_files = self
+                .git_expanded_commit_files
+                .iter()
+                .map(|f| f.path.clone())
+                .collect();
+
+            match crate::model::git::get_commit_file_diff(&dir, hash, rel_path) {
+                Ok(diff) => {
+                    self.active_diff_modal = Some(crate::ui::sidebar::diff_modal::GitDiffModalState {
+                        title: fname,
+                        subtitle,
+                        commit_hash: Some(hash.to_string()),
+                        file_path: rel_path.to_string(),
+                        diff,
+                        available_files: all_files,
+                    });
+                }
+                Err(err) => {
+                    self.toast = Some(Toast::error(format!("获取提交差异失败: {}", err)));
+                }
+            }
+        }
+    }
+
+    /// 打开工作区或暂存区未提交文件的修改差异对比
+    pub fn open_working_file_diff(&mut self, rel_path: &str, is_staged: bool) {
+        if let Some(dir) = self.get_git_working_dir() {
+            let fname = std::path::Path::new(rel_path)
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or(rel_path)
+                .to_string();
+
+            let subtitle = if is_staged {
+                "暂存区变更 (Staged Changes)".to_string()
+            } else {
+                "工作区未暂存修改 (Working Tree Changes)".to_string()
+            };
+
+            match crate::model::git::get_working_tree_file_diff(&dir, rel_path, is_staged) {
+                Ok(diff) => {
+                    self.active_diff_modal = Some(crate::ui::sidebar::diff_modal::GitDiffModalState {
+                        title: fname,
+                        subtitle,
+                        commit_hash: None,
+                        file_path: rel_path.to_string(),
+                        diff,
+                        available_files: vec![rel_path.to_string()],
+                    });
+                }
+                Err(err) => {
+                    self.toast = Some(Toast::error(format!("获取文件修改差异失败: {}", err)));
+                }
+            }
+        }
+    }
+
+    /// 关闭差异对比弹窗
+    pub fn close_diff_modal(&mut self) {
+        self.active_diff_modal = None;
     }
 
     /// 初始化 Git 仓库 (git init)
@@ -621,6 +761,13 @@ impl AppState {
             match crate::model::git::discard_file(&dir, rel_path, is_untracked) {
                 Ok(()) => {
                     self.refresh_git_status();
+                    let norm_rel = rel_path.replace('\\', "/");
+                    for tab in self.open_tabs.iter_mut() {
+                        let norm_tab = tab.file_path.replace('\\', "/");
+                        if norm_tab.ends_with(&norm_rel) || norm_tab.contains(&norm_rel) {
+                            tab.is_modified = false;
+                        }
+                    }
                     self.toast = Some(Toast::info(format!("已放弃更改: {}", rel_path)));
                 }
                 Err(e) => {
@@ -636,6 +783,9 @@ impl AppState {
             match crate::model::git::discard_all(&dir) {
                 Ok(()) => {
                     self.refresh_git_status();
+                    for tab in self.open_tabs.iter_mut() {
+                        tab.is_modified = false;
+                    }
                     self.toast = Some(Toast::info("已放弃所有未暂存更改"));
                 }
                 Err(e) => {
@@ -693,7 +843,7 @@ impl AppState {
                 return true;
             }
         }
-        if self.global_search_focused || self.file_search_focused {
+        if self.global_search_focused || self.file_search_focused || self.git_history_search_focused {
             return true;
         }
         if self.git_commit_focus != GitCommitFocus::None {
@@ -709,6 +859,7 @@ impl AppState {
     pub fn clear_active_text_inputs(&mut self) {
         self.global_search_focused = false;
         self.file_search_focused = false;
+        self.git_history_search_focused = false;
         self.git_commit_focus = GitCommitFocus::None;
         self.is_adding_action = false;
         self.is_adding_query = false;
@@ -745,6 +896,9 @@ impl AppState {
         }
         if self.global_search_focused {
             return Some(&self.global_search_query);
+        }
+        if self.git_history_search_focused {
+            return Some(&self.git_history_search_query);
         }
         match self.git_commit_focus {
             GitCommitFocus::Title => return Some(&self.git_commit_title),
@@ -856,6 +1010,12 @@ impl AppState {
         if self.global_search_focused {
             self.global_search_query.push_str(&clean);
             self.update_global_search_results();
+            return true;
+        }
+
+        // 3.1 Git 历史提交搜索框
+        if self.git_history_search_focused {
+            self.git_history_search_query.push_str(&clean);
             return true;
         }
 

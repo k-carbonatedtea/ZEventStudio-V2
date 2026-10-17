@@ -407,5 +407,9 @@ impl Render for AppView {
             .children(state.settings_modal_open.then(|| {
                 crate::ui::render_settings_modal(state, &self.model)
             }))
+            // Git 代码修改与差异对比模态框
+            .children((state.active_diff_modal.is_some()).then(|| {
+                crate::ui::sidebar::render_git_diff_modal(state, &self.model)
+            }))
     }
 }

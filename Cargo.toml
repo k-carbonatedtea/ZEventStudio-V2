@@ -6,8 +6,8 @@ edition = "2021"
 [dependencies]
 gpui = { path = "../zed/crates/gpui" }
 gpui_platform = { path = "../zed/crates/gpui_platform", features = ["font-kit"] }
-gpui-component = { path = "../gpui-component/crates/ui", features = ["tree-sitter", "tree-sitter-yaml"] }
-gpui-component-assets = { path = "../gpui-component/crates/assets" }
+gpui-component = { path = "../gpui-component/crates/component", features = ["tree-sitter", "tree-sitter-yaml"] }
+gpui-component-assets = { package = "gpui-kit-assets", path = "../gpui-component/crates/assets" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1.10", features = ["v4", "fast-rng", "serde"] }
