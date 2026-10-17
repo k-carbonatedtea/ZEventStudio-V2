@@ -693,7 +693,7 @@ impl AppState {
                 return true;
             }
         }
-        if self.global_search_focused {
+        if self.global_search_focused || self.file_search_focused {
             return true;
         }
         if self.git_commit_focus != GitCommitFocus::None {
@@ -703,6 +703,17 @@ impl AppState {
             return true;
         }
         false
+    }
+
+    /// 清除所有侧边栏及编辑输入框的激活状态，使焦点回归主工作区/代码编辑器
+    pub fn clear_active_text_inputs(&mut self) {
+        self.global_search_focused = false;
+        self.file_search_focused = false;
+        self.git_commit_focus = GitCommitFocus::None;
+        self.is_adding_action = false;
+        self.is_adding_query = false;
+        self.is_adding_actor = false;
+        self.is_adding_param = false;
     }
 
     /// 获取当前激活的输入框文本内容切片
@@ -942,6 +953,30 @@ mod tests {
         let inserted = state.insert_text_to_active_input("动作_播放动画");
         assert!(inserted);
         assert_eq!(state.new_action_name, "动作_播放动画");
+    }
+
+    #[test]
+    fn test_clear_active_text_inputs() {
+        let mut state = AppState::new();
+        state.git_commit_focus = GitCommitFocus::Title;
+        assert!(state.has_active_text_input());
+        state.clear_active_text_inputs();
+        assert!(!state.has_active_text_input());
+
+        state.global_search_focused = true;
+        assert!(state.has_active_text_input());
+        state.clear_active_text_inputs();
+        assert!(!state.has_active_text_input());
+
+        state.file_search_focused = true;
+        assert!(state.has_active_text_input());
+        state.clear_active_text_inputs();
+        assert!(!state.has_active_text_input());
+
+        state.is_adding_param = true;
+        assert!(state.has_active_text_input());
+        state.clear_active_text_inputs();
+        assert!(!state.has_active_text_input());
     }
 }
 

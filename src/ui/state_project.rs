@@ -111,6 +111,7 @@ impl AppState {
 
     /// 智能切换主工作区模式 (与已打开文档标签协同联动)
     pub fn switch_workspace_tab(&mut self, target_tab: AppWorkspaceTab) {
+        self.clear_active_text_inputs();
         match target_tab {
             AppWorkspaceTab::Flowchart => {
                 let is_flow_active = self
@@ -162,6 +163,7 @@ impl AppState {
 
     /// 根据虚拟路径或物理路径加载事件流或数据文件至编辑器
     pub fn load_file_by_path(&mut self, path: &str) {
+        self.clear_active_text_inputs();
         self.selected_file_path = Some(path.to_string());
 
         let raw_name = path

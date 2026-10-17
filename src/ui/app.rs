@@ -261,6 +261,17 @@ impl Render for AppView {
                                     .flex()
                                     .size_full()
                                     .overflow_hidden()
+                                    .capture_any_mouse_down({
+                                        let model = self.model.clone();
+                                        move |_e, _window, cx| {
+                                            model.update(cx, |st, cx| {
+                                                if st.has_active_text_input() {
+                                                    st.clear_active_text_inputs();
+                                                    cx.notify();
+                                                }
+                                            });
+                                        }
+                                    })
                                     // 中间主工作区列 (顶部文档Tab + 流程图画布 + 底部切换栏)
                                     .child(
                                         div()
@@ -300,6 +311,17 @@ impl Render for AppView {
                                     .flex_col()
                                     .size_full()
                                     .overflow_hidden()
+                                    .capture_any_mouse_down({
+                                        let model = self.model.clone();
+                                        move |_e, _window, cx| {
+                                            model.update(cx, |st, cx| {
+                                                if st.has_active_text_input() {
+                                                    st.clear_active_text_inputs();
+                                                    cx.notify();
+                                                }
+                                            });
+                                        }
+                                    })
                                     // 顶部多文档/多文件标签栏 (Document Tab Bar)
                                     .child(crate::ui::render_document_tab_bar(state, &self.model))
                                     // 代码编辑器主体

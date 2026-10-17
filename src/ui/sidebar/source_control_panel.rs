@@ -400,7 +400,9 @@ fn render_commit_box(
     let has_title = !state.git_commit_title.trim().is_empty();
 
     let model_title_click = model.clone();
+    let model_title_out = model.clone();
     let model_desc_click = model.clone();
+    let model_desc_out = model.clone();
     let model_toggle_desc = model.clone();
     let model_commit = model.clone();
 
@@ -438,6 +440,14 @@ fn render_commit_box(
                     model_title_click.update(cx, |st, cx| {
                         st.git_commit_focus = GitCommitFocus::Title;
                         cx.notify();
+                    });
+                })
+                .on_mouse_down_out(move |_, _, cx| {
+                    model_title_out.update(cx, |st, cx| {
+                        if st.git_commit_focus == GitCommitFocus::Title {
+                            st.git_commit_focus = GitCommitFocus::None;
+                            cx.notify();
+                        }
                     });
                 })
                 .child(
@@ -532,6 +542,14 @@ fn render_commit_box(
                     model_desc_click.update(cx, |st, cx| {
                         st.git_commit_focus = GitCommitFocus::Description;
                         cx.notify();
+                    });
+                })
+                .on_mouse_down_out(move |_, _, cx| {
+                    model_desc_out.update(cx, |st, cx| {
+                        if st.git_commit_focus == GitCommitFocus::Description {
+                            st.git_commit_focus = GitCommitFocus::None;
+                            cx.notify();
+                        }
                     });
                 })
                 .child(

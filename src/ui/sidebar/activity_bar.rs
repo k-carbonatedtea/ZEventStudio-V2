@@ -150,6 +150,7 @@ where
         })
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             model_click.update(cx, |st, cx| {
+                st.clear_active_text_inputs();
                 match tab {
                     ActivityBarTab::Explorer => {
                         if st.active_activity_tab == ActivityBarTab::Explorer && st.sidebar_open {
@@ -162,12 +163,10 @@ where
                     ActivityBarTab::Search => {
                         if st.active_activity_tab == ActivityBarTab::Search && st.sidebar_open {
                             st.sidebar_open = false;
-                            st.global_search_focused = false;
                         } else {
                             st.active_activity_tab = ActivityBarTab::Search;
                             st.sidebar_open = true;
                             st.global_search_focused = true;
-                            st.file_search_focused = false;
                             st.update_global_search_results();
                         }
                     }

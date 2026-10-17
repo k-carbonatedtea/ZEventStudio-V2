@@ -7,11 +7,12 @@ use crate::ui::state::AppState;
 pub fn render_editor_area(
     _code_state: &CodeDocumentState,
     state: &AppState,
-    _model: &Entity<AppState>,
+    model: &Entity<AppState>,
     editor_state: Option<&Entity<EditorState>>,
 ) -> impl IntoElement {
     let pal = state.theme();
     let ed_click = editor_state.cloned();
+    let model_click = model.clone();
     div()
         .id("code_editor_interactive_container")
         .flex_1()
@@ -19,6 +20,12 @@ pub fn render_editor_area(
         .overflow_hidden()
         .bg(pal.app_bg)
         .capture_any_mouse_down(move |_e, window, cx| {
+            model_click.update(cx, |st, cx| {
+                if st.has_active_text_input() {
+                    st.clear_active_text_inputs();
+                    cx.notify();
+                }
+            });
             if let Some(ref ed) = ed_click {
                 ed.update(cx, |editor, cx| {
                     editor.focus(window, cx);

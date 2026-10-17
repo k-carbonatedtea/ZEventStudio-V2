@@ -4,6 +4,7 @@ use crate::ui::state::{AppState, AppWorkspaceTab, UnsavedChangesModalState};
 impl AppState {
     /// 切换当前活跃文档标签页
     pub fn switch_document_tab(&mut self, tab_id: &str) {
+        self.clear_active_text_inputs();
         if self.active_tab_id.as_deref() == Some(tab_id) {
             return;
         }

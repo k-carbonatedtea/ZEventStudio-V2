@@ -52,6 +52,7 @@ pub fn render_search_panel(
     let show_filters = state.global_search_show_filters;
 
     let model_input = model.clone();
+    let model_input_out = model.clone();
     let model_clear = model.clone();
     let model_case = model.clone();
     let model_word = model.clone();
@@ -193,6 +194,14 @@ pub fn render_search_panel(
                                 st.global_search_focused = true;
                                 st.file_search_focused = false;
                                 cx.notify();
+                            });
+                        })
+                        .on_mouse_down_out(move |_, _, cx| {
+                            model_input_out.update(cx, |st, cx| {
+                                if st.global_search_focused {
+                                    st.global_search_focused = false;
+                                    cx.notify();
+                                }
                             });
                         })
                         .child(
@@ -503,6 +512,7 @@ fn render_search_row(
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             let p = path_to_load.clone();
             model_jump.update(cx, |st, cx| {
+                st.clear_active_text_inputs();
                 if !is_sarc {
                     st.load_file_by_path(&p);
                     // 从搜索界面打开文件：保持在搜索界面，不跳转回资源管理器界面

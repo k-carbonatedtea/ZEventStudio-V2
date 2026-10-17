@@ -607,7 +607,7 @@ fn render_flat_file_row(
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             let path_clone = path.clone();
             model_click.update(cx, |st, cx| {
-                st.file_search_focused = false;
+                st.clear_active_text_inputs();
                 st.file_tree_sort_menu_open = false;
                 if is_container {
                     st.toggle_tree_path(&path_clone);
