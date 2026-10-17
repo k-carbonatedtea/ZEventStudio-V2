@@ -8,6 +8,7 @@ pub mod settings;
 pub mod sidebar;
 pub mod state;
 pub mod state_canvas;
+pub mod state_diff;
 pub mod state_editor;
 pub mod state_project;
 pub mod state_settings;

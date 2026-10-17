@@ -159,11 +159,11 @@ pub fn unquote_git_path(raw: &str) -> String {
                     i += 1;
                 }
                 b'0'..=b'7' => {
-                    let mut val = (bytes[i] - b'0') as u8;
+                    let mut val = bytes[i] - b'0';
                     i += 1;
                     for _ in 0..2 {
                         if i < bytes.len() && (b'0'..=b'7').contains(&bytes[i]) {
-                            val = (val << 3) | (bytes[i] - b'0') as u8;
+                            val = (val << 3) | (bytes[i] - b'0');
                             i += 1;
                         } else {
                             break;
@@ -258,8 +258,9 @@ pub fn get_repo_status(dir: &str) -> Result<GitRepoStatus, String> {
             continue;
         }
 
-        let x = line.chars().nth(0).unwrap_or(' ');
-        let y = line.chars().nth(1).unwrap_or(' ');
+        let mut chars = line.chars();
+        let x = chars.next().unwrap_or(' ');
+        let y = chars.next().unwrap_or(' ');
         let raw_path = line[3..].trim();
         let actual_path = if let Some((_, new_p)) = raw_path.split_once(" -> ") {
             unquote_git_path(new_p.trim())
@@ -487,7 +488,7 @@ pub fn parse_unified_diff(diff_output: &str, file_path: &str) -> GitFileDiff {
             // 解析 Hunk 头部，提取起始行号例如 @@ -12,4 +15,6 @@
             if let Some(pos) = raw_line.find('-') {
                 let rest = &raw_line[pos + 1..];
-                if let Some(comma_or_space) = rest.find(|c: char| c == ',' || c == ' ') {
+                if let Some(comma_or_space) = rest.find([',', ' ']) {
                     if let Ok(n) = rest[..comma_or_space].parse::<usize>() {
                         old_num = n;
                     }
@@ -495,7 +496,7 @@ pub fn parse_unified_diff(diff_output: &str, file_path: &str) -> GitFileDiff {
             }
             if let Some(pos) = raw_line.find('+') {
                 let rest = &raw_line[pos + 1..];
-                if let Some(comma_or_space) = rest.find(|c: char| c == ',' || c == ' ') {
+                if let Some(comma_or_space) = rest.find([',', ' ']) {
                     if let Ok(n) = rest[..comma_or_space].parse::<usize>() {
                         new_num = n;
                     }

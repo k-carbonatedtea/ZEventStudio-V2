@@ -8,6 +8,61 @@ pub enum DocumentTabKind {
     Flowchart,
     /// 多格式通用代码编辑器
     CodeEditor,
+    /// Git 代码双栏差异对比视图
+    DiffViewer,
+}
+
+/// 封包内子文件的代码差异项
+#[derive(Debug, Clone, PartialEq)]
+pub struct SubFileDiffItem {
+    pub sub_path: String,
+    pub format_name: String, // 如 "AAMP" / "BYML" / "MSBT" / "BFEVFL"
+    pub diff: crate::model::git::GitFileDiff,
+    pub rows: Vec<crate::model::git_diff_align::SideBySideRow>,
+}
+
+/// 对比模式标签页专属状态
+#[derive(Debug, Clone, PartialEq)]
+pub struct DiffViewerTabState {
+    pub title: String,
+    pub file_path: String,
+    pub full_path: String,
+    pub old_rev: String,
+    pub new_rev: String,
+    pub diff: crate::model::git::GitFileDiff,
+    pub rows: Vec<crate::model::git_diff_align::SideBySideRow>,
+    pub sub_files: Vec<SubFileDiffItem>,
+    pub active_sub_file_idx: usize,
+}
+
+impl DiffViewerTabState {
+    /// 获取当前正在展示的 diff 数据
+    pub fn current_diff(&self) -> &crate::model::git::GitFileDiff {
+        if let Some(sub) = self.sub_files.get(self.active_sub_file_idx) {
+            &sub.diff
+        } else {
+            &self.diff
+        }
+    }
+
+    /// 获取当前正在展示的双栏对齐行
+    pub fn current_rows(&self) -> &[crate::model::git_diff_align::SideBySideRow] {
+        if let Some(sub) = self.sub_files.get(self.active_sub_file_idx) {
+            &sub.rows
+        } else {
+            &self.rows
+        }
+    }
+
+    /// 获取当前激活子文件的格式名称 (若存在)
+    pub fn current_format_name(&self) -> Option<&str> {
+        self.sub_files.get(self.active_sub_file_idx).map(|s| s.format_name.as_str())
+    }
+
+    /// 获取当前正在展示的路径面包屑
+    pub fn current_sub_path(&self) -> Option<&str> {
+        self.sub_files.get(self.active_sub_file_idx).map(|s| s.sub_path.as_str())
+    }
 }
 
 /// 已打开文档标签项 (Document Tab)
@@ -21,6 +76,7 @@ pub struct OpenDocumentTab {
     pub graph: Option<Graph>,
     pub original_graph: Option<Graph>, // 原始加载时的快照，用于精确比对是否被真正修改
     pub code_state: Option<CodeDocumentState>,
+    pub diff_state: Option<DiffViewerTabState>,
     pub is_modified: bool,
 }
 
@@ -43,6 +99,7 @@ impl OpenDocumentTab {
             graph,
             original_graph,
             code_state: None,
+            diff_state: None,
             is_modified: false,
         }
     }
@@ -64,12 +121,37 @@ impl OpenDocumentTab {
             graph: None,
             original_graph: None,
             code_state: Some(code_state),
+            diff_state: None,
             is_modified: false,
         }
     }
 
-    /// 获取文件类型对应的精美图标 (💬 / ⚙️ / ⚡ / 📜 / {} / ≡ / 📦 / 📄)
+    /// 创建差异对比类型的文档标签项
+    pub fn new_diff(
+        id: String,
+        title: String,
+        file_path: String,
+        diff_state: DiffViewerTabState,
+    ) -> Self {
+        Self {
+            id,
+            title,
+            file_path,
+            file_type: "diff".to_string(),
+            tab_kind: DocumentTabKind::DiffViewer,
+            graph: None,
+            original_graph: None,
+            code_state: None,
+            diff_state: Some(diff_state),
+            is_modified: false,
+        }
+    }
+
+    /// 获取文件类型对应的精美图标 (💬 / ⚙️ / ⚡ / 📜 / {} / ≡ / 📦 / 📄 / ⇄)
     pub fn icon(&self) -> &'static str {
+        if self.tab_kind == DocumentTabKind::DiffViewer {
+            return "⇄";
+        }
         if let Some(ref code) = self.code_state {
             return code.format.icon();
         }
@@ -99,6 +181,9 @@ impl OpenDocumentTab {
                 if let Some(ref code) = self.code_state {
                     self.is_modified = code.is_modified();
                 }
+            }
+            DocumentTabKind::DiffViewer => {
+                self.is_modified = false;
             }
         }
     }

@@ -533,6 +533,11 @@ pub fn get_en(key: &str) -> &str {
         "source_control.no_matching_commits" => "No matching commits found",
         "source_control.view_diff" => "View Diff Changes",
         "source_control.files_changed" => "files changed",
+        "diff.binary_or_no_text" => "No text changes in this file or file is binary",
+        "diff.no_file_selected" => "No diff file selected",
+        "diff.file_path_prefix" => "File path",
+        "diff.sub_files_label" => "📦 Changed Files in Archive",
+        "diff.unpacked_single" => "📦 Unpacked Archive File",
         "toast.project_closed" => "Closed current project folder",
 
         _ => key,

@@ -359,6 +359,7 @@ impl AppState {
                     false
                 }
             }
+            DocumentTabKind::DiffViewer => true,
         }
     }
 
@@ -535,6 +536,9 @@ impl AppState {
                     if let Some(ref mut code) = tab.code_state {
                         code.revert();
                     }
+                    tab.is_modified = false;
+                }
+                DocumentTabKind::DiffViewer => {
                     tab.is_modified = false;
                 }
             }

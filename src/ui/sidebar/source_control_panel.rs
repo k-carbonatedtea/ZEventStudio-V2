@@ -217,7 +217,7 @@ pub fn render_source_control_panel(
                     } else {
                         // 2.4 虚拟滚动列表 (uniform_list) 渲染暂存与变更文件，支持上万个文件 60FPS 流畅滚动
                         let model_vlist = model.clone();
-                        let pal_vlist = pal.clone();
+                        let pal_vlist = pal;
                         let staged_vlist = staged_items.clone();
                         let unstaged_vlist = unstaged_items.clone();
 
@@ -241,7 +241,7 @@ pub fn render_source_control_panel(
                                             let st = staged_vlist.clone();
                                             let ust = unstaged_vlist.clone();
                                             let m = model_vlist.clone();
-                                            let p = pal_vlist.clone();
+                                            let p = pal_vlist;
 
                                             range
                                                 .map(|ix| {
@@ -952,7 +952,6 @@ fn render_file_row(
     let model_discard = model.clone();
     let model_diff = model.clone();
 
-    let full_path = item.full_path.clone();
     let rel_path = item.rel_path.clone();
     let is_untracked = item.status == GitFileStatusKind::Untracked;
 
@@ -987,17 +986,16 @@ fn render_file_row(
         .flex()
         .items_center()
         .justify_between()
-        // 点击在主工作区加载打开文件（如果是 SARC 封包，则在资源管理器中定位并展开）
-        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-            let fp = full_path.clone();
-            model_click.update(cx, |st, cx| {
-                if crate::model::file_tree::is_sarc_extension(&fp) {
-                    st.reveal_file_in_tree(&fp, true);
-                } else {
-                    st.load_file_by_path(&fp);
-                }
-                cx.notify();
-            });
+        // 点击在主工作区加载打开文件或对比（非SARC直接进入IDE对比模式，SARC封包定位并展开）
+        .on_mouse_down(MouseButton::Left, {
+            let rp = rel_path.clone();
+            move |_, _, cx| {
+                let rp = rp.clone();
+                model_click.update(cx, |st, cx| {
+                    st.open_working_file_diff_tab(&rp, is_staged);
+                    cx.notify();
+                });
+            }
         })
         // 左侧图标与文件名/目录
         .child(
@@ -1045,7 +1043,7 @@ fn render_file_row(
                 .items_center()
                 .gap_1()
                 .flex_shrink_0()
-                // 对比修改差异按钮 (Diff)
+                // 对比修改差异按钮 (Diff 标签页模式)
                 .child({
                     let rp = rel_path.clone();
                     div()
@@ -1060,7 +1058,7 @@ fn render_file_row(
                             cx.stop_propagation();
                             let p = rp.clone();
                             model_diff.update(cx, |st, cx| {
-                                st.open_working_file_diff(&p, is_staged);
+                                st.open_working_file_diff_tab(&p, is_staged);
                                 cx.notify();
                             });
                         })
@@ -1290,7 +1288,7 @@ fn render_commit_history_section(
         // 2. 提交历史主体内容 (如果未折叠)
         .children((!is_collapsed).then(|| {
             let model_content = model.clone();
-            let pal_c = pal.clone();
+            let pal_c = *pal;
             let commits_list = commits.clone();
             let q = state.git_history_search_query.trim().to_lowercase();
             let filtered: Vec<_> = commits_list
@@ -1722,7 +1720,7 @@ fn render_commit_row(
                                     let fp = f_path.clone();
                                     let h = f_hash.clone();
                                     m_diff.update(cx, |st, cx| {
-                                        st.open_commit_file_diff(&h, &fp);
+                                        st.open_commit_file_diff_tab(&h, &fp);
                                         cx.notify();
                                     });
                                 })

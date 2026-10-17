@@ -11,7 +11,8 @@ use crate::ui::state::{AppState, AppWorkspaceTab};
 use crate::ui::toolbar::render_toolbar;
 use crate::ui::views::{
     render_actor_manager_view, render_bottom_tabs, render_code_editor_view,
-    render_event_manager_view, render_json_viewer_view, render_welcome_view,
+    render_diff_viewer_view, render_event_manager_view, render_json_viewer_view,
+    render_welcome_view,
 };
 
 pub struct AppView {
@@ -333,6 +334,45 @@ impl Render for AppView {
                                             .child(render_code_editor_view(state, &self.model, self.code_editor.as_ref())),
                                     )
                                     // 代码编辑器窗口底部的模式切换菜单栏
+                                    .child(render_bottom_tabs(state, &self.model)),
+                            )
+                            .into_any_element(),
+
+                        AppWorkspaceTab::DiffViewer => div()
+                            .flex()
+                            .size_full()
+                            .overflow_hidden()
+                            .child(render_sidebar(state, &self.model))
+                            .children(state.sidebar_open.then(|| crate::ui::sidebar::render_sidebar_resize_handle(state, &self.model)))
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .flex()
+                                    .flex_col()
+                                    .size_full()
+                                    .overflow_hidden()
+                                    .capture_any_mouse_down({
+                                        let model = self.model.clone();
+                                        move |_e, _window, cx| {
+                                            model.update(cx, |st, cx| {
+                                                if st.has_active_text_input() {
+                                                    st.clear_active_text_inputs();
+                                                    cx.notify();
+                                                }
+                                            });
+                                        }
+                                    })
+                                    // 顶部多文档/多文件标签栏 (Document Tab Bar)
+                                    .child(crate::ui::render_document_tab_bar(state, &self.model))
+                                    // 双栏差异对比视图主体
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .size_full()
+                                            .overflow_hidden()
+                                            .child(render_diff_viewer_view(state, &self.model)),
+                                    )
+                                    // 底部切换栏
                                     .child(render_bottom_tabs(state, &self.model)),
                             )
                             .into_any_element(),

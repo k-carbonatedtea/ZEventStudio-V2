@@ -38,6 +38,14 @@ pub fn render_branding(state: &AppState) -> impl IntoElement {
                     tab.title.clone()
                 }
             }
+            crate::model::DocumentTabKind::DiffViewer => {
+                if let Some(ref diff_state) = tab.diff_state {
+                    let d = diff_state.current_diff();
+                    format!("{} (+{} / -{})", tab.title, d.additions, d.deletions)
+                } else {
+                    tab.title.clone()
+                }
+            }
         })
     } else {
         None

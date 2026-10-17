@@ -505,6 +505,7 @@ fn sort_nodes(
 }
 
 /// 将树结构中当前可见的节点扁平化收集为一维数组 (只遍历展开的目录)
+#[allow(clippy::too_many_arguments)]
 pub fn flatten_visible_nodes(
     nodes: &[FileNode],
     expanded_paths: &std::collections::HashSet<String>,

@@ -35,6 +35,9 @@ impl AppState {
                 DocumentTabKind::CodeEditor => {
                     self.current_tab = AppWorkspaceTab::CodeEditor;
                 }
+                DocumentTabKind::DiffViewer => {
+                    self.current_tab = AppWorkspaceTab::DiffViewer;
+                }
             }
 
             if self.active_activity_tab == crate::ui::state::ActivityBarTab::Explorer {
@@ -185,6 +188,10 @@ impl AppState {
                         DocumentTabKind::CodeEditor => {
                             self.graph = Graph::new("EventFlow");
                             self.current_tab = AppWorkspaceTab::CodeEditor;
+                        }
+                        DocumentTabKind::DiffViewer => {
+                            self.graph = Graph::new("EventFlow");
+                            self.current_tab = AppWorkspaceTab::DiffViewer;
                         }
                     }
                 } else {

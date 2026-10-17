@@ -50,7 +50,7 @@ pub fn render_activity_bar(
                     current_tab == ActivityBarTab::Explorer,
                     sidebar_open,
                     0,
-                    |color, pal| render_explorer_icon(color, pal),
+                    render_explorer_icon,
                 ))
 
                 // 2. 全局搜索 (Search)
@@ -72,7 +72,7 @@ pub fn render_activity_bar(
                     current_tab == ActivityBarTab::SourceControl,
                     sidebar_open,
                     source_control_badge,
-                    |color, pal| render_source_control_icon(color, pal),
+                    render_source_control_icon,
                 )),
         )
 

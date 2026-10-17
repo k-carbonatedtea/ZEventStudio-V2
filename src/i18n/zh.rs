@@ -528,6 +528,11 @@ pub fn get_zh(key: &str) -> &str {
         "source_control.no_matching_commits" => "未找到匹配的提交记录",
         "source_control.view_diff" => "对比修改差异",
         "source_control.files_changed" => "个文件变更",
+        "diff.binary_or_no_text" => "该文件未发生文本变更或为二进制格式",
+        "diff.no_file_selected" => "未选择任何差异对比文件",
+        "diff.file_path_prefix" => "文件路径",
+        "diff.sub_files_label" => "📦 封包内变更文件",
+        "diff.unpacked_single" => "📦 封包内部已解析文件",
         "toast.project_closed" => "已关闭当前项目文件夹",
 
         _ => key,

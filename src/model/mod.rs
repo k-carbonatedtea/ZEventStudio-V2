@@ -14,14 +14,21 @@ pub mod port;
 pub mod sarc_writer;
 pub mod settings;
 pub mod ai_def;
+pub mod binary_diff;
+pub mod git_diff_align;
 pub mod git;
 
 pub use bcml::import_bcml_paths;
+#[allow(unused_imports)]
+pub use binary_diff::resolve_smart_code_diff;
 pub use settings::{GamePathSettings, PlatformType, RecentProjectItem};
 
 pub use actor::*;
 pub use code_document::CodeDocumentState;
-pub use document_tab::{DocumentTabKind, OpenDocumentTab};
+#[allow(unused_imports)]
+pub use document_tab::{DiffViewerTabState, DocumentTabKind, OpenDocumentTab, SubFileDiffItem};
+#[allow(unused_imports)]
+pub use git_diff_align::{align_unified_diff, DiffCellKind, DiffSideCell, SideBySideRow};
 pub use edge::Edge;
 pub use file_converter::{compile_code_to_bytes, should_compress_yaz0};
 pub use file_tree::{is_sarc_extension, FileNode};

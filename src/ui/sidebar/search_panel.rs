@@ -560,6 +560,7 @@ fn render_search_row(
 }
 
 /// 递归遍历项目文件树并提取匹配项 (毫秒级极速检索与精准智能排序)
+#[allow(clippy::too_many_arguments)]
 pub fn search_project_files(
     nodes: &[FileNode],
     query: &str,
@@ -623,6 +624,7 @@ pub fn search_project_files(
     results
 }
 
+#[allow(clippy::too_many_arguments)]
 fn collect_search_results_fast(
     nodes: &[FileNode],
     query: &str,
