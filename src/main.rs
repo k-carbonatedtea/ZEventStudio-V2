@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 pub mod i18n;
 mod model;
 mod ui;
@@ -30,6 +32,8 @@ fn main() {
         cx.open_window(window_options, |window, cx| {
             let app_view = cx.new(AppView::new);
             let model = app_view.read(cx).model.clone();
+            let focus = app_view.read(cx).focus_handle.clone();
+            focus.focus(window, cx);
 
             window.on_window_should_close(cx, move |_window, cx| {
                 let model = model.clone();

@@ -4,7 +4,7 @@ use crate::ui::components::handle_text_key_event;
 use crate::ui::state::AppState;
 
 /// 处理全局键盘事件与快捷键，返回是否需要触发重绘通知
-pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bool {
+pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipboard: Option<&str>) -> bool {
     // 1. 快捷键: Ctrl+S 保存当前活跃文档 (流程图或代码文件)
     if event.keystroke.modifiers.control && event.keystroke.key == "s" {
         state.save_active_document();
@@ -119,35 +119,35 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
 
         match state.active_settings_field {
             ActiveSettingsField::SwitchGameDir => {
-                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.switch.game_dir, event);
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.switch.game_dir, event, clipboard);
                 should_notify = changed;
             }
             ActiveSettingsField::SwitchDlcDir => {
-                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.switch.dlc_dir, event);
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.switch.dlc_dir, event, clipboard);
                 should_notify = changed;
             }
             ActiveSettingsField::SwitchExportDir => {
-                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.switch.export_dir, event);
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.switch.export_dir, event, clipboard);
                 should_notify = changed;
             }
             ActiveSettingsField::WiiuGameDir => {
-                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.wiiu.game_dir, event);
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.wiiu.game_dir, event, clipboard);
                 should_notify = changed;
             }
             ActiveSettingsField::WiiuUpdateDir => {
-                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.wiiu.update_dir, event);
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.wiiu.update_dir, event, clipboard);
                 should_notify = changed;
             }
             ActiveSettingsField::WiiuDlcDir => {
-                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.wiiu.dlc_dir, event);
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.wiiu.dlc_dir, event, clipboard);
                 should_notify = changed;
             }
             ActiveSettingsField::WiiuExportDir => {
-                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.wiiu.export_dir, event);
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.wiiu.export_dir, event, clipboard);
                 should_notify = changed;
             }
             ActiveSettingsField::AiDumpDir => {
-                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.custom_ai_dump_dir, event);
+                let (changed, _, _) = handle_text_key_event(&mut state.settings_draft.custom_ai_dump_dir, event, clipboard);
                 should_notify = changed;
             }
             ActiveSettingsField::None => {}
@@ -161,33 +161,33 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
         let mut should_notify = false;
         match modal.active_field {
             ActiveEditField::FlowchartName => {
-                let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.res_flowchart_name, event);
+                let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.res_flowchart_name, event, clipboard);
                 if is_esc { modal.active_field = ActiveEditField::None; }
                 if is_enter { modal.active_field = ActiveEditField::EntryPointName; }
                 should_notify = changed || is_enter || is_esc;
             }
             ActiveEditField::EntryPointName => {
-                let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.entry_point_name, event);
+                let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.entry_point_name, event, clipboard);
                 if is_esc || is_enter { modal.active_field = ActiveEditField::None; }
                 should_notify = changed || is_enter || is_esc;
             }
             ActiveEditField::BranchValue(idx) => {
                 if idx < modal.branches.len() {
-                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.branches[idx].value, event);
+                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.branches[idx].value, event, clipboard);
                     if is_esc || is_enter { modal.active_field = ActiveEditField::None; }
                     should_notify = changed || is_enter || is_esc;
                 }
             }
             ActiveEditField::BranchTarget(idx) => {
                 if idx < modal.branches.len() {
-                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.branches[idx].target_id, event);
+                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.branches[idx].target_id, event, clipboard);
                     if is_esc || is_enter { modal.active_field = ActiveEditField::None; }
                     should_notify = changed || is_enter || is_esc;
                 }
             }
             ActiveEditField::ParamKey(idx) => {
                 if idx < modal.properties.len() {
-                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.properties[idx].key, event);
+                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.properties[idx].key, event, clipboard);
                     if is_esc { modal.active_field = ActiveEditField::None; }
                     if is_enter { modal.active_field = ActiveEditField::ParamVal(idx); }
                     should_notify = changed || is_enter || is_esc;
@@ -195,7 +195,7 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
             }
             ActiveEditField::ParamVal(idx) => {
                 if idx < modal.properties.len() {
-                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.properties[idx].val, event);
+                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.properties[idx].val, event, clipboard);
                     if is_esc || is_enter { modal.active_field = ActiveEditField::None; }
                     should_notify = changed || is_enter || is_esc;
                 }
@@ -220,7 +220,7 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
             state.global_search_focused = false;
             return true;
         }
-        let (changed, _, _) = handle_text_key_event(&mut state.global_search_query, event);
+        let (changed, _, _) = handle_text_key_event(&mut state.global_search_query, event, clipboard);
         if changed {
             state.update_global_search_results();
         }
@@ -245,7 +245,7 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
                 state.git_commit_focus = crate::ui::state::GitCommitFocus::Description;
                 return true;
             }
-            let (changed, _, _) = handle_text_key_event(&mut state.git_commit_title, event);
+            let (changed, _, _) = handle_text_key_event(&mut state.git_commit_title, event, clipboard);
             return changed;
         }
         crate::ui::state::GitCommitFocus::Description => {
@@ -261,7 +261,7 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
                 state.git_commit_focus = crate::ui::state::GitCommitFocus::Title;
                 return true;
             }
-            let (changed, is_enter, _) = handle_text_key_event(&mut state.git_commit_desc, event);
+            let (changed, is_enter, _) = handle_text_key_event(&mut state.git_commit_desc, event, clipboard);
             if is_enter {
                 state.git_commit_desc.push('\n');
                 return true;
@@ -281,13 +281,13 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState) -> bo
     }
 
     // 4. 角色与事件快速输入框键盘事件
-    handle_sidebar_quick_input(event, state)
+    handle_sidebar_quick_input(event, state, clipboard)
 }
 
 /// 侧边栏及管理器快速输入字段键盘事件响应
-fn handle_sidebar_quick_input(event: &KeyDownEvent, state: &mut AppState) -> bool {
+fn handle_sidebar_quick_input(event: &KeyDownEvent, state: &mut AppState, clipboard: Option<&str>) -> bool {
     if state.is_adding_action {
-        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_action_name, event);
+        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_action_name, event, clipboard);
         if is_enter {
             let act_name = if state.new_action_name.trim().is_empty() {
                 "Demo_WaitFrame".to_string()
@@ -307,7 +307,7 @@ fn handle_sidebar_quick_input(event: &KeyDownEvent, state: &mut AppState) -> boo
     }
 
     if state.is_adding_query {
-        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_query_name, event);
+        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_query_name, event, clipboard);
         if is_enter {
             let qry_name = if state.new_query_name.trim().is_empty() {
                 "CheckFlag".to_string()
@@ -327,7 +327,7 @@ fn handle_sidebar_quick_input(event: &KeyDownEvent, state: &mut AppState) -> boo
     }
 
     if state.is_adding_actor {
-        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_actor_name, event);
+        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_actor_name, event, clipboard);
         if is_enter {
             let name = if state.new_actor_name.trim().is_empty() {
                 format!("Actor_{}", state.graph.actors.len())
@@ -346,7 +346,7 @@ fn handle_sidebar_quick_input(event: &KeyDownEvent, state: &mut AppState) -> boo
     }
 
     if state.is_adding_param {
-        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_param_key, event);
+        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_param_key, event, clipboard);
         if is_enter {
             if let Some(act) = state.graph.actors.get_mut(state.selected_actor_idx) {
                 act.params.push(crate::model::node::PropertyItem {

@@ -103,8 +103,6 @@ impl Render for AppView {
             }
         }
 
-        let state = self.model.read(cx);
-
         // 采样并计算真实渲染帧率
         self.frame_count += 1;
         let now = Instant::now();
@@ -118,22 +116,38 @@ impl Render for AppView {
         }
 
         // 默认极速性能模式调度：活跃窗口高刷新流畅渲染，或文本框处于激活状态（用于闪烁光标动画）
-        let has_active_field = state.active_settings_field != crate::ui::state::ActiveSettingsField::None
-            || state.file_search_focused
-            || state.global_search_focused;
+        let has_active_field = self.model.read(cx).has_active_text_input();
         if is_active || has_active_field {
             cx.on_next_frame(window, |_, _, cx| {
                 cx.notify();
             });
         }
 
+        let current_tab = self.model.read(cx).current_tab;
+
+        // 焦点调度：
+        // 1. 如果存在活跃的输入框（如全局搜索、Git提交、设置弹窗），确保应用主 FocusHandle 处于聚焦状态以接收输入
+        // 2. 如果处于代码编辑视图且没有其他输入框活跃，确保代码编辑器实例获得焦点以支持文本输入、光标与 IME
+        if has_active_field {
+            if !self.focus_handle.is_focused(window) {
+                self.focus_handle.focus(window, cx);
+            }
+        } else if current_tab == AppWorkspaceTab::CodeEditor {
+            if let Some(ref editor) = self.code_editor {
+                let editor_focused = editor.read(cx).focus_handle(cx).is_focused(window);
+                if !editor_focused {
+                    editor.update(cx, |ed, cx| ed.focus(window, cx));
+                }
+            }
+        }
+
         let state = self.model.read(cx);
         if state.should_quit_app {
             cx.quit();
         }
+
         let current_fps = self.fps;
         let current_frame_time = self.frame_time_ms;
-        let current_tab = state.current_tab;
 
         // 3秒自动隐藏 Toast 提示气泡 (过滤已过期 Toast)
         let visible_toast = state
@@ -154,6 +168,8 @@ impl Render for AppView {
             .bg(state.theme().app_bg)
             .font_family(".SystemUIFont")
             .text_color(state.theme().text_primary)
+            // 挂载全局 IME 桥接 Element (在 paint 阶段注册 handle_input，激活 Windows 原生中文输入法)
+            .child(crate::ui::components::ImeInputBridge::new(self.model.clone(), self.focus_handle.clone()))
             // 侧边栏与弹窗拖拽调宽全局鼠标移动监听
             .on_mouse_move(move |e, _window, cx| {
                 let mx: f32 = e.position.x.into();
@@ -197,9 +213,24 @@ impl Render for AppView {
                     return;
                 }
 
+                let clipboard = if event.keystroke.modifiers.control && event.keystroke.key == "v" {
+                    cx.read_from_clipboard().and_then(|item| item.text())
+                } else {
+                    None
+                };
+
                 model_key.update(cx, |st, cx| {
-                    let should_notify = handle_global_key_event(event, st);
+                    if event.keystroke.modifiers.control && event.keystroke.key == "c" {
+                        if let Some(active_text) = st.active_text_input() {
+                            cx.write_to_clipboard(ClipboardItem::new_string(active_text.to_string()));
+                            cx.stop_propagation();
+                            return;
+                        }
+                    }
+
+                    let should_notify = handle_global_key_event(event, st, clipboard.as_deref());
                     if should_notify {
+                        cx.stop_propagation();
                         cx.notify();
                     }
                 });

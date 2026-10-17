@@ -11,12 +11,20 @@ pub fn render_editor_area(
     editor_state: Option<&Entity<EditorState>>,
 ) -> impl IntoElement {
     let pal = state.theme();
+    let ed_click = editor_state.cloned();
     div()
         .id("code_editor_interactive_container")
         .flex_1()
         .size_full()
         .overflow_hidden()
         .bg(pal.app_bg)
+        .capture_any_mouse_down(move |_e, window, cx| {
+            if let Some(ref ed) = ed_click {
+                ed.update(cx, |editor, cx| {
+                    editor.focus(window, cx);
+                });
+            }
+        })
         .children(editor_state.map(|ed| {
             Editor::new(ed)
                 .bordered(false)
