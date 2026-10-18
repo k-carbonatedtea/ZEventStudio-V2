@@ -1,4 +1,5 @@
 pub mod context_menu;
+pub mod edge_geometry;
 pub mod edges;
 pub mod flow_canvas;
 pub mod grid;

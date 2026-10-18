@@ -247,180 +247,31 @@ impl Render for AppView {
                     .size_full()
                     .overflow_hidden()
                     .child(match current_tab {
-                        AppWorkspaceTab::Welcome => {
-                            render_welcome_view(state, &self.model).into_any_element()
-                        }
-                        AppWorkspaceTab::Flowchart => div()
-                            .flex()
-                            .size_full()
-                            .overflow_hidden()
-                            .child(render_sidebar(state, &self.model))
-                            .children(state.sidebar_open.then(|| crate::ui::sidebar::render_sidebar_resize_handle(state, &self.model)))
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .flex()
-                                    .size_full()
-                                    .overflow_hidden()
-                                    .capture_any_mouse_down({
-                                        let model = self.model.clone();
-                                        move |_e, _window, cx| {
-                                            model.update(cx, |st, cx| {
-                                                if st.has_active_text_input() {
-                                                    st.clear_active_text_inputs();
-                                                    cx.notify();
-                                                }
-                                            });
-                                        }
-                                    })
-                                    // 中间主工作区列 (顶部文档Tab + 流程图画布 + 底部切换栏)
-                                    .child(
-                                        div()
-                                            .flex_1()
-                                            .flex()
-                                            .flex_col()
-                                            .size_full()
-                                            .overflow_hidden()
-                                            // 顶部多文档/多文件标签栏 (Document Tab Bar)
-                                            .child(crate::ui::render_document_tab_bar(state, &self.model))
-                                            // 流程图画布主体
-                                            .child(
-                                                div()
-                                                    .flex_1()
-                                                    .size_full()
-                                                    .overflow_hidden()
-                                                    .child(render_flow_canvas(state, &self.model)),
-                                            )
-                                            // 流程图窗口底部的模式切换菜单栏
-                                            .child(render_bottom_tabs(state, &self.model)),
-                                    )
-                                    // 右侧属性与拓扑检查器
-                                    .child(render_inspector(state, &self.model)),
-                            )
-                            .into_any_element(),
-
-                        AppWorkspaceTab::CodeEditor => div()
-                            .flex()
-                            .size_full()
-                            .overflow_hidden()
-                            .child(render_sidebar(state, &self.model))
-                            .children(state.sidebar_open.then(|| crate::ui::sidebar::render_sidebar_resize_handle(state, &self.model)))
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .flex()
-                                    .flex_col()
-                                    .size_full()
-                                    .overflow_hidden()
-                                    .capture_any_mouse_down({
-                                        let model = self.model.clone();
-                                        move |_e, _window, cx| {
-                                            model.update(cx, |st, cx| {
-                                                if st.has_active_text_input() {
-                                                    st.clear_active_text_inputs();
-                                                    cx.notify();
-                                                }
-                                            });
-                                        }
-                                    })
-                                    // 顶部多文档/多文件标签栏 (Document Tab Bar)
-                                    .child(crate::ui::render_document_tab_bar(state, &self.model))
-                                    // 代码编辑器主体
-                                    .child(
-                                        div()
-                                            .flex_1()
-                                            .size_full()
-                                            .overflow_hidden()
-                                            .child(render_code_editor_view(state, &self.model, self.code_editor.as_ref())),
-                                    )
-                                    // 代码编辑器窗口底部的模式切换菜单栏
-                                    .child(render_bottom_tabs(state, &self.model)),
-                            )
-                            .into_any_element(),
-
-                        AppWorkspaceTab::DiffViewer => div()
-                            .flex()
-                            .size_full()
-                            .overflow_hidden()
-                            .child(render_sidebar(state, &self.model))
-                            .children(state.sidebar_open.then(|| crate::ui::sidebar::render_sidebar_resize_handle(state, &self.model)))
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .flex()
-                                    .flex_col()
-                                    .size_full()
-                                    .overflow_hidden()
-                                    .capture_any_mouse_down({
-                                        let model = self.model.clone();
-                                        move |_e, _window, cx| {
-                                            model.update(cx, |st, cx| {
-                                                if st.has_active_text_input() {
-                                                    st.clear_active_text_inputs();
-                                                    cx.notify();
-                                                }
-                                            });
-                                        }
-                                    })
-                                    // 顶部多文档/多文件标签栏 (Document Tab Bar)
-                                    .child(crate::ui::render_document_tab_bar(state, &self.model))
-                                    // 双栏差异对比视图主体
-                                    .child(
-                                        div()
-                                            .flex_1()
-                                            .size_full()
-                                            .overflow_hidden()
-                                            .child(render_diff_viewer_view(state, &self.model)),
-                                    )
-                                    // 底部切换栏
-                                    .child(render_bottom_tabs(state, &self.model)),
-                            )
-                            .into_any_element(),
-
-                        AppWorkspaceTab::Actors => div()
-                            .flex()
-                            .flex_col()
-                            .size_full()
-                            .overflow_hidden()
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .size_full()
-                                    .overflow_hidden()
-                                    .child(render_actor_manager_view(state, &self.model)),
-                            )
-                            .child(render_bottom_tabs(state, &self.model))
-                            .into_any_element(),
-
-                        AppWorkspaceTab::Events => div()
-                            .flex()
-                            .flex_col()
-                            .size_full()
-                            .overflow_hidden()
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .size_full()
-                                    .overflow_hidden()
-                                    .child(render_event_manager_view(state, &self.model)),
-                            )
-                            .child(render_bottom_tabs(state, &self.model))
-                            .into_any_element(),
-
-                        AppWorkspaceTab::Json => div()
-                            .flex()
-                            .flex_col()
-                            .size_full()
-                            .overflow_hidden()
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .size_full()
-                                    .overflow_hidden()
-                                    .child(render_json_viewer_view(state, &self.model)),
-                            )
-                            .child(render_bottom_tabs(state, &self.model))
-                            .into_any_element(),
+                        AppWorkspaceTab::Welcome => render_welcome_view(state, &self.model).into_any_element(),
+                        AppWorkspaceTab::Flowchart => wrap_sidebar_workspace(
+                            state,
+                            &self.model,
+                            render_flow_canvas(state, &self.model),
+                            Some(render_inspector(state, &self.model).into_any_element()),
+                        )
+                        .into_any_element(),
+                        AppWorkspaceTab::CodeEditor => wrap_sidebar_workspace(
+                            state,
+                            &self.model,
+                            render_code_editor_view(state, &self.model, self.code_editor.as_ref()),
+                            None,
+                        )
+                        .into_any_element(),
+                        AppWorkspaceTab::DiffViewer => wrap_sidebar_workspace(
+                            state,
+                            &self.model,
+                            render_diff_viewer_view(state, &self.model),
+                            None,
+                        )
+                        .into_any_element(),
+                        AppWorkspaceTab::Actors => wrap_fullscreen_tab(state, &self.model, render_actor_manager_view(state, &self.model)).into_any_element(),
+                        AppWorkspaceTab::Events => wrap_fullscreen_tab(state, &self.model, render_event_manager_view(state, &self.model)).into_any_element(),
+                        AppWorkspaceTab::Json => wrap_fullscreen_tab(state, &self.model, render_json_viewer_view(state, &self.model)).into_any_element(),
                     }),
             )
             // Floating Toast notification
@@ -456,4 +307,76 @@ impl Render for AppView {
                 crate::ui::sidebar::render_git_diff_modal(state, &self.model)
             }))
     }
+}
+
+/// 包装带侧边栏和顶部文档标签栏的主工作区布局
+fn wrap_sidebar_workspace(
+    state: &AppState,
+    model: &Entity<AppState>,
+    body: impl IntoElement,
+    extra_right: Option<gpui::AnyElement>,
+) -> impl IntoElement {
+    div()
+        .flex()
+        .size_full()
+        .overflow_hidden()
+        .child(render_sidebar(state, model))
+        .children(state.sidebar_open.then(|| crate::ui::sidebar::render_sidebar_resize_handle(state, model)))
+        .child(
+            div()
+                .flex_1()
+                .flex()
+                .size_full()
+                .overflow_hidden()
+                .capture_any_mouse_down({
+                    let model = model.clone();
+                    move |_e, _window, cx| {
+                        model.update(cx, |st, cx| {
+                            if st.has_active_text_input() {
+                                st.clear_active_text_inputs();
+                                cx.notify();
+                            }
+                        });
+                    }
+                })
+                .child(
+                    div()
+                        .flex_1()
+                        .flex()
+                        .flex_col()
+                        .size_full()
+                        .overflow_hidden()
+                        .child(crate::ui::render_document_tab_bar(state, model))
+                        .child(
+                            div()
+                                .flex_1()
+                                .size_full()
+                                .overflow_hidden()
+                                .child(body),
+                        )
+                        .child(render_bottom_tabs(state, model)),
+                )
+                .children(extra_right),
+        )
+}
+
+/// 包装全屏单视图工作区布局 (包含底部模式切换菜单栏)
+fn wrap_fullscreen_tab(
+    state: &AppState,
+    model: &Entity<AppState>,
+    body: impl IntoElement,
+) -> impl IntoElement {
+    div()
+        .flex()
+        .flex_col()
+        .size_full()
+        .overflow_hidden()
+        .child(
+            div()
+                .flex_1()
+                .size_full()
+                .overflow_hidden()
+                .child(body),
+        )
+        .child(render_bottom_tabs(state, model))
 }

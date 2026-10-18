@@ -4,6 +4,7 @@ pub mod code_document;
 pub mod document_tab;
 pub mod edge;
 pub mod evfl;
+pub mod evfl_builder;
 pub mod file_converter;
 pub mod file_tree;
 pub mod game_language;
@@ -18,6 +19,12 @@ pub mod binary_diff;
 pub mod git_diff_align;
 pub mod git;
 pub mod git_actions;
+pub mod search;
+pub mod subgraph;
+
+pub use search::*;
+#[allow(unused_imports)]
+pub use subgraph::{compute_subgraph_groups, SubgraphGroup};
 
 pub use bcml::import_bcml_paths;
 #[allow(unused_imports)]

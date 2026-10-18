@@ -1,157 +1,11 @@
-/// 英文 (English) 本地化词典
-pub fn get_en(key: &str) -> &str {
-    match key {
-        // ---------------- 顶部菜单栏 (Menu Bar) ----------------
-        "menu.file" => "File",
-        "menu.options" => "Options",
-        "menu.edit" => "Edit",
-        "menu.selection" => "Selection",
-        "menu.view" => "View",
-        "menu.help" => "Help",
-
-        "menu.ui_language" => "UI Language",
-        "menu.game_language" => "Game Language",
-        "menu.settings" => "Settings...",
-
-        "menu.new_flow" => "New EventFlow (Ctrl+N)",
-        "menu.open_file" => "Open File... (Ctrl+O)",
-        "menu.open_mod" => "Open Mod Folder...",
-        "menu.open_pack" => "Open SARC Pack...",
-        "menu.save" => "Save Active File (Ctrl+S)",
-        "menu.revert" => "Revert Changes",
-        "menu.close_tab" => "Close Tab (Ctrl+W)",
-        "menu.close_all_tabs" => "Close All Tabs",
-        "menu.close_folder" => "Close Folder",
-        "menu.exit" => "Exit (Alt+F4)",
-
-        "menu.auto_layout" => "Auto Layout Graph",
-        "menu.expand_all_params" => "Expand All Parameters",
-        "menu.collapse_all_params" => "Collapse All Parameters",
-        "menu.knife_mode" => "Toggle Knife Tool",
-        "menu.delete_selected" => "Delete Selected Node (Delete)",
-
-        "menu.select_all" => "Select All Nodes (Ctrl+A)",
-        "menu.deselect_all" => "Deselect (Esc)",
-        "menu.select_actions" => "Select All Action Nodes",
-        "menu.select_switches" => "Select All Switch Nodes",
-        "menu.select_queries" => "Select All Query Nodes",
-        "menu.select_subflows" => "Select All SubFlow Nodes",
-        "menu.select_entries" => "Select All EntryPoint Nodes",
-
-        "menu.view_welcome" => "Welcome Launcher",
-        "menu.view_flowchart" => "Flowchart Canvas",
-        "menu.view_code_editor" => "Code Editor",
-        "menu.view_actors" => "Actor Manager",
-        "menu.view_events" => "Event Manager",
-        "menu.view_json" => "JSON Viewer",
-        "menu.toggle_sidebar" => "Toggle Sidebar",
-        "menu.toggle_inspector" => "Toggle Inspector",
-        "menu.fit_view" => "Fit / Center View",
-        "menu.zoom_in" => "Zoom In",
-        "menu.zoom_out" => "Zoom Out",
-        "menu.reset_zoom" => "Reset Zoom (100%)",
-
-        "menu.shortcuts" => "Keyboard Shortcuts",
-        "menu.evfl_spec" => "EVFL Core Specification",
-        "menu.switch_lang" => "Switch Language (EN / 中)",
-        "menu.about" => "About ZEvent Studio",
-        "menu.about_info" => "ZEvent Studio - GPU-Accelerated EVFL Nodeflow & Logic Editor",
-        "menu.shortcuts_info" => "Shortcuts: Ctrl+S Save | Ctrl+N New | Ctrl+O Open | Wheel Zoom | Drag Pan | Double-Click Add Node",
-
-        // ---------------- 主题风格 (Theme) ----------------
-        "menu.themes" => "🎨 Color Theme",
-        "theme.title" => "🎨 Color Theme",
-        "theme.relic_cyan" => "Relic Cyan (Default)",
-        "theme.twilight_amber" => "Twilight Amber",
-        "theme.sheikah_slate" => "Sheikah Slate",
-        "theme.midnight_purple" => "Midnight Purple",
-        "theme.emerald_forest" => "Emerald Forest",
-        "theme.nordic_light" => "Nordic Light (Light)",
-
-        // ---------------- 顶部工具栏 (Toolbar) ----------------
-        "toolbar.auto_layout" => "Auto Layout",
-        "toolbar.expand_params" => "Expand Params",
-        "toolbar.collapse_params" => "Collapse Params",
-        "toolbar.knife_mode" => "Knife Tool",
-        "toolbar.knife_active" => "Cutting Mode",
-        "toolbar.fit_view" => "Fit View",
-        "toolbar.zoom_in" => "Zoom In",
-        "toolbar.zoom_out" => "Zoom Out",
-        "toolbar.reset_zoom" => "Reset Zoom",
-        "toolbar.sidebar" => "Sidebar",
-        "toolbar.inspector" => "Inspector",
-
-        "toolbar.lang_btn" => "EN / 中",
-        "toolbar.nodes_label" => "Nodes",
-        "toolbar.edges_label" => "Edges",
-
-        // ---------------- 底部工作区切换栏 (Bottom Tabs) ----------------
-        "tab.flowchart" => "Flowchart",
-        "tab.code_editor" => "Code Editor",
-        "tab.actors" => "Actors",
-        "tab.events" => "Events",
-        "tab.json" => "JSON",
-
-        // ---------------- 代码编辑器 (Code Editor) ----------------
-        "code_editor.save" => "Save",
-        "code_editor.revert" => "Revert Changes",
-        "code_editor.copy_all" => "Copy All",
-        "code_editor.modified_label" => "Unsaved",
-        "code_editor.lines" => "lines",
-        "code_editor.chars" => "chars",
-        "code_editor.empty_prompt" => "Select a file from the explorer to view and edit",
-
-        // ---------------- 角色管理主页面 (Actor Manager Page) ----------------
-        "actors_view.add_actor_btn" => "+ Add Actor...",
-        "actors_view.th_name" => "Name",
-        "actors_view.th_sub_name" => "Sub Name",
-        "actors_view.th_argument_name" => "Argument",
-        "actors_view.th_argument_entry" => "Entry Point",
-        "actors_view.th_actions_count" => "Actions",
-        "actors_view.th_queries_count" => "Queries",
-        "actors_view.th_operations" => "Operations",
-
-        "actors_view.actions_title" => "Actions",
-        "actors_view.queries_title" => "Queries",
-        "actors_view.params_title" => "Parameters",
-        "actors_view.load_default_params" => "🪄 Load Defaults",
-        "actors_view.add_item_btn" => "+ Add...",
-        "actors_view.th_type" => "Type",
-        "actors_view.th_key" => "Key",
-        "actors_view.th_val" => "Value",
-
-        // ---------------- 事件列表主页面 (Event Manager Page) ----------------
-        "events_view.th_index" => "#",
-        "events_view.th_name" => "Event Name",
-        "events_view.th_type" => "Type",
-        "events_view.th_actor" => "Actor",
-        "events_view.th_next" => "Next Node",
-        "events_view.th_action" => "Action",
-        "events_view.details_title" => "Event Details",
-        "events_view.select_prompt" => "Select an event from the table above to view details",
-        "events_view.jump_to_flowchart" => "🎯 Focus in Flowchart",
-
-        // ---------------- 顶部多标签栏 (Document Tab Bar) ----------------
-        "tab_bar.close_tab" => "Close Tab",
-        "tab_bar.new_tab" => "New Flowchart",
-        "tab_bar.untitled" => "Untitled Flowchart",
-        "tab_menu.close" => "Close",
-        "tab_menu.close_others" => "Close Others",
-        "tab_menu.close_to_right" => "Close to the Right",
-        "tab_menu.close_saved" => "Close Saved",
-        "tab_menu.close_all" => "Close All",
-        "tab_menu.save" => "Save File",
-        "tab_menu.copy_path" => "Copy Full Path",
-        "tab_menu.copy_name" => "Copy File Name",
-        "tab_menu.path_copied" => "✨ File path copied to clipboard",
-        "tab_menu.name_copied" => "✨ File name copied to clipboard",
-
+/// English canvas, inspector, sidebar, git, preferences and settings localization dictionary
+pub fn get_en_editor(key: &str) -> Option<&'static str> {
+    let text = match key {
         // ---------------- 节点卡片与图形 (Nodes & Canvas) ----------------
         "node.parameters_label" => "Parameters:",
         "node.wait_join" => "Wait for parallel join",
         "node.fork_count" => "Forks",
         "edge.cut" => "✂ Cut",
-
 
         // ---------------- 属性检查器 (Inspector) ----------------
         "inspector.title" => "Inspector",
@@ -313,8 +167,6 @@ pub fn get_en(key: &str) -> &str {
         "modal.val" => "Value",
         "modal.action" => "Action",
 
-
-
         // 默认节点标题
         "default_node.action" => "New Action",
         "default_node.switch" => "New Switch",
@@ -328,7 +180,6 @@ pub fn get_en(key: &str) -> &str {
 
         // ---------------- Toast 提示信息 (Toast Notifications) ----------------
         "toast.auto_layout_done" => "✨ DAG hierarchical layout completed",
-
         "toast.expand_params_on" => "📋 Expanded all node parameters",
         "toast.expand_params_off" => "📋 Collapsed node parameters",
         "toast.focus_node" => "Focused on node: ",
@@ -354,6 +205,9 @@ pub fn get_en(key: &str) -> &str {
         "toast.params_complete" => "Parameters are already complete",
         "toast.params_autofilled" => "Auto-filled parameters count: ",
         "toast.autofill_failed" => "Failed to auto-fill parameters",
+        "toast.project_closed" => "Closed current project folder",
+        "toast.copy_hash_success" => "📋 Commit hash copied to clipboard",
+        "toast.copy_msg_success" => "💬 Commit message copied to clipboard",
 
         // ---------------- 角色分类与关键参数 (Actor Theme & Smart Params) ----------------
         "actor.system" => "System Logic",
@@ -374,44 +228,6 @@ pub fn get_en(key: &str) -> &str {
         "group.subgraph" => "Event Flow Scope",
         "group.nodes_count" => "nodes",
         "tracing.upstream" => "Upstream",
-        // ---------------- 欢迎与启动页 (Welcome / Launcher Page) ----------------
-        "tab.welcome" => "Welcome",
-        "empty.title" => "Event Studio",
-        "empty.subtitle" => "BotW EventFlow & Story Logic Editor · High-speed Visualization",
-        "welcome.explorer" => "EXPLORER",
-        "welcome.no_folder" => "NO FOLDER OPENED",
-        "welcome.no_folder_hint" => "You have not yet opened a mod folder.",
-        "welcome.open_folder_btn" => "Open Folder",
-        "welcome.open_folder_desc" => "Opening a folder will load full Romfs/Content stories & flows.",
-        "welcome.open_file_btn" => "Open Single File",
-        "welcome.create_flow_btn" => "Create Blank Flow",
-        "welcome.outline" => "OUTLINE",
-        "welcome.timeline" => "TIMELINE",
-        "welcome.actor_deps" => "ACTOR DEPENDENCIES",
-        "welcome.start_section" => "Start",
-        "welcome.recent_section" => "Recent",
-        "welcome.walkthrough_section" => "Walkthrough & Features",
-        "welcome.show_on_startup" => "Show welcome page on startup",
-        "welcome.guide_basics" => "Get Started with Event Studio",
-        "welcome.guide_basics_desc" => "Familiarize with node canvas, wiring & actor manager",
-        "welcome.guide_evfl" => "Understand EVFL Core Mechanics",
-        "welcome.guide_evfl_desc" => "Master Action, Switch, Query & Fork/Join syntax",
-        "welcome.guide_actors" => "BotW Actor & Action System",
-        "welcome.guide_actors_desc" => "Configure EventSystemActor, Player & NPC actors",
-        "welcome.guide_msbt" => "MSBT Dialogue & Localization",
-        "welcome.guide_msbt_desc" => "Seamlessly cross-reference story dialogue & branches",
-        "empty.quickStartTab" => "Quick Start",
-        "empty.recentProjectsTab" => "Recent Files & Mods",
-        "empty.openFile" => "Open Single File...",
-        "empty.openFileDesc" => "Supports .bfevfl / .baiprog / .sbeventpack / .pack / .msbt / .aamp / .byml",
-        "empty.openMod" => "Open Mod Folder...",
-        "empty.openModDesc" => "Supports Wii U (content) & Switch (romfs) root mod folders",
-        "empty.newFlow" => "New EventFlow...",
-        "empty.newFlowDesc" => "Build brand new EventFlow story and logic from scratch",
-        "empty.dragHint" => "Or drag & drop game files / mod folders directly into any area of this window",
-        "empty.viewGuide" => "View User Guide",
-        "empty.noRecentProjects" => "No recent projects yet",
-        "empty.clearRecent" => "Clear Recent History",
 
         // ---------------- 设置与首选项 (Settings Modal) ----------------
         "settings.title" => "Preferences & Game Paths",
@@ -424,8 +240,7 @@ pub fn get_en(key: &str) -> &str {
         "settings.save_btn" => "Save & Apply",
         "settings.cancel_btn" => "Cancel",
         "settings.reset_defaults" => "Reset Defaults",
-        
-        // Game AI & Auto-fill
+
         "settings.game_ai_info_title" => "About Game Parameter Auto-fill Engine",
         "settings.game_ai_info_desc" => "The editor features a native, offline parsing engine that directly extracts actor action and query parameter definitions from BotW game dump archives (.sbyml and .baiprog in Bootup.pack). Click 'Auto-fill Game Parameters' in the inspector or context menu to instantly populate standard parameters. Completely offline, zero network or external model calls required.",
         "settings.active_badge" => "Active Platform",
@@ -488,11 +303,6 @@ pub fn get_en(key: &str) -> &str {
         "settings.status_bar_desc" => "Display realtime FPS and frame render time in the top toolbar",
 
         // ---------------- Activity Bar & Functional Panels ----------------
-        "activity_bar.explorer" => "Explorer (Ctrl+Shift+E)",
-        "activity_bar.search" => "Global Search (Ctrl+Shift+F)",
-        "activity_bar.source_control" => "Source Control (Ctrl+Shift+G)",
-        "activity_bar.settings" => "Preferences & Settings",
-
         "search.title" => "Search",
         "search.placeholder" => "Search files and content in project...",
         "search.filters_hint" => "Filter include and exclude patterns (Match Case / Whole Word)",
@@ -501,6 +311,7 @@ pub fn get_en(key: &str) -> &str {
         "search.no_match" => "No matching results",
         "search.results_found" => "Results Found",
 
+        // ---------------- Source Control ----------------
         "source_control.title" => "Source Control",
         "source_control.changes" => "Changes",
         "source_control.staged_changes" => "Staged Changes",
@@ -537,12 +348,13 @@ pub fn get_en(key: &str) -> &str {
         "source_control.sarc_no_subfiles_changed" => "No text changes in package sub-files",
         "source_control.expand_package" => "Expand package sub-files",
         "source_control.collapse_package" => "Collapse package sub-files",
+
+        // ---------------- Diff & Commit Menu ----------------
         "diff.binary_or_no_text" => "No text changes in this file or file is binary",
         "diff.no_file_selected" => "No diff file selected",
         "diff.file_path_prefix" => "File path",
         "diff.sub_files_label" => "📦 Changed Files in Archive",
         "diff.unpacked_single" => "📦 Unpacked Archive File",
-        "toast.project_closed" => "Closed current project folder",
         "commit_menu.view_changes" => "🔍 View Changes / Expand Files",
         "commit_menu.revert_commit" => "🔄 Revert This Commit",
         "commit_menu.soft_reset" => "⏮️ Soft Reset (Keep Staged)",
@@ -551,11 +363,8 @@ pub fn get_en(key: &str) -> &str {
         "commit_menu.copy_hash" => "📋 Copy Full Commit Hash",
         "commit_menu.copy_short_hash" => "📑 Copy Short Hash",
         "commit_menu.copy_message" => "💬 Copy Commit Message",
-        "toast.copy_hash_success" => "📋 Commit hash copied to clipboard",
-        "toast.copy_msg_success" => "💬 Commit message copied to clipboard",
 
-        _ => key,
-    }
+        _ => return None,
+    };
+    Some(text)
 }
-
-

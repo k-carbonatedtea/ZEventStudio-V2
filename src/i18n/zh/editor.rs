@@ -1,157 +1,11 @@
-/// 中文 (Simplified Chinese) 本地化词典
-pub fn get_zh(key: &str) -> &str {
-    match key {
-
-        // ---------------- 顶部菜单栏 (Menu Bar) ----------------
-        "menu.file" => "文件",
-        "menu.options" => "选项",
-        "menu.edit" => "编辑",
-        "menu.selection" => "选择",
-        "menu.view" => "查看",
-        "menu.help" => "帮助",
-
-        "menu.ui_language" => "UI 界面语言",
-        "menu.game_language" => "游戏文本语言",
-        "menu.settings" => "设置...",
-
-        "menu.new_flow" => "新建事件流 (Ctrl+N)",
-        "menu.open_file" => "打开单个文件... (Ctrl+O)",
-        "menu.open_mod" => "打开 Mod 文件夹...",
-        "menu.open_pack" => "打开 SARC 封包...",
-        "menu.save" => "保存当前文件 (Ctrl+S)",
-        "menu.revert" => "重置文件修改",
-        "menu.close_tab" => "关闭当前标签页 (Ctrl+W)",
-        "menu.close_all_tabs" => "关闭所有标签页",
-        "menu.close_folder" => "关闭文件夹",
-        "menu.exit" => "退出 (Alt+F4)",
-
-        "menu.auto_layout" => "自动排版图表",
-        "menu.expand_all_params" => "展开所有参数",
-        "menu.collapse_all_params" => "折叠所有参数",
-        "menu.knife_mode" => "切换切刀工具",
-        "menu.delete_selected" => "删除选中节点 (Delete)",
-
-        "menu.select_all" => "全选节点 (Ctrl+A)",
-        "menu.deselect_all" => "取消选择 (Esc)",
-        "menu.select_actions" => "选择所有 Action 动作节点",
-        "menu.select_switches" => "选择所有 Switch 条件节点",
-        "menu.select_queries" => "选择所有 Query 查询节点",
-        "menu.select_subflows" => "选择所有 SubFlow 子流程节点",
-        "menu.select_entries" => "选择所有 EntryPoint 入口节点",
-
-        "menu.view_welcome" => "启动欢迎页",
-        "menu.view_flowchart" => "流程图画布",
-        "menu.view_code_editor" => "代码编辑器",
-        "menu.view_actors" => "角色管理器",
-        "menu.view_events" => "事件流管理器",
-        "menu.view_json" => "JSON 源码",
-        "menu.toggle_sidebar" => "切换预设侧边栏",
-        "menu.toggle_inspector" => "切换属性面板",
-        "menu.fit_view" => "自适应居中视口",
-        "menu.zoom_in" => "放大画布",
-        "menu.zoom_out" => "缩小画布",
-        "menu.reset_zoom" => "重置缩放 (100%)",
-
-        "menu.shortcuts" => "快捷键指南",
-        "menu.evfl_spec" => "EVFL 核心机制说明",
-        "menu.switch_lang" => "切换语言 (中 / EN)",
-        "menu.about" => "关于 ZEvent Studio",
-        "menu.about_info" => "ZEvent Studio - GPU 加速 EVFL 节点流与剧情逻辑编辑器",
-        "menu.shortcuts_info" => "快捷键: Ctrl+S 保存 | Ctrl+N 新建 | Ctrl+O 打开 | 滚轮缩放 | 拖拽平移 | 双击新建节点",
-
-        // ---------------- 主题风格 (Theme) ----------------
-        "menu.themes" => "🎨 主题风格",
-        "theme.title" => "🎨 主题风格",
-        "theme.relic_cyan" => "遗迹青蓝 (默认)",
-        "theme.twilight_amber" => "旷野黄昏",
-        "theme.sheikah_slate" => "希卡科技",
-        "theme.midnight_purple" => "暗夜紫微",
-        "theme.emerald_forest" => "苔原深绿",
-        "theme.nordic_light" => "极简晨曦 (浅色)",
-
-        // ---------------- 顶部工具栏 (Toolbar) ----------------
-        "toolbar.auto_layout" => "自动排版",
-        "toolbar.expand_params" => "展开参数",
-        "toolbar.collapse_params" => "折叠参数",
-        "toolbar.knife_mode" => "切刀工具",
-        "toolbar.knife_active" => "剪断模式中",
-        "toolbar.fit_view" => "自适应视口",
-        "toolbar.zoom_in" => "放大",
-        "toolbar.zoom_out" => "缩小",
-        "toolbar.reset_zoom" => "重置缩放",
-        "toolbar.sidebar" => "预设侧边栏",
-        "toolbar.inspector" => "属性面板",
-        "toolbar.lang_btn" => "中 / EN",
-        "toolbar.nodes_label" => "节点",
-        "toolbar.edges_label" => "连线",
-
-        // ---------------- 底部工作区切换栏 (Bottom Tabs) ----------------
-        "tab.flowchart" => "流程图 (Flowchart)",
-        "tab.code_editor" => "代码编辑 (Code Editor)",
-        "tab.actors" => "角色管理 (Actors)",
-        "tab.events" => "事件列表 (Events)",
-        "tab.json" => "JSON 源码",
-
-        // ---------------- 代码编辑器 (Code Editor) ----------------
-        "code_editor.save" => "保存",
-        "code_editor.revert" => "重置修改",
-        "code_editor.copy_all" => "复制全部",
-        "code_editor.modified_label" => "未保存",
-        "code_editor.lines" => "行",
-        "code_editor.chars" => "字符",
-        "code_editor.empty_prompt" => "请在左侧文件树选择文件以在代码编辑器中查看与编辑",
-
-        // ---------------- 角色管理主页面 (Actor Manager Page) ----------------
-        "actors_view.add_actor_btn" => "+ 添加角色...",
-        "actors_view.th_name" => "名称",
-        "actors_view.th_sub_name" => "子名称",
-        "actors_view.th_argument_name" => "部件名",
-        "actors_view.th_argument_entry" => "部件入口点",
-        "actors_view.th_actions_count" => "动作数",
-        "actors_view.th_queries_count" => "查询数",
-        "actors_view.th_operations" => "操作",
-
-        "actors_view.actions_title" => "动作",
-        "actors_view.queries_title" => "查询",
-        "actors_view.params_title" => "参数属性 (Parameters)",
-        "actors_view.load_default_params" => "🪄 加载默认参数",
-        "actors_view.add_item_btn" => "+ 添加...",
-        "actors_view.th_type" => "类型",
-        "actors_view.th_key" => "键",
-        "actors_view.th_val" => "值",
-
-        // ---------------- 事件列表主页面 (Event Manager Page) ----------------
-        "events_view.th_index" => "#",
-        "events_view.th_name" => "事件名称",
-        "events_view.th_type" => "类型",
-        "events_view.th_actor" => "关联角色",
-        "events_view.th_next" => "下一节点",
-        "events_view.th_action" => "操作",
-        "events_view.details_title" => "事件详情",
-        "events_view.select_prompt" => "请选择上方列表中的事件以查看详情与参数",
-        "events_view.jump_to_flowchart" => "🎯 跳转至流程图定位",
-
-        // ---------------- 顶部多标签栏 (Document Tab Bar) ----------------
-        "tab_bar.close_tab" => "关闭标签页",
-        "tab_bar.new_tab" => "新建流程图",
-        "tab_bar.untitled" => "未命名流程图",
-        "tab_menu.close" => "关闭",
-        "tab_menu.close_others" => "关闭其他",
-        "tab_menu.close_to_right" => "关闭右侧标签页",
-        "tab_menu.close_saved" => "关闭已保存",
-        "tab_menu.close_all" => "全部关闭",
-        "tab_menu.save" => "保存文件",
-        "tab_menu.copy_path" => "复制完整路径",
-        "tab_menu.copy_name" => "复制文件名",
-        "tab_menu.path_copied" => "✨ 已复制文件路径到剪贴板",
-        "tab_menu.name_copied" => "✨ 已复制文件名到剪贴板",
-
+/// 中文画布、节点、检查器、侧边栏、Git、首选项与设置本地化词典
+pub fn get_zh_editor(key: &str) -> Option<&'static str> {
+    let text = match key {
         // ---------------- 节点卡片与图形 (Nodes & Canvas) ----------------
         "node.parameters_label" => "参数属性 (Parameters):",
         "node.wait_join" => "等待并发分支汇合",
         "node.fork_count" => "分支数",
         "edge.cut" => "✂ 剪断",
-
 
         // ---------------- 属性检查器 (Inspector) ----------------
         "inspector.title" => "属性检查器",
@@ -308,8 +162,6 @@ pub fn get_zh(key: &str) -> &str {
         "modal.val" => "值",
         "modal.action" => "操作",
 
-
-
         // 默认节点标题
         "default_node.action" => "新动作 (Action)",
         "default_node.switch" => "新分支 (Switch)",
@@ -323,7 +175,6 @@ pub fn get_zh(key: &str) -> &str {
 
         // ---------------- Toast 提示信息 (Toast Notifications) ----------------
         "toast.auto_layout_done" => "✨ 已完成 DAG 拓扑分层自动排版",
-
         "toast.expand_params_on" => "📋 已展开全部节点参数详情",
         "toast.expand_params_off" => "📋 已折叠节点参数详情",
         "toast.focus_node" => "已跳转聚焦至: ",
@@ -349,6 +200,9 @@ pub fn get_zh(key: &str) -> &str {
         "toast.params_complete" => "参数已全部完整，无需填充",
         "toast.params_autofilled" => "已自动填充参数数量: ",
         "toast.autofill_failed" => "自动填充失败",
+        "toast.project_closed" => "已关闭当前项目文件夹",
+        "toast.copy_hash_success" => "📋 已复制提交哈希到剪贴板",
+        "toast.copy_msg_success" => "💬 已复制提交说明到剪贴板",
 
         // ---------------- 角色分类与关键参数 (Actor Theme & Smart Params) ----------------
         "actor.system" => "系统逻辑",
@@ -369,44 +223,6 @@ pub fn get_zh(key: &str) -> &str {
         "group.subgraph" => "剧情流程分区",
         "group.nodes_count" => "节点",
         "tracing.upstream" => "上游前驱",
-        // ---------------- 欢迎与启动页 (Welcome / Launcher Page) ----------------
-        "tab.welcome" => "启动页 (Welcome)",
-        "empty.title" => "Event Studio",
-        "empty.subtitle" => "BotW 事件流与剧情逻辑编辑器 · 极速可视化",
-        "welcome.explorer" => "资源管理器",
-        "welcome.no_folder" => "无打开的文件夹",
-        "welcome.no_folder_hint" => "尚未打开模组文件夹。",
-        "welcome.open_folder_btn" => "打开文件夹",
-        "welcome.open_folder_desc" => "打开文件夹将加载整套 Romfs/Content 剧情与事件流。",
-        "welcome.open_file_btn" => "打开单个文件",
-        "welcome.create_flow_btn" => "新建空白事件流",
-        "welcome.outline" => "大纲",
-        "welcome.timeline" => "时间线",
-        "welcome.actor_deps" => "角色依赖关系",
-        "welcome.start_section" => "启动",
-        "welcome.recent_section" => "最近",
-        "welcome.walkthrough_section" => "演练与功能概览",
-        "welcome.show_on_startup" => "启动时显示欢迎页",
-        "welcome.guide_basics" => "开始使用 Event Studio",
-        "welcome.guide_basics_desc" => "熟悉节点画布、快捷连线与角色管理",
-        "welcome.guide_evfl" => "了解 EVFL 核心节点机制",
-        "welcome.guide_evfl_desc" => "掌握 Action、Switch、Query、Fork/Join 语法",
-        "welcome.guide_actors" => "BotW 角色与动作系统",
-        "welcome.guide_actors_desc" => "查看并配置 EventSystemActor、Player 等角色",
-        "welcome.guide_msbt" => "MSBT 文本与本地化编辑",
-        "welcome.guide_msbt_desc" => "无缝对照剧情对白与条件分支",
-        "empty.quickStartTab" => "快速开始",
-        "empty.recentProjectsTab" => "最近打开的文件与模组",
-        "empty.openFile" => "打开单个文件...",
-        "empty.openFileDesc" => "支持 .bfevfl / .baiprog / .sbeventpack / .pack / .msbt / .aamp / .byml",
-        "empty.openMod" => "打开 Mod 文件夹...",
-        "empty.openModDesc" => "支持 Wii U (content) 与 Switch (romfs) 模组根目录",
-        "empty.newFlow" => "新建事件流...",
-        "empty.newFlowDesc" => "从零开始构建全新的 EventFlow 剧情与逻辑",
-        "empty.dragHint" => "或直接将游戏文件/模组文件夹拖拽至此窗口任意区域即可极速打开",
-        "empty.viewGuide" => "查看使用说明",
-        "empty.noRecentProjects" => "暂无最近打开的项目",
-        "empty.clearRecent" => "清空最近记录",
 
         // ---------------- 设置与首选项 (Settings Modal) ----------------
         "settings.title" => "偏好设置与游戏路径",
@@ -420,7 +236,6 @@ pub fn get_zh(key: &str) -> &str {
         "settings.cancel_btn" => "取消",
         "settings.reset_defaults" => "恢复默认",
 
-        // 游戏 AI 与自动填充
         "settings.game_ai_info_title" => "关于游戏参数自动填充机制",
         "settings.game_ai_info_desc" => "编辑器内置本地离线解析引擎，自动从《旷野之息》游戏解包目录（Bootup.pack / Game AI）中的 .sbyml 及 .baiprog 二进制定义提取各 Actor 的动作与查询参数规范。在属性面板或右键菜单中点击「自动填充游戏参数」即可快速补全标准参数项，完全离线运行，无需任何联网或外部模型服务。",
         "settings.active_badge" => "当前生效平台",
@@ -482,12 +297,7 @@ pub fn get_zh(key: &str) -> &str {
         "settings.status_bar_title" => "状态栏性能监控",
         "settings.status_bar_desc" => "在顶部工具栏常驻显示实时 FPS 帧率与渲染耗时",
 
-        // ---------------- 垂直活动栏与功能面板 (Activity Bar & Panels) ----------------
-        "activity_bar.explorer" => "资源管理器 (Ctrl+Shift+E)",
-        "activity_bar.search" => "全局搜索 (Ctrl+Shift+F)",
-        "activity_bar.source_control" => "源文件管理 (Ctrl+Shift+G)",
-        "activity_bar.settings" => "首选项设置",
-
+        // ---------------- 全局搜索 (Search) ----------------
         "search.title" => "搜索",
         "search.placeholder" => "在项目中搜索文件与内容...",
         "search.filters_hint" => "过滤包含与排除模式 (区分大小写 / 全字匹配)",
@@ -496,6 +306,7 @@ pub fn get_zh(key: &str) -> &str {
         "search.no_match" => "未找到匹配项",
         "search.results_found" => "匹配结果",
 
+        // ---------------- 源代码管理 (Source Control) ----------------
         "source_control.title" => "源文件管理",
         "source_control.changes" => "更改",
         "source_control.staged_changes" => "暂存的更改",
@@ -532,12 +343,13 @@ pub fn get_zh(key: &str) -> &str {
         "source_control.sarc_no_subfiles_changed" => "封包内部子文件无文本差异",
         "source_control.expand_package" => "展开封包子文件",
         "source_control.collapse_package" => "折叠封包子文件",
+
+        // ---------------- 差异对比与提交详情 (Diff & Commit) ----------------
         "diff.binary_or_no_text" => "该文件未发生文本变更或为二进制格式",
         "diff.no_file_selected" => "未选择任何差异对比文件",
         "diff.file_path_prefix" => "文件路径",
         "diff.sub_files_label" => "📦 封包内变更文件",
         "diff.unpacked_single" => "📦 封包内部已解析文件",
-        "toast.project_closed" => "已关闭当前项目文件夹",
         "commit_menu.view_changes" => "🔍 查看提交变更 / 展开文件",
         "commit_menu.revert_commit" => "🔄 撤回此提交 (Revert Commit)",
         "commit_menu.soft_reset" => "⏮️ 软重置至此处 (保留暂存区)",
@@ -546,11 +358,8 @@ pub fn get_zh(key: &str) -> &str {
         "commit_menu.copy_hash" => "📋 复制完整提交哈希",
         "commit_menu.copy_short_hash" => "📑 复制短哈希",
         "commit_menu.copy_message" => "💬 复制提交说明",
-        "toast.copy_hash_success" => "📋 已复制提交哈希到剪贴板",
-        "toast.copy_msg_success" => "💬 已复制提交说明到剪贴板",
 
-        _ => key,
-    }
+        _ => return None,
+    };
+    Some(text)
 }
-
-

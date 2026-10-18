@@ -291,4 +291,89 @@ impl AppState {
             }
         }
     }
+
+    /// 打开指定提交中某个文件的差异对比弹窗
+    pub fn open_commit_file_diff(&mut self, hash: &str, rel_path: &str) {
+        if let Some(dir) = self.get_git_working_dir() {
+            let fname = std::path::Path::new(rel_path)
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or(rel_path)
+                .to_string();
+
+            let subject = self
+                .git_commits
+                .iter()
+                .find(|c| c.hash == hash || c.short_hash == hash)
+                .map(|c| c.subject.clone())
+                .unwrap_or_default();
+
+            let subtitle = if subject.is_empty() {
+                format!("提交: {}", &hash[..7.min(hash.len())])
+            } else {
+                format!("提交: {} · {}", &hash[..7.min(hash.len())], subject)
+            };
+
+            let all_files = self
+                .git_expanded_commit_files
+                .iter()
+                .map(|f| f.path.clone())
+                .collect();
+
+            match crate::model::git::get_commit_file_diff(&dir, hash, rel_path) {
+                Ok(diff) => {
+                    self.active_diff_modal = Some(crate::ui::sidebar::diff_modal::GitDiffModalState {
+                        title: fname,
+                        subtitle,
+                        commit_hash: Some(hash.to_string()),
+                        file_path: rel_path.to_string(),
+                        diff,
+                        available_files: all_files,
+                    });
+                }
+                Err(err) => {
+                    self.toast = Some(Toast::error(format!("获取提交差异失败: {}", err)));
+                }
+            }
+        }
+    }
+
+    /// 打开工作区或暂存区未提交文件的修改差异对比
+    pub fn open_working_file_diff(&mut self, rel_path: &str, is_staged: bool) {
+        if let Some(dir) = self.get_git_working_dir() {
+            let fname = std::path::Path::new(rel_path)
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or(rel_path)
+                .to_string();
+
+            let subtitle = if is_staged {
+                "暂存区变更 (Staged Changes)".to_string()
+            } else {
+                "工作区未暂存修改 (Working Tree Changes)".to_string()
+            };
+
+            match crate::model::git::get_working_tree_file_diff(&dir, rel_path, is_staged) {
+                Ok(diff) => {
+                    self.active_diff_modal = Some(crate::ui::sidebar::diff_modal::GitDiffModalState {
+                        title: fname,
+                        subtitle,
+                        commit_hash: None,
+                        file_path: rel_path.to_string(),
+                        diff,
+                        available_files: vec![rel_path.to_string()],
+                    });
+                }
+                Err(err) => {
+                    self.toast = Some(Toast::error(format!("获取文件修改差异失败: {}", err)));
+                }
+            }
+        }
+    }
+
+    /// 关闭差异对比弹窗
+    pub fn close_diff_modal(&mut self) {
+        self.active_diff_modal = None;
+    }
+
 }
