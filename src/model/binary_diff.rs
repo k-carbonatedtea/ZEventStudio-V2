@@ -5,7 +5,7 @@ use roead::sarc::Sarc;
 use crate::model::document_tab::SubFileDiffItem;
 use crate::model::file_converter::parse_file_to_code;
 use crate::model::file_tree::is_sarc_extension;
-use crate::model::git::{parse_unified_diff, GitFileDiff};
+use crate::model::git::{parse_unified_diff, GitFileDiff, GitFileStatusKind};
 use crate::model::git_diff_align::align_unified_diff;
 
 /// 获取指定提交中某个文件的二进制字节流 (git show <hash>:<path>)
@@ -212,3 +212,112 @@ pub fn resolve_smart_code_diff(
 
     None
 }
+
+/// SARC 归档封包内部子文件单项变更
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SarcSubFileChange {
+    pub sub_path: String,
+    pub file_name: String,
+    pub dir_name: String,
+    pub format_name: String,
+    pub status: GitFileStatusKind,
+}
+
+impl SarcSubFileChange {
+    /// 获取子文件对应的图标符号
+    pub fn icon(&self) -> &'static str {
+        let lower = self.file_name.to_lowercase();
+        if lower.ends_with(".bfevfl") {
+            "⚡"
+        } else if lower.ends_with(".msbt") {
+            "💬"
+        } else if lower.ends_with(".bxml")
+            || lower.ends_with(".baev")
+            || lower.ends_with(".baischedule")
+            || lower.ends_with(".genvb")
+            || lower.ends_with(".bactparam")
+        {
+            "⚙️"
+        } else if lower.ends_with(".byml") || lower.ends_with(".bgyml") {
+            "{ }"
+        } else {
+            "📄"
+        }
+    }
+}
+
+/// 提取并比对 SARC 封包前后两版本的差异子文件列表
+pub fn get_sarc_changed_subfiles(
+    old_bytes_opt: Option<&[u8]>,
+    new_bytes_opt: Option<&[u8]>,
+) -> Vec<SarcSubFileChange> {
+    let old_files = old_bytes_opt.and_then(unpack_sarc_files).unwrap_or_default();
+    let new_files = new_bytes_opt.and_then(unpack_sarc_files).unwrap_or_default();
+
+    let mut all_keys: BTreeSet<String> = BTreeSet::new();
+    for k in old_files.keys() {
+        all_keys.insert(k.clone());
+    }
+    for k in new_files.keys() {
+        all_keys.insert(k.clone());
+    }
+
+    let mut changes = Vec::new();
+
+    for key in all_keys {
+        let old_data = old_files.get(&key);
+        let new_data = new_files.get(&key);
+
+        if old_data == new_data {
+            continue;
+        }
+
+        let status = match (old_data.is_some(), new_data.is_some()) {
+            (true, true) => GitFileStatusKind::Modified,
+            (false, true) => GitFileStatusKind::Added,
+            (true, false) => GitFileStatusKind::Deleted,
+            (false, false) => continue,
+        };
+
+        let norm_key = key.replace('\\', "/");
+        let (dir_name, file_name) = match norm_key.rfind('/') {
+            Some(idx) => (norm_key[..idx].to_string(), norm_key[idx + 1..].to_string()),
+            None => (String::new(), norm_key.clone()),
+        };
+
+        let format_name = new_data
+            .or(old_data)
+            .and_then(|d| parse_file_to_code(d, &key).ok())
+            .map(|(_, fmt, _)| fmt.display_name().to_string())
+            .unwrap_or_else(|| {
+                let lk = key.to_lowercase();
+                if lk.ends_with(".bxml")
+                    || lk.ends_with(".baev")
+                    || lk.ends_with(".baischedule")
+                    || lk.ends_with(".genvb")
+                    || lk.ends_with(".bactparam")
+                {
+                    "AAMP".to_string()
+                } else if lk.ends_with(".byml") || lk.ends_with(".bgyml") {
+                    "BYML".to_string()
+                } else if lk.ends_with(".bfevfl") {
+                    "BFEVFL".to_string()
+                } else if lk.ends_with(".msbt") {
+                    "MSBT".to_string()
+                } else {
+                    "Binary".to_string()
+                }
+            });
+
+        changes.push(SarcSubFileChange {
+            sub_path: norm_key,
+            file_name,
+            dir_name,
+            format_name,
+            status,
+        });
+    }
+
+    changes
+}
+

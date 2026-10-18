@@ -7,11 +7,14 @@ pub mod node_palette;
 pub mod search_panel;
 pub mod source_control_panel;
 pub mod diff_modal;
+pub mod sarc_subfile_view;
+pub mod commit_context_menu;
 
 pub use activity_bar::render_activity_bar;
 pub use search_panel::render_search_panel;
 pub use source_control_panel::render_source_control_panel;
 pub use diff_modal::render_git_diff_modal;
+pub use commit_context_menu::render_commit_context_menu;
 
 use crate::ui::sidebar::actors_manager::render_actors_manager;
 use crate::ui::sidebar::entry_points::render_entry_point_list;

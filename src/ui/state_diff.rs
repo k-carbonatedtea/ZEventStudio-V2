@@ -244,4 +244,51 @@ impl AppState {
             }
         }
     }
+
+    /// 打开指定提交中 SARC 封包的内部指定子文件的差异对比
+    pub fn open_commit_sarc_subfile_diff(&mut self, hash: &str, rel_path: &str, sub_path: &str) {
+        self.open_commit_file_diff_tab(hash, rel_path);
+
+        let commit_item = self
+            .git_commits
+            .iter()
+            .find(|c| c.hash == hash || c.short_hash == hash);
+        let new_rev = commit_item
+            .map(|c| c.short_hash.clone())
+            .unwrap_or_else(|| hash[..7.min(hash.len())].to_string());
+        let tab_id = format!("diff:commit:{}:{}", new_rev, rel_path);
+
+        if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
+            if let Some(ref mut ds) = tab.diff_state {
+                if let Some(idx) = ds.sub_files.iter().position(|s| s.sub_path == sub_path) {
+                    ds.active_sub_file_idx = idx;
+                    if let Some(sub) = ds.sub_files.get(idx) {
+                        ds.diff = sub.diff.clone();
+                        ds.rows = sub.rows.clone();
+                    }
+                }
+            }
+        }
+    }
+
+    /// 打开工作区/暂存区中 SARC 封包的内部指定子文件的差异对比
+    #[allow(dead_code)]
+    pub fn open_working_sarc_subfile_diff(&mut self, rel_path: &str, is_staged: bool, sub_path: &str) {
+        self.open_working_file_diff_tab(rel_path, is_staged);
+
+        let tab_id_prefix = if is_staged { "diff:staged" } else { "diff:working" };
+        let tab_id = format!("{}:{}", tab_id_prefix, rel_path);
+
+        if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
+            if let Some(ref mut ds) = tab.diff_state {
+                if let Some(idx) = ds.sub_files.iter().position(|s| s.sub_path == sub_path) {
+                    ds.active_sub_file_idx = idx;
+                    if let Some(sub) = ds.sub_files.get(idx) {
+                        ds.diff = sub.diff.clone();
+                        ds.rows = sub.rows.clone();
+                    }
+                }
+            }
+        }
+    }
 }

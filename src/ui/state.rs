@@ -315,6 +315,13 @@ pub struct AppState {
     pub git_expanded_commit_files: Vec<crate::model::git::GitCommitFileChange>,
     pub git_history_limit: usize,
     pub active_diff_modal: Option<crate::ui::sidebar::diff_modal::GitDiffModalState>,
+
+    // SARC 封包内部子文件展开与变更缓存
+    pub git_expanded_sarc_keys: std::collections::HashSet<String>,
+    pub git_sarc_subfiles_cache: std::collections::HashMap<String, Vec<crate::model::SarcSubFileChange>>,
+
+    // Git 提交记录右键上下文菜单
+    pub git_commit_context_menu: Option<(String, (f32, f32))>,
 }
 
 #[allow(dead_code)]
@@ -436,6 +443,9 @@ impl AppState {
             git_expanded_commit_files: Vec::new(),
             git_history_limit: 50,
             active_diff_modal: None,
+            git_expanded_sarc_keys: std::collections::HashSet::new(),
+            git_sarc_subfiles_cache: std::collections::HashMap::new(),
+            git_commit_context_menu: None,
         };
 
         state.fit_view();
@@ -595,6 +605,170 @@ impl AppState {
                 } else {
                     self.git_expanded_commit_files.clear();
                 }
+            }
+        }
+    }
+
+    /// 展开或折叠指定提交中 SARC 封包文件的子文件列表
+    pub fn toggle_expand_commit_sarc(&mut self, hash: &str, rel_path: &str) {
+        let key = format!("commit:{}:{}", hash, rel_path);
+        if self.git_expanded_sarc_keys.contains(&key) {
+            self.git_expanded_sarc_keys.remove(&key);
+        } else {
+            self.git_expanded_sarc_keys.insert(key.clone());
+            if !self.git_sarc_subfiles_cache.contains_key(&key) {
+                if let Some(dir) = self.get_git_working_dir() {
+                    let commit_item = self
+                        .git_commits
+                        .iter()
+                        .find(|c| c.hash == hash || c.short_hash == hash);
+                    let parent_hash = commit_item
+                        .and_then(|c| c.parents.first())
+                        .cloned()
+                        .or_else(|| {
+                            let mut cmd = std::process::Command::new("git");
+                            cmd.args(["rev-parse", &format!("{}^", hash)]);
+                            cmd.current_dir(&dir);
+                            #[cfg(windows)]
+                            {
+                                use std::os::windows::process::CommandExt;
+                                cmd.creation_flags(0x08000000);
+                            }
+                            cmd.output().ok().and_then(|out| {
+                                if out.status.success() {
+                                    let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                                    if !s.is_empty() { Some(s) } else { None }
+                                } else {
+                                    None
+                                }
+                            })
+                        });
+
+                    let new_bytes = crate::model::binary_diff::get_commit_file_bytes(&dir, hash, rel_path).ok();
+                    let old_bytes = parent_hash.and_then(|p| {
+                        crate::model::binary_diff::get_commit_file_bytes(&dir, &p, rel_path).ok()
+                    });
+
+                    let sub_changes = crate::model::binary_diff::get_sarc_changed_subfiles(
+                        old_bytes.as_deref(),
+                        new_bytes.as_deref(),
+                    );
+                    self.git_sarc_subfiles_cache.insert(key, sub_changes);
+                }
+            }
+        }
+    }
+
+    /// 展开或折叠工作区/暂存区 SARC 封包文件的子文件列表
+    #[allow(dead_code)]
+    pub fn toggle_expand_working_sarc(&mut self, rel_path: &str, is_staged: bool) {
+        let key = if is_staged {
+            format!("staged:{}", rel_path)
+        } else {
+            format!("working:{}", rel_path)
+        };
+        if self.git_expanded_sarc_keys.contains(&key) {
+            self.git_expanded_sarc_keys.remove(&key);
+        } else {
+            self.git_expanded_sarc_keys.insert(key.clone());
+            if !self.git_sarc_subfiles_cache.contains_key(&key) {
+                if let Some(dir) = self.get_git_working_dir() {
+                    let new_bytes = crate::model::binary_diff::get_working_tree_file_bytes(&dir, rel_path, is_staged).ok();
+                    let old_bytes = if is_staged {
+                        crate::model::binary_diff::get_commit_file_bytes(&dir, "HEAD", rel_path).ok()
+                    } else {
+                        crate::model::binary_diff::get_working_tree_file_bytes(&dir, rel_path, true).ok()
+                            .or_else(|| crate::model::binary_diff::get_commit_file_bytes(&dir, "HEAD", rel_path).ok())
+                    };
+
+                    let sub_changes = crate::model::binary_diff::get_sarc_changed_subfiles(
+                        old_bytes.as_deref(),
+                        new_bytes.as_deref(),
+                    );
+                    self.git_sarc_subfiles_cache.insert(key, sub_changes);
+                }
+            }
+        }
+    }
+
+    /// 撤回指定的提交记录 (git revert <hash> --no-edit)
+    pub fn revert_commit_by_hash(&mut self, hash: &str) {
+        self.git_commit_context_menu = None;
+        let dir = match self.get_git_working_dir() {
+            Some(d) => d,
+            None => {
+                self.toast = Some(crate::ui::components::Toast::warning("未找到有效 Git 工作区"));
+                return;
+            }
+        };
+
+        let short_h = hash[..7.min(hash.len())].to_string();
+        match crate::model::git_actions::revert_commit(&dir, hash) {
+            Ok(_) => {
+                self.toast = Some(crate::ui::components::Toast::success(format!("✓ 已成功撤回提交: {}", short_h)));
+                self.refresh_git_status();
+                self.refresh_git_history();
+            }
+            Err(e) => {
+                self.toast = Some(crate::ui::components::Toast::error(format!("❌ 撤回提交失败: {}", e)));
+                self.refresh_git_status();
+            }
+        }
+    }
+
+    /// 重置分支至指定提交 (git reset <mode> <hash>)
+    pub fn reset_to_commit_by_hash(&mut self, hash: &str, mode: &str) {
+        self.git_commit_context_menu = None;
+        let dir = match self.get_git_working_dir() {
+            Some(d) => d,
+            None => {
+                self.toast = Some(crate::ui::components::Toast::warning("未找到有效 Git 工作区"));
+                return;
+            }
+        };
+
+        let short_h = hash[..7.min(hash.len())].to_string();
+        let mode_desc = match mode {
+            "--soft" => "软重置(保留暂存区)",
+            "--mixed" => "混合重置(保留工作区)",
+            "--hard" => "硬重置",
+            _ => "重置",
+        };
+
+        match crate::model::git_actions::reset_to_commit(&dir, hash, mode) {
+            Ok(_) => {
+                self.toast = Some(crate::ui::components::Toast::success(format!("✓ 已{}至提交: {}", mode_desc, short_h)));
+                self.refresh_git_status();
+                self.refresh_git_history();
+            }
+            Err(e) => {
+                self.toast = Some(crate::ui::components::Toast::error(format!("❌ 重置分支失败: {}", e)));
+                self.refresh_git_status();
+            }
+        }
+    }
+
+    /// 检出指定提交 (git checkout <hash>)
+    pub fn checkout_commit_by_hash(&mut self, hash: &str) {
+        self.git_commit_context_menu = None;
+        let dir = match self.get_git_working_dir() {
+            Some(d) => d,
+            None => {
+                self.toast = Some(crate::ui::components::Toast::warning("未找到有效 Git 工作区"));
+                return;
+            }
+        };
+
+        let short_h = hash[..7.min(hash.len())].to_string();
+        match crate::model::git_actions::checkout_commit(&dir, hash) {
+            Ok(_) => {
+                self.toast = Some(crate::ui::components::Toast::success(format!("✓ 已检出切换至提交: {}", short_h)));
+                self.refresh_git_status();
+                self.refresh_git_history();
+            }
+            Err(e) => {
+                self.toast = Some(crate::ui::components::Toast::error(format!("❌ 检出提交失败: {}", e)));
+                self.refresh_git_status();
             }
         }
     }

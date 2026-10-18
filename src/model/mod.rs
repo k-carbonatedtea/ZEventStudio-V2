@@ -17,10 +17,11 @@ pub mod ai_def;
 pub mod binary_diff;
 pub mod git_diff_align;
 pub mod git;
+pub mod git_actions;
 
 pub use bcml::import_bcml_paths;
 #[allow(unused_imports)]
-pub use binary_diff::resolve_smart_code_diff;
+pub use binary_diff::{get_sarc_changed_subfiles, resolve_smart_code_diff, SarcSubFileChange};
 pub use settings::{GamePathSettings, PlatformType, RecentProjectItem};
 
 pub use actor::*;

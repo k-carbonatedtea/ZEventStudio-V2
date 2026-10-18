@@ -85,6 +85,12 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipb
         return true;
     }
 
+    // 5.0 Git 提交记录右键菜单拦截 (Esc 关闭)
+    if state.git_commit_context_menu.is_some() && event.keystroke.key == "escape" {
+        state.git_commit_context_menu = None;
+        return true;
+    }
+
     // 5.1 首选项设置弹窗拦截 (Esc 关闭)
     if state.settings_modal_open && event.keystroke.key == "escape" {
         state.settings_modal_open = false;

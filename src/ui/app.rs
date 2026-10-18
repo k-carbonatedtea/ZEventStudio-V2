@@ -435,6 +435,10 @@ impl Render for AppView {
             .children(state.tab_context_menu.as_ref().map(|(tid, pos)| {
                 crate::ui::render_tab_context_menu(state, tid, *pos, &self.model)
             }))
+            // Git 提交记录右键上下文菜单
+            .children(state.git_commit_context_menu.as_ref().map(|(hash, pos)| {
+                crate::ui::sidebar::render_commit_context_menu(state, hash, *pos, &self.model)
+            }))
             // 节点属性与分支编辑模态框
             .children((state.active_node_editor_modal.is_some()).then(|| {
                 render_node_editor_modal(state, &self.model)

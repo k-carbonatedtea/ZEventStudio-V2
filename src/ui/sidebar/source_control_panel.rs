@@ -1447,8 +1447,8 @@ fn render_commit_history_section(
                                         total_f,
                                         is_exp,
                                         &expanded_files,
+                                        state,
                                         &model_content,
-                                        &pal_c,
                                     )
                                     .into_any_element(),
                                 );
@@ -1494,12 +1494,15 @@ fn render_commit_row(
     total_count: usize,
     is_expanded: bool,
     expanded_files: &[crate::model::git::GitCommitFileChange],
+    state: &AppState,
     model: &Entity<AppState>,
-    pal: &crate::ui::theme::ThemePalette,
 ) -> impl IntoElement {
+    let pal = state.theme();
     let hash = item.hash.clone();
     let hash_click = hash.clone();
+    let hash_right = hash.clone();
     let model_click = model.clone();
+    let model_right = model.clone();
 
     // 分支轨道配色规范
     let dot_color = match ix % 4 {
@@ -1532,6 +1535,15 @@ fn render_commit_row(
                     let h = hash_click.clone();
                     model_click.update(cx, |st, cx| {
                         st.toggle_expand_commit(&h);
+                        cx.notify();
+                    });
+                })
+                .on_mouse_down(MouseButton::Right, move |event, _, cx| {
+                    cx.stop_propagation();
+                    let h = hash_right.clone();
+                    let pos = (event.position.x.into(), event.position.y.into());
+                    model_right.update(cx, |st, cx| {
+                        st.git_commit_context_menu = Some((h, pos));
                         cx.notify();
                     });
                 })
@@ -1696,74 +1708,142 @@ fn render_commit_row(
                                 GitFileStatusKind::Conflicted => ("!", rgb(0xE51400)),
                             };
 
+                            let is_sarc = crate::model::file_tree::is_sarc_extension(&file_name);
+                            let sarc_key = format!("commit:{}:{}", f_hash, f_path);
+                            let is_sarc_expanded = is_sarc && state.git_expanded_sarc_keys.contains(&sarc_key);
+
                             let icon = if file_name.ends_with(".bfevfl") {
                                 "⚡"
                             } else if file_name.ends_with(".msbt") {
                                 "💬"
-                            } else if crate::model::file_tree::is_sarc_extension(&file_name) {
+                            } else if is_sarc {
                                 "🗃️"
                             } else {
                                 "📄"
                             };
 
+                            let f_hash_chevron = f_hash.clone();
+                            let f_path_chevron = f_path.clone();
+                            let m_chevron = model.clone();
+
                             div()
-                                .h(px(24.0))
-                                .px_1p5()
-                                .rounded_xs()
-                                .bg(rgba(0x00000022))
-                                .hover(|s| s.bg(pal.card_hover))
-                                .cursor_pointer()
+                                .w_full()
                                 .flex()
-                                .items_center()
-                                .justify_between()
-                                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                                    let fp = f_path.clone();
-                                    let h = f_hash.clone();
-                                    m_diff.update(cx, |st, cx| {
-                                        st.open_commit_file_diff_tab(&h, &fp);
-                                        cx.notify();
-                                    });
-                                })
-                                // 文件图标与名称
+                                .flex_col()
+                                .gap_0p5()
                                 .child(
                                     div()
+                                        .h(px(24.0))
+                                        .px_1p5()
+                                        .rounded_xs()
+                                        .bg(rgba(0x00000022))
+                                        .hover(|s| s.bg(pal.card_hover))
+                                        .cursor_pointer()
                                         .flex()
                                         .items_center()
-                                        .gap_1p5()
-                                        .overflow_hidden()
-                                        .child(div().text_size(px(10.0)).child(icon))
+                                        .justify_between()
+                                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                                            let fp = f_path.clone();
+                                            let h = f_hash.clone();
+                                            m_diff.update(cx, |st, cx| {
+                                                if is_sarc && !st.git_expanded_sarc_keys.contains(&format!("commit:{}:{}", h, fp)) {
+                                                    st.toggle_expand_commit_sarc(&h, &fp);
+                                                }
+                                                st.open_commit_file_diff_tab(&h, &fp);
+                                                cx.notify();
+                                            });
+                                        })
+                                        // 文件展开折叠箭头(若是压缩包) + 图标与名称 + 变动子文件数提示
                                         .child(
                                             div()
-                                                .text_size(px(10.0))
-                                                .text_color(pal.text_primary)
-                                                .whitespace_nowrap()
+                                                .flex()
+                                                .items_center()
+                                                .gap_1p5()
                                                 .overflow_hidden()
-                                                .child(file_name),
-                                        ),
-                                )
-                                // 右侧状态与差异对比图标
-                                .child(
-                                    div()
-                                        .flex()
-                                        .items_center()
-                                        .gap_1()
-                                        .flex_shrink_0()
-                                        .child(
-                                            div()
-                                                .px_1()
-                                                .rounded_xs()
-                                                .text_size(px(9.0))
-                                                .font_weight(FontWeight::BOLD)
-                                                .text_color(status_color)
-                                                .child(status_label),
+                                                .children(is_sarc.then(|| {
+                                                    div()
+                                                        .px_1()
+                                                        .py_0p5()
+                                                        .cursor_pointer()
+                                                        .text_size(px(8.5))
+                                                        .text_color(if is_sarc_expanded {
+                                                            pal.primary_accent
+                                                        } else {
+                                                            pal.text_secondary
+                                                        })
+                                                        .hover(|s| s.text_color(pal.text_primary))
+                                                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                                                            cx.stop_propagation();
+                                                            let h = f_hash_chevron.clone();
+                                                            let fp = f_path_chevron.clone();
+                                                            m_chevron.update(cx, |st, cx| {
+                                                                st.toggle_expand_commit_sarc(&h, &fp);
+                                                                cx.notify();
+                                                            });
+                                                        })
+                                                        .child(if is_sarc_expanded { "▼" } else { "▶" })
+                                                }))
+                                                .child(div().text_size(px(10.0)).child(icon))
+                                                .child(
+                                                    div()
+                                                        .text_size(px(10.0))
+                                                        .text_color(pal.text_primary)
+                                                        .whitespace_nowrap()
+                                                        .overflow_hidden()
+                                                        .child(file_name),
+                                                )
+                                                .children(if is_sarc {
+                                                    state.git_sarc_subfiles_cache.get(&sarc_key).map(|subs| {
+                                                        div()
+                                                            .px_1()
+                                                            .rounded_xs()
+                                                            .bg(pal.card_surface)
+                                                            .border_1()
+                                                            .border_color(pal.panel_border)
+                                                            .text_size(px(8.0))
+                                                            .text_color(pal.text_secondary)
+                                                            .child(format!("{} 变更", subs.len()))
+                                                    })
+                                                } else {
+                                                    None
+                                                }),
                                         )
+                                        // 右侧状态与差异对比图标
                                         .child(
                                             div()
-                                                .text_size(px(10.0))
-                                                .text_color(pal.text_secondary)
-                                                .child("⇄"),
+                                                .flex()
+                                                .items_center()
+                                                .gap_1()
+                                                .flex_shrink_0()
+                                                .child(
+                                                    div()
+                                                        .px_1()
+                                                        .rounded_xs()
+                                                        .text_size(px(9.0))
+                                                        .font_weight(FontWeight::BOLD)
+                                                        .text_color(status_color)
+                                                        .child(status_label),
+                                                )
+                                                .child(
+                                                    div()
+                                                        .text_size(px(10.0))
+                                                        .text_color(pal.text_secondary)
+                                                        .hover(|s| s.text_color(pal.primary_accent))
+                                                        .child("⇄"),
+                                                ),
                                         ),
                                 )
+                                // 如果已展开，渲染 SARC 封包内部子文件列表
+                                .children(is_sarc_expanded.then(|| {
+                                    crate::ui::sidebar::sarc_subfile_view::render_commit_sarc_subfiles(
+                                        &commit_hash,
+                                        &f.path,
+                                        state,
+                                        model,
+                                        &pal,
+                                    )
+                                    .into_any_element()
+                                }))
                                 .into_any_element()
                         })
                         .collect()
