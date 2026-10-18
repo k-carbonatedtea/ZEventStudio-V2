@@ -176,6 +176,13 @@ pub fn pick_and_load_file(model: &Entity<AppState>, cx: &mut App) {
                         st.open_pack_file(&path_str);
                     } else {
                         st.load_file_by_path(&path_str);
+                        if !st.is_path_inside_project(&path_str) {
+                            let ext = path
+                                .extension()
+                                .map(|e| e.to_string_lossy().to_string())
+                                .unwrap_or_else(|| "bfevfl".to_string());
+                            st.add_recent_project(file_name, path_str, ext);
+                        }
                     }
                     cx.notify();
                 });

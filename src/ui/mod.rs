@@ -11,6 +11,7 @@ pub mod state_canvas;
 pub mod state_diff;
 pub mod state_editor;
 pub mod state_project;
+pub mod state_recent;
 pub mod state_settings;
 pub mod state_tabs;
 pub mod state_theme;

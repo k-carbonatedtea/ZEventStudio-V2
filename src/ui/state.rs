@@ -448,6 +448,7 @@ impl AppState {
             git_commit_context_menu: None,
         };
 
+        state.clean_invalid_recent_projects();
         state.fit_view();
         state
     }

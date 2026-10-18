@@ -132,6 +132,18 @@ fn read_dir_recursive_impl(dir_path: &Path, depth: usize, max_depth: usize) -> R
     let paths: Vec<_> = entries
         .filter_map(|e| e.ok())
         .map(|e| e.path())
+        .filter(|p| {
+            if let Some(file_name) = p.file_name() {
+                let name = file_name.to_string_lossy();
+                name != ".git"
+                    && name != ".vscode"
+                    && name != ".idea"
+                    && name != ".DS_Store"
+                    && name != "Thumbs.db"
+            } else {
+                true
+            }
+        })
         .collect();
 
     let mut nodes: Vec<FileNode> = paths

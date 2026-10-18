@@ -4,7 +4,7 @@ use crate::model::file_tree::{read_file_from_path, scan_project_path};
 use crate::model::{DocumentTabKind, Graph, OpenDocumentTab};
 use crate::ui::components::Toast;
 use crate::ui::sidebar::SidebarTab;
-use crate::ui::state::{AppState, AppWorkspaceTab, RecentProjectItem};
+use crate::ui::state::{AppState, AppWorkspaceTab};
 
 impl AppState {
     /// 打开并解析指定 Mod 根目录 (如 content 或 romfs)
@@ -225,11 +225,6 @@ impl AppState {
                     self.open_tabs.push(new_tab);
                     self.active_tab_id = Some(new_id);
 
-                    let is_physical = !path.contains("//") && std::path::Path::new(path).exists();
-                    if is_physical {
-                        self.add_recent_project(raw_name.clone(), path.to_string(), "bfevfl".to_string());
-                    }
-
                     self.fit_view();
                     self.current_tab = AppWorkspaceTab::Flowchart;
                     self.toast = Some(Toast::success(format!("{} {}", self.t("toast.file_loaded"), raw_name)));
@@ -264,71 +259,12 @@ impl AppState {
                 self.open_tabs.push(new_tab);
                 self.active_tab_id = Some(new_id);
 
-                let is_physical = !path.contains("//") && std::path::Path::new(path).exists();
-                if is_physical {
-                    self.add_recent_project(raw_name.clone(), path.to_string(), file_type);
-                }
-
                 self.current_tab = AppWorkspaceTab::CodeEditor;
                 self.toast = Some(Toast::success(format!("{} {} [{}]", self.t("toast.file_loaded"), raw_name, format.display_name())));
             }
             Err(e) => {
                 self.toast = Some(Toast::error(format!("{} {}", self.t("toast.file_load_error"), e)));
             }
-        }
-    }
-
-    /// 辅助添加最近项目项并持久化保存
-    pub fn add_recent_project(&mut self, name: String, path: String, project_type: String) {
-        self.recent_projects.retain(|p| p.path != path);
-        self.recent_projects.insert(
-            0,
-            RecentProjectItem {
-                id: uuid::Uuid::new_v4().to_string(),
-                name,
-                path,
-                project_type,
-            },
-        );
-        self.recent_projects.truncate(20);
-        self.game_paths.recent_projects = self.recent_projects.clone();
-        let _ = self.game_paths.save_to_disk();
-    }
-
-    /// 清空所有最近打开记录并持久化
-    pub fn clear_recent_projects(&mut self) {
-        self.recent_projects.clear();
-        self.game_paths.recent_projects.clear();
-        let _ = self.game_paths.save_to_disk();
-    }
-
-    /// 删除单条最近打开记录并持久化
-    pub fn remove_recent_project(&mut self, index: usize) {
-        if index < self.recent_projects.len() {
-            self.recent_projects.remove(index);
-            self.game_paths.recent_projects = self.recent_projects.clone();
-            let _ = self.game_paths.save_to_disk();
-        }
-    }
-
-    /// 智能打开任意类型最近记录 (文件夹/SARC/单文件)
-    pub fn open_recent_item(&mut self, item: &RecentProjectItem) {
-        let path = item.path.clone();
-        if path.is_empty() {
-            return;
-        }
-
-        let p = std::path::Path::new(&path);
-        if p.is_dir() {
-            self.open_project_directory(&path);
-        } else if crate::model::is_sarc_extension(&item.name)
-            || item.project_type == "pack"
-            || item.project_type == "sbeventpack"
-            || item.project_type == "sbactorpack"
-        {
-            self.open_pack_file(&path);
-        } else {
-            self.load_file_by_path(&path);
         }
     }
 
