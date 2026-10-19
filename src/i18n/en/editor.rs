@@ -363,7 +363,6 @@ pub fn get_en_editor(key: &str) -> Option<&'static str> {
         "commit_menu.copy_hash" => "📋 Copy Full Commit Hash",
         "commit_menu.copy_short_hash" => "📑 Copy Short Hash",
         "commit_menu.copy_message" => "💬 Copy Commit Message",
-
         _ => return None,
     };
     Some(text)

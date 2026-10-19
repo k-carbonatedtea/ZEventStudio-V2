@@ -10,6 +10,7 @@ pub mod state;
 pub mod state_canvas;
 pub mod state_diff;
 pub mod state_editor;
+pub mod state_file_ops;
 pub mod state_node_editor;
 pub mod state_git;
 pub mod state_input;

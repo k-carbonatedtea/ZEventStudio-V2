@@ -287,6 +287,15 @@ impl Render for AppView {
                 crate::ui::render_tab_context_menu(state, tid, *pos, &self.model)
             }))
             // Git 提交记录右键上下文菜单
+            .children(state.file_tree_context_menu.as_ref().map(|menu| {
+                crate::ui::sidebar::render_file_tree_context_menu(state, menu, &self.model)
+            }))
+            .children(state.rename_modal.as_ref().map(|modal| {
+                crate::ui::sidebar::render_rename_modal(state, modal, &self.model)
+            }))
+            .children(state.delete_confirm_modal.as_ref().map(|modal| {
+                crate::ui::sidebar::render_delete_confirm_modal(state, modal, &self.model)
+            }))
             .children(state.git_commit_context_menu.as_ref().map(|(hash, pos)| {
                 crate::ui::sidebar::render_commit_context_menu(state, hash, *pos, &self.model)
             }))

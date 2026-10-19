@@ -32,7 +32,6 @@ pub enum AppWorkspaceTab {
     DiffViewer,
 }
 
-
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum WelcomeTab {
@@ -174,4 +173,35 @@ pub enum GitCommitFocus {
     None,
     Title,
     Description,
+}
+
+/// 资源管理器文件树右键上下文菜单激活状态
+#[derive(Debug, Clone, PartialEq)]
+pub struct FileTreeContextMenu {
+    pub path: String,
+    pub name: String,
+    pub is_dir: bool,
+    pub is_sarc: bool,
+    pub is_inside_sarc: bool,
+    pub position: (f32, f32),
+}
+
+/// 文件/封包条目重命名弹窗状态
+#[derive(Debug, Clone, PartialEq)]
+pub struct RenameModalState {
+    pub target_path: String,
+    pub old_name: String,
+    pub new_name: String,
+    pub is_inside_sarc: bool,
+    pub is_dir: bool,
+    pub focused: bool,
+}
+
+/// 文件/封包条目删除确认弹窗状态
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeleteConfirmModalState {
+    pub target_path: String,
+    pub name: String,
+    pub is_inside_sarc: bool,
+    pub is_dir: bool,
 }

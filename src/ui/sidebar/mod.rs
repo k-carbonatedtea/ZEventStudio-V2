@@ -10,12 +10,18 @@ pub mod source_control;
 pub mod diff_modal;
 pub mod sarc_subfile_view;
 pub mod commit_context_menu;
+pub mod file_async_ops;
+pub mod file_context_menu;
+pub mod file_modals;
 
 pub use activity_bar::render_activity_bar;
 pub use search_panel::render_search_panel;
 pub use source_control::render_source_control_panel;
 pub use diff_modal::render_git_diff_modal;
 pub use commit_context_menu::render_commit_context_menu;
+pub use file_async_ops::{pick_and_add_files, pick_and_export_container, pick_and_export_file, pick_and_replace_file};
+pub use file_context_menu::render_file_tree_context_menu;
+pub use file_modals::{render_delete_confirm_modal, render_rename_modal};
 
 use crate::ui::sidebar::actors_manager::render_actors_manager;
 use crate::ui::sidebar::entry_points::render_entry_point_list;

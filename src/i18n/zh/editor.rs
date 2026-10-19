@@ -358,7 +358,6 @@ pub fn get_zh_editor(key: &str) -> Option<&'static str> {
         "commit_menu.copy_hash" => "📋 复制完整提交哈希",
         "commit_menu.copy_short_hash" => "📑 复制短哈希",
         "commit_menu.copy_message" => "💬 复制提交说明",
-
         _ => return None,
     };
     Some(text)

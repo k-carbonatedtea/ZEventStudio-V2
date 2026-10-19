@@ -20,6 +20,9 @@ impl AppState {
         if self.is_adding_action || self.is_adding_query || self.is_adding_actor || self.is_adding_param {
             return true;
         }
+        if self.rename_modal.as_ref().is_some_and(|m| m.focused) {
+            return true;
+        }
         false
     }
 
@@ -33,6 +36,9 @@ impl AppState {
         self.is_adding_query = false;
         self.is_adding_actor = false;
         self.is_adding_param = false;
+        if let Some(ref mut m) = self.rename_modal {
+            m.focused = false;
+        }
     }
 
     /// 获取当前激活的输入框文本内容切片
@@ -84,6 +90,11 @@ impl AppState {
         }
         if self.is_adding_param {
             return Some(&self.new_param_key);
+        }
+        if let Some(ref m) = self.rename_modal {
+            if m.focused {
+                return Some(&m.new_name);
+            }
         }
         None
     }
@@ -218,9 +229,18 @@ impl AppState {
             return true;
         }
 
+        // 6. 重命名模态框输入
+        if let Some(ref mut m) = self.rename_modal {
+            if m.focused {
+                m.new_name.push_str(&clean);
+                return true;
+            }
+        }
+
         false
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

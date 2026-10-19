@@ -45,4 +45,4 @@ pub use graph::Graph;
 pub use layout::auto_layout_graph;
 pub use node::{NodeData, NodeKind, PropertyItem};
 pub use port::{Port, PortDirection};
-pub use sarc_writer::write_file_to_target;
+pub use sarc_writer::{copy_dir_all, delete_file_from_target, extract_sarc_to_dir, rename_file_in_target, write_file_to_target};

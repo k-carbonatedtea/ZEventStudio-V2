@@ -1,16 +1,21 @@
 use gpui::*;
 use crate::ui::state::AppState;
 use super::types::FlatFileEntry;
+
 pub(crate) fn render_flat_file_row(
     item: &FlatFileEntry,
     model: &Entity<AppState>,
     pal: &crate::ui::theme::ThemePalette,
 ) -> impl IntoElement {
-    let is_container = item.is_dir || item.is_sarc;
+    let is_dir = item.is_dir;
+    let is_sarc = item.is_sarc;
+    let is_container = is_dir || is_sarc;
     let is_selected = item.is_selected;
     let is_modified = item.is_modified;
     let path = item.path.clone();
+    let name_clone = item.name.clone();
     let model_click = model.clone();
+    let model_right = model.clone();
 
     let guide_line_color = if pal.is_dark {
         hsla(215.0 / 360.0, 0.20, 0.40, 0.25)
@@ -18,8 +23,12 @@ pub(crate) fn render_flat_file_row(
         hsla(215.0 / 360.0, 0.20, 0.60, 0.25)
     };
 
+    let item_path_id = path.clone();
+    let r_path = path.clone();
+    let r_name = name_clone.clone();
+
     div()
-        .id(ElementId::Name(item.path.clone().into()))
+        .id(ElementId::Name(item_path_id.into()))
         .h(px(26.0))
         .w_full()
         .flex()
@@ -57,6 +66,16 @@ pub(crate) fn render_flat_file_row(
                 } else {
                     st.load_file_by_path(&path_clone);
                 }
+                cx.notify();
+            });
+        })
+        .on_mouse_down(MouseButton::Right, move |e, _window, cx| {
+            cx.stop_propagation();
+            let p = r_path.clone();
+            let n = r_name.clone();
+            let pos = (e.position.x.into(), e.position.y.into());
+            model_right.update(cx, |st, cx| {
+                st.open_file_tree_context_menu(p, n, is_dir, is_sarc, pos);
                 cx.notify();
             });
         })
