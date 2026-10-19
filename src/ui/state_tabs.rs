@@ -46,6 +46,17 @@ impl AppState {
         }
     }
 
+    /// 判断当前激活的文档标签页是否为 BFEVFL 流程图
+    pub fn is_active_flowchart(&self) -> bool {
+        if self.current_tab == AppWorkspaceTab::Welcome {
+            return false;
+        }
+        self.active_tab_id
+            .as_deref()
+            .and_then(|id| self.open_tabs.iter().find(|t| t.id == id))
+            .is_some_and(|t| t.tab_kind == DocumentTabKind::Flowchart)
+    }
+
     /// 请求关闭指定文档标签页（检查未保存修改，有修改则弹出保存确认提示框）
     pub fn request_close_document_tab(&mut self, tab_id: &str) {
         // 1. 若关闭的是当前活跃流程图标签，确保当前图数据已同步至标签项并精确重算 is_modified

@@ -354,7 +354,9 @@ fn wrap_sidebar_workspace(
                                 .overflow_hidden()
                                 .child(body),
                         )
-                        .child(render_bottom_tabs(state, model)),
+                        .children(state.is_active_flowchart().then(|| {
+                            render_bottom_tabs(state, model)
+                        })),
                 )
                 .children(extra_right),
         )

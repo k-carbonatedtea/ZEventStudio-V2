@@ -74,7 +74,12 @@ pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoEl
 /// 渲染侧边栏资源与事件流程图专属浏览器内容
 fn render_sidebar_explorer_content(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
     let pal = state.theme();
-    let active_tab = state.active_sidebar_tab;
+    let is_flowchart = state.is_active_flowchart();
+    let active_tab = if is_flowchart {
+        state.active_sidebar_tab
+    } else {
+        SidebarTab::Files
+    };
     let search_val = state.search_query.clone();
 
     let model_tab_fl = model.clone();
@@ -98,7 +103,7 @@ fn render_sidebar_explorer_content(state: &AppState, model: &Entity<AppState>) -
                 .bg(pal.panel_surface)
                 .p_1()
                 .gap_1()
-                // 0. 资源
+                // 0. 资源 (通用工程文件树)
                 .child(render_tab_btn(
                     state.t("sidebar.tab_files"),
                     active_tab == SidebarTab::Files,
@@ -106,45 +111,54 @@ fn render_sidebar_explorer_content(state: &AppState, model: &Entity<AppState>) -
                     state,
                     &model_tab_fl,
                 ))
-                // 1. 入口
-                .child(render_tab_btn(
-                    state.t("sidebar.tab_entry_points"),
-                    active_tab == SidebarTab::EntryPoints,
-                    SidebarTab::EntryPoints,
-                    state,
-                    &model_tab_ep,
-                ))
-                // 2. 事件
-                .child(render_tab_btn(
-                    state.t("sidebar.tab_events"),
-                    active_tab == SidebarTab::Events,
-                    SidebarTab::Events,
-                    state,
-                    &model_tab_ev,
-                ))
-                // 3. 角色
-                .child(render_tab_btn(
-                    state.t("sidebar.tab_actors"),
-                    active_tab == SidebarTab::Actors,
-                    SidebarTab::Actors,
-                    state,
-                    &model_tab_act,
-                ))
-                // 4. 组件
-                .child(render_tab_btn(
-                    state.t("sidebar.tab_palette"),
-                    active_tab == SidebarTab::Palette,
-                    SidebarTab::Palette,
-                    state,
-                    &model_tab_pal,
-                )),
+                // 1-4. 流程图专属导航项 (仅当激活文档为 BFEVFL 流程图时呈现)
+                .children(if is_flowchart {
+                    vec![
+                        render_tab_btn(
+                            state.t("sidebar.tab_entry_points"),
+                            active_tab == SidebarTab::EntryPoints,
+                            SidebarTab::EntryPoints,
+                            state,
+                            &model_tab_ep,
+                        )
+                        .into_any_element(),
+                        render_tab_btn(
+                            state.t("sidebar.tab_events"),
+                            active_tab == SidebarTab::Events,
+                            SidebarTab::Events,
+                            state,
+                            &model_tab_ev,
+                        )
+                        .into_any_element(),
+                        render_tab_btn(
+                            state.t("sidebar.tab_actors"),
+                            active_tab == SidebarTab::Actors,
+                            SidebarTab::Actors,
+                            state,
+                            &model_tab_act,
+                        )
+                        .into_any_element(),
+                        render_tab_btn(
+                            state.t("sidebar.tab_palette"),
+                            active_tab == SidebarTab::Palette,
+                            SidebarTab::Palette,
+                            state,
+                            &model_tab_pal,
+                        )
+                        .into_any_element(),
+                    ]
+                } else {
+                    vec![]
+                }),
         )
-        // 搜索过滤栏 (在事件/角色/组件 Tab 下展示)
+        // 搜索过滤栏 (仅在流程图专属事件/角色/组件 Tab 下展示)
         .children(
-            if matches!(
-                active_tab,
-                SidebarTab::Events | SidebarTab::Actors | SidebarTab::Palette
-            ) {
+            if is_flowchart
+                && matches!(
+                    active_tab,
+                    SidebarTab::Events | SidebarTab::Actors | SidebarTab::Palette
+                )
+            {
                 let placeholder = match active_tab {
                     SidebarTab::Events => state.t("sidebar.events_search"),
                     SidebarTab::Actors => state.t("sidebar.actors_search"),
