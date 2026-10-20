@@ -53,7 +53,7 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
         .flex_col()
         .overflow_hidden()
         .relative()
-        .on_scroll_wheel(|_, _, cx| {
+        .on_scroll(|_, _, cx| {
             cx.stop_propagation();
         })
         .on_mouse_down(MouseButton::Left, {
@@ -128,7 +128,7 @@ pub fn render_settings_modal(state: &AppState, model: &Entity<AppState>) -> impl
         .items_center()
         .justify_center()
         .p_4()
-        .on_scroll_wheel(|_, _, cx| {
+        .on_scroll(|_, _, cx| {
             cx.stop_propagation();
         })
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {

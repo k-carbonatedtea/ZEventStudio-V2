@@ -34,7 +34,7 @@ pub fn render_unsaved_changes_modal(
         .flex()
         .items_center()
         .justify_center()
-        .on_scroll_wheel(|_, _, cx| {
+        .on_scroll(|_, _, cx| {
             cx.stop_propagation();
         })
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
@@ -68,7 +68,7 @@ pub fn render_unsaved_changes_modal(
                 .flex()
                 .flex_col()
                 .overflow_hidden()
-                .on_scroll_wheel(|_, _, cx| {
+                .on_scroll(|_, _, cx| {
                     cx.stop_propagation();
                 })
                 .on_mouse_down(MouseButton::Left, |_, _, cx| {

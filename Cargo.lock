@@ -2136,7 +2136,7 @@ dependencies = [
 
 [[package]]
 name = "gpui-base"
-version = "0.7.3"
+version = "0.8.0"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -2175,7 +2175,7 @@ dependencies = [
 
 [[package]]
 name = "gpui-component"
-version = "0.7.3"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2223,7 +2223,7 @@ dependencies = [
 
 [[package]]
 name = "gpui-component-macros"
-version = "0.7.3"
+version = "0.8.0"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2 1.0.107",
@@ -2233,7 +2233,7 @@ dependencies = [
 
 [[package]]
 name = "gpui-kit-assets"
-version = "0.7.3"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "gpui",
