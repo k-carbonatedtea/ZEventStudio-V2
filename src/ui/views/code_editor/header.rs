@@ -14,7 +14,6 @@ pub fn render_code_editor_header(
     let pal = state.theme();
     let line_count = code_state.content.lines().count();
     let char_count = code_state.content.len();
-    let file_path = code_state.file_path.clone();
     let format_name = code_state.format.display_name();
     let format_icon = code_state.format.icon();
     let endian_label = code_state.endian.display_label();
@@ -40,7 +39,7 @@ pub fn render_code_editor_header(
         .flex()
         .items_center()
         .justify_between()
-        // 左侧：格式徽章、大小端指示与文件路径
+        // 左侧：格式徽章与大小端指示
         .child(
             div()
                 .flex()
@@ -81,14 +80,6 @@ pub fn render_code_editor_header(
                         .font_weight(FontWeight::BOLD)
                         .text_color(pal.secondary_accent)
                         .child(endian_label),
-                )
-                // 路径
-                .child(
-                    div()
-                        .text_size(px(11.5))
-                        .text_color(pal.text_secondary)
-                        .overflow_hidden()
-                        .child(file_path),
                 )
                 // 未保存修改指示
                 .children(is_modified.then(|| {
