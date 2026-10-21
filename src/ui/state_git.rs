@@ -14,12 +14,20 @@ impl AppState {
     pub fn refresh_git_status(&mut self) {
         if let Some(dir) = self.get_git_working_dir() {
             match crate::model::git::get_repo_status(&dir) {
-                Ok(status) => self.apply_git_status(status),
+                Ok(status) => {
+                    self.apply_git_status(status);
+                    if self.git_is_repo {
+                        self.refresh_git_history();
+                    } else {
+                        self.git_commits = std::sync::Arc::new(Vec::new());
+                    }
+                }
                 Err(_) => {
                     self.git_is_repo = false;
                     self.git_branch = None;
                     self.git_staged = std::sync::Arc::new(Vec::new());
                     self.git_unstaged = std::sync::Arc::new(Vec::new());
+                    self.git_commits = std::sync::Arc::new(Vec::new());
                 }
             }
         } else {
@@ -367,6 +375,7 @@ impl AppState {
                     self.git_commit_focus = GitCommitFocus::None;
                     self.git_show_desc_field = false;
                     self.refresh_git_status();
+                    self.refresh_git_history();
                     let summary = msg.lines().next().unwrap_or("提交成功").to_string();
                     self.toast = Some(Toast::success(format!("Git 提交成功: {}", summary)));
                 }

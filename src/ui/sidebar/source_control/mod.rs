@@ -262,6 +262,7 @@ pub fn render_source_control_panel(
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     model_refresh.update(cx, |st, cx| {
                                         st.refresh_git_status();
+                                        st.refresh_git_history();
                                         st.sync_active_tab_modified();
                                         cx.notify();
                                     });

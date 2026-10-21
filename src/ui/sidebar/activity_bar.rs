@@ -185,6 +185,7 @@ where
                             st.active_activity_tab = ActivityBarTab::SourceControl;
                             st.sidebar_open = true;
                             st.refresh_git_status();
+                            st.refresh_git_history();
                             st.sync_active_tab_modified();
                         }
                     }

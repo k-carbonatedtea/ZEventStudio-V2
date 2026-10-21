@@ -249,6 +249,7 @@ impl AppState {
         self.git_branch = None;
         self.git_staged = std::sync::Arc::new(Vec::new());
         self.git_unstaged = std::sync::Arc::new(Vec::new());
+        self.git_commits = std::sync::Arc::new(Vec::new());
         self.git_commit_title.clear();
         self.git_commit_desc.clear();
         self.git_commit_focus = GitCommitFocus::None;

@@ -14,6 +14,7 @@ impl AppState {
         self.git_branch = None;
         self.git_staged = std::sync::Arc::new(Vec::new());
         self.git_unstaged = std::sync::Arc::new(Vec::new());
+        self.git_commits = std::sync::Arc::new(Vec::new());
         self.git_commit_title.clear();
         self.git_commit_desc.clear();
         self.git_commit_focus = crate::ui::state::GitCommitFocus::None;
@@ -38,6 +39,7 @@ impl AppState {
                 self.add_recent_project(name.clone(), path.to_string(), "mod".to_string());
                 self.active_sidebar_tab = SidebarTab::Files;
                 self.refresh_git_status();
+                self.refresh_git_history();
                 self.toast = Some(Toast::success(format!("{} {}", self.t("toast.project_loaded"), name)));
             }
             Err(e) => {
@@ -53,6 +55,7 @@ impl AppState {
         self.git_branch = None;
         self.git_staged = std::sync::Arc::new(Vec::new());
         self.git_unstaged = std::sync::Arc::new(Vec::new());
+        self.git_commits = std::sync::Arc::new(Vec::new());
         self.git_commit_title.clear();
         self.git_commit_desc.clear();
         self.git_commit_focus = crate::ui::state::GitCommitFocus::None;
@@ -90,6 +93,7 @@ impl AppState {
                 self.file_tree = nodes;
                 self.update_global_search_results();
                 self.refresh_git_status();
+                self.refresh_git_history();
                 self.toast = Some(Toast::info(self.t("explorer.refresh_done")));
             }
         }
