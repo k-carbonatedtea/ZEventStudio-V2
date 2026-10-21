@@ -91,6 +91,8 @@ pub struct CodeDocumentState {
     pub endian: CodeEndian,
     /// 关联文件物理或虚拟路径
     pub file_path: String,
+    /// 数据版本号 (每次重新加载、放弃更改或外部更新时自增，通知 UI 同步)
+    pub version: usize,
 }
 
 impl CodeDocumentState {
@@ -107,6 +109,7 @@ impl CodeDocumentState {
             format,
             endian,
             file_path,
+            version: 0,
         }
     }
 
@@ -115,14 +118,24 @@ impl CodeDocumentState {
         self.content != self.original_content
     }
 
-    /// 重置内容为原始状态
+    /// 重置内容为原始状态并自增版本号
     pub fn revert(&mut self) {
         self.content = self.original_content.clone();
+        self.version = self.version.wrapping_add(1);
     }
 
     /// 标记当前内容为已保存（更新基线快照）
     pub fn mark_saved(&mut self) {
         self.original_content = self.content.clone();
+    }
+
+    /// 从磁盘或外部重新加载新内容并自增版本号
+    pub fn reload(&mut self, content: String, format: CodeFormat, endian: CodeEndian) {
+        self.original_content = content.clone();
+        self.content = content;
+        self.format = format;
+        self.endian = endian;
+        self.version = self.version.wrapping_add(1);
     }
 }
 

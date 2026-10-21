@@ -1,16 +1,16 @@
 use gpui::*;
 use gpui_component::input::{EditorState, InputEvent};
 use std::time::Instant;
+use crate::ui::app_layout::{wrap_fullscreen_tab, wrap_sidebar_workspace};
 use crate::ui::canvas::{render_flow_canvas, render_node_editor_modal};
 use crate::ui::components::render_toast;
 use crate::ui::inspector::render_inspector;
 use crate::ui::key_handler::handle_global_key_event;
 use crate::ui::render_title_bar;
-use crate::ui::sidebar::render_sidebar;
 use crate::ui::state::{AppState, AppWorkspaceTab};
 use crate::ui::toolbar::render_toolbar;
 use crate::ui::views::{
-    render_actor_manager_view, render_bottom_tabs, render_code_editor_view,
+    render_actor_manager_view, render_code_editor_view,
     render_diff_viewer_view, render_event_manager_view, render_json_viewer_view,
     render_welcome_view,
 };
@@ -24,6 +24,8 @@ pub struct AppView {
     pub focus_handle: FocusHandle,
     pub code_editor: Option<Entity<EditorState>>,
     pub code_editor_tab_id: Option<String>,
+    pub code_editor_version: usize,
+    pub was_window_active: bool,
 }
 
 impl AppView {
@@ -46,6 +48,8 @@ impl AppView {
             focus_handle,
             code_editor: None,
             code_editor_tab_id: None,
+            code_editor_version: 0,
+            was_window_active: false,
         }
     }
 }
@@ -54,6 +58,16 @@ impl Render for AppView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_active = window.is_window_active();
 
+        // 窗口从后台切回前台时，自动检测 Git 状态与活动文件磁盘外部变更
+        if is_active && !self.was_window_active {
+            self.model.update(cx, |st, cx| {
+                st.refresh_git_status();
+                st.check_and_reload_active_tab_if_disk_changed();
+                cx.notify();
+            });
+        }
+        self.was_window_active = is_active;
+
         // 1. 同步与管理高性能可编辑代码编辑器实例 (EditorState)
         let active_tab_info = {
             let state = self.model.read(cx);
@@ -61,14 +75,14 @@ impl Render for AppView {
             active_id.and_then(|id| {
                 state.open_tabs.iter().find(|t| t.id == id).and_then(|tab| {
                     tab.code_state.as_ref().map(|code| {
-                        (id, code.content.clone(), code.format.language_id())
+                        (id, code.content.clone(), code.format.language_id(), code.version)
                     })
                 })
             })
         };
 
-        if let Some((current_id, code_content, lang)) = active_tab_info {
-            if self.code_editor_tab_id.as_ref() != Some(&current_id) {
+        if let Some((current_id, code_content, lang, current_version)) = active_tab_info {
+            if self.code_editor.is_none() || self.code_editor_tab_id.as_ref() != Some(&current_id) {
                 let new_editor = cx.new(|cx| {
                     EditorState::new(window, cx)
                         .language(lang)
@@ -101,7 +115,20 @@ impl Render for AppView {
 
                 self.code_editor = Some(new_editor);
                 self.code_editor_tab_id = Some(current_id);
+                self.code_editor_version = current_version;
+            } else if self.code_editor_version != current_version {
+                // 底层数据由于外部放弃更改、Revert 或重新载入发生变动，即时刷新编辑器文本
+                if let Some(ref ed) = self.code_editor {
+                    ed.update(cx, |ed_state, cx| {
+                        ed_state.set_value(code_content, window, cx);
+                    });
+                }
+                self.code_editor_version = current_version;
             }
+        } else if self.code_editor.is_some() {
+            // 当前非代码编辑器标签，释放旧实例与标签 ID
+            self.code_editor = None;
+            self.code_editor_tab_id = None;
         }
 
         // 采样并计算真实渲染帧率
@@ -320,76 +347,3 @@ impl Render for AppView {
     }
 }
 
-/// 包装带侧边栏和顶部文档标签栏的主工作区布局
-fn wrap_sidebar_workspace(
-    state: &AppState,
-    model: &Entity<AppState>,
-    body: impl IntoElement,
-    extra_right: Option<gpui::AnyElement>,
-) -> impl IntoElement {
-    div()
-        .flex()
-        .size_full()
-        .overflow_hidden()
-        .child(render_sidebar(state, model))
-        .children(state.sidebar_open.then(|| crate::ui::sidebar::render_sidebar_resize_handle(state, model)))
-        .child(
-            div()
-                .flex_1()
-                .flex()
-                .size_full()
-                .overflow_hidden()
-                .capture_any_mouse_down({
-                    let model = model.clone();
-                    move |_e, _window, cx| {
-                        model.update(cx, |st, cx| {
-                            if st.has_active_text_input() {
-                                st.clear_active_text_inputs();
-                                cx.notify();
-                            }
-                        });
-                    }
-                })
-                .child(
-                    div()
-                        .flex_1()
-                        .flex()
-                        .flex_col()
-                        .size_full()
-                        .overflow_hidden()
-                        .child(crate::ui::render_document_tab_bar(state, model))
-                        .child(
-                            div()
-                                .flex_1()
-                                .size_full()
-                                .overflow_hidden()
-                                .child(body),
-                        )
-                        .children(state.is_active_flowchart().then(|| {
-                            render_bottom_tabs(state, model)
-                        })),
-                )
-                .children(extra_right),
-        )
-}
-
-/// 包装全屏单视图工作区布局 (包含底部模式切换菜单栏)
-fn wrap_fullscreen_tab(
-    state: &AppState,
-    model: &Entity<AppState>,
-    body: impl IntoElement,
-) -> impl IntoElement {
-    div()
-        .flex()
-        .flex_col()
-        .size_full()
-        .overflow_hidden()
-        .child(
-            div()
-                .flex_1()
-                .size_full()
-                .overflow_hidden()
-                .child(body),
-        )
-        .child(render_bottom_tabs(state, model))
-}

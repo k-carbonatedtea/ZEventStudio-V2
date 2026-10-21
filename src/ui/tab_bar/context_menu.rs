@@ -225,6 +225,33 @@ pub fn render_tab_context_menu(
                     },
                     state,
                 ))
+                // 8. 从磁盘重新加载 (Reload from Disk)
+                .child(render_menu_item(
+                    state.t("tab_menu.reload_disk"),
+                    None,
+                    Some("🔄"),
+                    pal.text_primary,
+                    {
+                        let tid = t_id.clone();
+                        let m = model.clone();
+                        move |cx| {
+                            let target = tid.clone();
+                            m.update(cx, |st, cx| {
+                                st.tab_context_menu = None;
+                                match st.reload_tab_from_disk(&target) {
+                                    Ok(_) => {
+                                        st.toast = Some(Toast::success(st.t("toast.reload_disk_success")));
+                                    }
+                                    Err(err) => {
+                                        st.toast = Some(Toast::error(format!("{}: {}", st.t("toast.reload_disk_failed"), err)));
+                                    }
+                                }
+                                cx.notify();
+                            });
+                        }
+                    },
+                    state,
+                ))
                 // 8. 复制完整路径 (Copy Path)
                 .child(render_menu_item(
                     state.t("tab_menu.copy_path"),

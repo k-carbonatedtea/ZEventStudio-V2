@@ -190,6 +190,8 @@ pub fn get_zh_editor(key: &str) -> Option<&'static str> {
         "toast.compile_failed" => "❌ 格式编译失败",
         "toast.no_active_file" => "⚠️ 当前没有打开的文件",
         "toast.revert_success" => "🔄 已重置文件至初始状态",
+        "toast.reload_disk_success" => "🔄 已从磁盘重新载入最新文件",
+        "toast.reload_disk_failed" => "❌ 从磁盘重新载入失败",
         "toast.settings_reset" => "🔄 已恢复所有首选项为默认配置",
         "toast.settings_save_err" => "❌ 保存偏好设置失败",
         "toast.settings_save_ok" => "💾 偏好设置已成功保存并持久化！",

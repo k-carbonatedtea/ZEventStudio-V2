@@ -140,6 +140,7 @@ pub fn get_zh_menu(key: &str) -> Option<&'static str> {
         "tab_menu.close_saved" => "关闭已保存",
         "tab_menu.close_all" => "全部关闭",
         "tab_menu.save" => "保存文件",
+        "tab_menu.reload_disk" => "从磁盘重新加载",
         "tab_menu.copy_path" => "复制完整路径",
         "tab_menu.copy_name" => "复制文件名",
         "tab_menu.path_copied" => "✨ 已复制文件路径到剪贴板",

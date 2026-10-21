@@ -140,6 +140,7 @@ pub fn get_en_menu(key: &str) -> Option<&'static str> {
         "tab_menu.close_saved" => "Close Saved",
         "tab_menu.close_all" => "Close All",
         "tab_menu.save" => "Save File",
+        "tab_menu.reload_disk" => "Reload from Disk",
         "tab_menu.copy_path" => "Copy Full Path",
         "tab_menu.copy_name" => "Copy File Name",
         "tab_menu.path_copied" => "✨ File path copied to clipboard",

@@ -195,6 +195,8 @@ pub fn get_en_editor(key: &str) -> Option<&'static str> {
         "toast.compile_failed" => "❌ Format compilation failed",
         "toast.no_active_file" => "⚠️ No active file opened",
         "toast.revert_success" => "🔄 File reverted to original state",
+        "toast.reload_disk_success" => "🔄 File successfully reloaded from disk",
+        "toast.reload_disk_failed" => "❌ Failed to reload file from disk",
         "toast.settings_reset" => "🔄 Settings have been reset to default",
         "toast.settings_save_err" => "❌ Failed to save preferences",
         "toast.settings_save_ok" => "💾 Preferences successfully saved and persisted!",

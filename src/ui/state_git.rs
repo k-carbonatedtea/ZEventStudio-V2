@@ -307,14 +307,8 @@ impl AppState {
             match crate::model::git::discard_file(&dir, rel_path, is_untracked) {
                 Ok(()) => {
                     self.refresh_git_status();
-                    let norm_rel = rel_path.replace('\\', "/");
-                    for tab in self.open_tabs.iter_mut() {
-                        let norm_tab = tab.file_path.replace('\\', "/");
-                        if norm_tab.ends_with(&norm_rel) || norm_tab.contains(&norm_rel) {
-                            tab.is_modified = false;
-                        }
-                    }
-                    self.toast = Some(Toast::info(format!("已放弃更改: {}", rel_path)));
+                    self.handle_git_discarded_file(rel_path, is_untracked);
+                    self.toast = Some(Toast::info(format!("已放弃更改并重新载入: {}", rel_path)));
                 }
                 Err(e) => {
                     self.toast = Some(Toast::error(format!("放弃更改失败: {}", e)));
@@ -329,10 +323,8 @@ impl AppState {
             match crate::model::git::discard_all(&dir) {
                 Ok(()) => {
                     self.refresh_git_status();
-                    for tab in self.open_tabs.iter_mut() {
-                        tab.is_modified = false;
-                    }
-                    self.toast = Some(Toast::info("已放弃所有未暂存更改"));
+                    self.handle_git_discard_all();
+                    self.toast = Some(Toast::info("已放弃所有未暂存更改并刷新文档"));
                 }
                 Err(e) => {
                     self.toast = Some(Toast::error(format!("放弃所有更改失败: {}", e)));

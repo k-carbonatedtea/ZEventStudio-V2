@@ -65,6 +65,20 @@ impl DiffViewerTabState {
     }
 }
 
+/// 获取指定物理或虚拟文件在磁盘上的最后修改时间 (用于外部变更感知)
+pub fn get_file_mtime(file_path: &str) -> Option<std::time::SystemTime> {
+    if file_path.starts_with("SARC:") {
+        let parts: Vec<&str> = file_path.trim_start_matches("SARC:").split("//").collect();
+        if let Some(first) = parts.first() {
+            std::fs::metadata(first).and_then(|m| m.modified()).ok()
+        } else {
+            None
+        }
+    } else {
+        std::fs::metadata(file_path).and_then(|m| m.modified()).ok()
+    }
+}
+
 /// 已打开文档标签项 (Document Tab)
 #[derive(Debug, Clone, PartialEq)]
 pub struct OpenDocumentTab {
@@ -78,6 +92,7 @@ pub struct OpenDocumentTab {
     pub code_state: Option<CodeDocumentState>,
     pub diff_state: Option<DiffViewerTabState>,
     pub is_modified: bool,
+    pub last_disk_mtime: Option<std::time::SystemTime>,
 }
 
 impl OpenDocumentTab {
@@ -90,6 +105,7 @@ impl OpenDocumentTab {
         graph: Option<Graph>,
         original_graph: Option<Graph>,
     ) -> Self {
+        let last_disk_mtime = get_file_mtime(&file_path);
         Self {
             id,
             title,
@@ -101,6 +117,7 @@ impl OpenDocumentTab {
             code_state: None,
             diff_state: None,
             is_modified: false,
+            last_disk_mtime,
         }
     }
 
@@ -112,6 +129,7 @@ impl OpenDocumentTab {
         file_type: String,
         code_state: CodeDocumentState,
     ) -> Self {
+        let last_disk_mtime = get_file_mtime(&file_path);
         Self {
             id,
             title,
@@ -123,6 +141,7 @@ impl OpenDocumentTab {
             code_state: Some(code_state),
             diff_state: None,
             is_modified: false,
+            last_disk_mtime,
         }
     }
 
@@ -144,6 +163,7 @@ impl OpenDocumentTab {
             code_state: None,
             diff_state: Some(diff_state),
             is_modified: false,
+            last_disk_mtime: None,
         }
     }
 
