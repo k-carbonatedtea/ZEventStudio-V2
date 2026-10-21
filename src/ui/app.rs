@@ -110,7 +110,9 @@ impl Render for AppView {
         let elapsed = now.duration_since(self.last_fps_update).as_secs_f32();
 
         if elapsed >= 0.25 {
-            self.fps = ((self.frame_count as f32 / elapsed).round()).max(1.0);
+            let measured = (self.frame_count as f32 / elapsed).round().max(1.0);
+            // 平滑移动平均，避免 250ms 采样时间窗微小偏差导致的数值抖动
+            self.fps = if self.fps <= 0.0 { measured } else { (self.fps * 0.35 + measured * 0.65).round() };
             self.frame_time_ms = if self.fps > 0.0 { 1000.0 / self.fps } else { 0.0 };
             self.frame_count = 0;
             self.last_fps_update = now;
