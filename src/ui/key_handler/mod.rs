@@ -62,6 +62,13 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipb
         return true;
     }
 
+    // 4.3.1 快捷键: Ctrl+Shift+X 切换至插件中心
+    if event.keystroke.modifiers.control && event.keystroke.modifiers.shift && event.keystroke.key == "x" {
+        state.active_activity_tab = crate::ui::state::ActivityBarTab::Plugins;
+        state.sidebar_open = true;
+        return true;
+    }
+
     // 4.4 快捷键: Ctrl+F 在当前激活面板中唤起搜索 (资源管理器中搜索文件，搜索面板中自动聚焦)
     if event.keystroke.modifiers.control && event.keystroke.key == "f" {
         match state.active_activity_tab {
@@ -77,6 +84,11 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipb
             }
             crate::ui::state::ActivityBarTab::SourceControl => {
                 state.git_history_search_focused = true;
+                state.sidebar_open = true;
+                return true;
+            }
+            crate::ui::state::ActivityBarTab::Plugins => {
+                state.plugin_search_focused = true;
                 state.sidebar_open = true;
                 return true;
             }

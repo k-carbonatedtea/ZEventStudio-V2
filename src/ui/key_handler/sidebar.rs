@@ -27,6 +27,16 @@ pub fn handle_sidebar_inputs(event: &KeyDownEvent, state: &mut AppState, clipboa
         return Some(changed);
     }
 
+    // 2.1 插件列表搜索框键盘输入拦截
+    if state.plugin_search_focused {
+        if event.keystroke.key == "escape" || event.keystroke.key == "enter" {
+            state.plugin_search_focused = false;
+            return Some(true);
+        }
+        let (changed, _, _) = handle_text_key_event(&mut state.plugin_search_query, event, clipboard);
+        return Some(changed);
+    }
+
     // 3. Git 源代码管理提交输入框键盘输入拦截
     match state.git_commit_focus {
         GitCommitFocus::Title => {

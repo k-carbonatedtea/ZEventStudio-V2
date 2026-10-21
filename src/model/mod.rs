@@ -19,9 +19,12 @@ pub mod binary_diff;
 pub mod git_diff_align;
 pub mod git;
 pub mod git_actions;
+pub mod plugin;
 pub mod search;
 pub mod subgraph;
 
+#[allow(unused_imports)]
+pub use plugin::*;
 pub use search::*;
 #[allow(unused_imports)]
 pub use subgraph::{compute_subgraph_groups, SubgraphGroup};

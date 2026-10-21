@@ -164,6 +164,7 @@ pub enum ActivityBarTab {
     Explorer,      // 资源管理器
     Search,        // 全局搜索
     SourceControl, // 源文件管理
+    Plugins,       // 插件中心
 }
 
 /// Git 提交输入框焦点

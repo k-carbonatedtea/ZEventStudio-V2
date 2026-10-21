@@ -1,0 +1,212 @@
+{
+  "id": "zevent-mcp-bridge",
+  "name": "ZEvent MCP Bridge",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) bridge for AI assistants (Claude, Cursor, Antigravity) to inspect and edit ZEventStudio event flowcharts in real time.",
+  "author": "ZEvent Studio Team",
+  "icon": "🤖",
+  "type": "mcp",
+  "entry": "mcp_server.py",
+  "enabled": true,
+  "homepage": "https://github.com/ZEventStudio",
+  "server": {
+    "transport": "stdio",
+    "port": 31415,
+    "command": "python",
+    "args": [
+      "mcp_server.py"
+    ]
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "mcp.start_server",
+        "title": "Start Local API Server",
+        "description": "Starts the local HTTP bridge server on port 31415"
+      },
+      {
+        "id": "mcp.copy_config",
+        "title": "Copy MCP Configuration",
+        "description": "Copies client JSON configuration for Claude Desktop or Cursor"
+      }
+    ],
+    "tools": [
+      {
+        "name": "zevent_get_status",
+        "description": "Get current status, project name, active file, and flowchart summary of ZEventStudio",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "zevent_get_project",
+        "description": "Get opened project path, file tree list, and statistics",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "zevent_get_graph",
+        "description": "Get the complete event flowchart graph (nodes, edges, actors, properties) for the active document",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "zevent_add_node",
+        "description": "Add a new node (Action, Query, Switch, Fork, Join, SubFlow, EntryPoint, Comment) to the active flowchart",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Node title/name (e.g. 'Demo_PlayAnimation')"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "Action",
+                "Query",
+                "Switch",
+                "Fork",
+                "Join",
+                "SubFlow",
+                "EntryPoint",
+                "Comment"
+              ],
+              "description": "Type of node"
+            },
+            "actor": {
+              "type": "string",
+              "description": "Actor name for this node (e.g. 'Link', 'WorldManager')"
+            },
+            "x": {
+              "type": "number",
+              "description": "X coordinate in canvas"
+            },
+            "y": {
+              "type": "number",
+              "description": "Y coordinate in canvas"
+            },
+            "params": {
+              "type": "object",
+              "description": "Key-value parameters for this node"
+            }
+          },
+          "required": [
+            "name"
+          ]
+        }
+      },
+      {
+        "name": "zevent_connect_nodes",
+        "description": "Connect two nodes with a directed edge in the active flowchart",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "from_node": {
+              "type": "string",
+              "description": "Source node ID"
+            },
+            "from_port": {
+              "type": "string",
+              "description": "Source port name (default: 'out')"
+            },
+            "to_node": {
+              "type": "string",
+              "description": "Target node ID"
+            },
+            "to_port": {
+              "type": "string",
+              "description": "Target port name (default: 'in')"
+            }
+          },
+          "required": [
+            "from_node",
+            "to_node"
+          ]
+        }
+      },
+      {
+        "name": "zevent_update_node",
+        "description": "Update properties, title, or actor of an existing node in the active flowchart",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "node_id": {
+              "type": "string",
+              "description": "Target node ID"
+            },
+            "name": {
+              "type": "string",
+              "description": "New title/name"
+            },
+            "actor": {
+              "type": "string",
+              "description": "New actor name"
+            },
+            "params": {
+              "type": "object",
+              "description": "Updated key-value parameters"
+            }
+          },
+          "required": [
+            "node_id"
+          ]
+        }
+      },
+      {
+        "name": "zevent_delete_node",
+        "description": "Delete a node and its connected edges from the active flowchart",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "node_id": {
+              "type": "string",
+              "description": "ID of node to delete"
+            }
+          },
+          "required": [
+            "node_id"
+          ]
+        }
+      },
+      {
+        "name": "zevent_auto_layout",
+        "description": "Automatically calculate Sugiyama hierarchical layout for the active flowchart and fit view",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "zevent_toast",
+        "description": "Display a popup toast notification inside the ZEventStudio UI",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string",
+              "description": "Notification message to display"
+            },
+            "level": {
+              "type": "string",
+              "enum": [
+                "info",
+                "success",
+                "error"
+              ],
+              "description": "Notification level"
+            }
+          },
+          "required": [
+            "message"
+          ]
+        }
+      }
+    ]
+  }
+}

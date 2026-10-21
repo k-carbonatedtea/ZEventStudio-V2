@@ -11,7 +11,7 @@ impl AppState {
                 return true;
             }
         }
-        if self.global_search_focused || self.file_search_focused || self.git_history_search_focused {
+        if self.global_search_focused || self.file_search_focused || self.git_history_search_focused || self.plugin_search_focused {
             return true;
         }
         if self.git_commit_focus != GitCommitFocus::None {
@@ -31,6 +31,7 @@ impl AppState {
         self.global_search_focused = false;
         self.file_search_focused = false;
         self.git_history_search_focused = false;
+        self.plugin_search_focused = false;
         self.git_commit_focus = GitCommitFocus::None;
         self.is_adding_action = false;
         self.is_adding_query = false;
@@ -73,6 +74,9 @@ impl AppState {
         }
         if self.git_history_search_focused {
             return Some(&self.git_history_search_query);
+        }
+        if self.plugin_search_focused {
+            return Some(&self.plugin_search_query);
         }
         match self.git_commit_focus {
             GitCommitFocus::Title => return Some(&self.git_commit_title),
@@ -195,6 +199,12 @@ impl AppState {
         // 3.1 Git 历史提交搜索框
         if self.git_history_search_focused {
             self.git_history_search_query.push_str(&clean);
+            return true;
+        }
+
+        // 3.2 插件搜索输入框
+        if self.plugin_search_focused {
+            self.plugin_search_query.push_str(&clean);
             return true;
         }
 

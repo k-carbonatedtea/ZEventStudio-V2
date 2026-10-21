@@ -1,8 +1,9 @@
 use gpui::*;
+use crate::ui::sidebar::activity_bar_icons::*;
 use crate::ui::state::{ActivityBarTab, AppState};
 
 /// 渲染 VS Code 风格的垂直活动栏 (Activity Bar, 宽度 48px)
-/// 包含：资源管理器、全局搜索、源文件管理 (带未保存标记徽标) 以及底部设置齿轮
+/// 包含：资源管理器、全局搜索、源文件管理、插件中心 以及底部设置齿轮
 pub fn render_activity_bar(
     state: &AppState,
     model: &Entity<AppState>,
@@ -11,6 +12,7 @@ pub fn render_activity_bar(
     let current_tab = state.active_activity_tab;
     let sidebar_open = state.sidebar_open;
     let source_control_badge = state.total_changed_files_count();
+    let plugins_badge = state.active_plugins_count();
 
     let model_settings = model.clone();
 
@@ -28,7 +30,7 @@ pub fn render_activity_bar(
         .py_1()
         .justify_between()
 
-        // 顶部核心功能图标组 (资源管理器 / 搜索 / 源文件管理)
+        // 顶部核心功能图标组 (资源管理器 / 搜索 / 源文件管理 / 插件中心)
         .child(
             div()
                 .flex()
@@ -68,6 +70,17 @@ pub fn render_activity_bar(
                     sidebar_open,
                     source_control_badge,
                     render_source_control_icon,
+                ))
+
+                // 4. 插件中心 (Plugins)
+                .child(render_activity_item(
+                    state,
+                    model,
+                    ActivityBarTab::Plugins,
+                    current_tab == ActivityBarTab::Plugins,
+                    sidebar_open,
+                    plugins_badge,
+                    render_plugins_icon,
                 )),
         )
 
@@ -175,6 +188,14 @@ where
                             st.sync_active_tab_modified();
                         }
                     }
+                    ActivityBarTab::Plugins => {
+                        if st.active_activity_tab == ActivityBarTab::Plugins && st.sidebar_open {
+                            st.sidebar_open = false;
+                        } else {
+                            st.active_activity_tab = ActivityBarTab::Plugins;
+                            st.sidebar_open = true;
+                        }
+                    }
                 }
                 cx.notify();
             });
@@ -194,7 +215,7 @@ where
         // 图标主体
         .child(render_icon(icon_color, &pal))
 
-        // 右上角角标徽章 (如源文件管理未保存文件数量)
+        // 右上角角标徽章 (如源文件管理未保存文件数量或已启用插件数量)
         .children((badge_count > 0).then(|| {
             div()
                 .absolute()
@@ -213,178 +234,4 @@ where
                 .justify_center()
                 .child(badge_count.to_string())
         }))
-}
-
-/// 渲染资源管理器矢量图标 (VS Code 风格重叠双文件页)
-fn render_explorer_icon(color: Rgba, pal: &crate::ui::theme::ThemePalette) -> AnyElement {
-    div()
-        .size(px(22.0))
-        .relative()
-        // 底层文件页
-        .child(
-            div()
-                .absolute()
-                .top(px(1.5))
-                .left(px(1.5))
-                .w(px(13.0))
-                .h(px(15.0))
-                .rounded(px(1.5))
-                .border_1()
-                .border_color(color),
-        )
-        // 顶层文件页
-        .child(
-            div()
-                .absolute()
-                .top(px(5.0))
-                .left(px(5.5))
-                .w(px(14.0))
-                .h(px(15.0))
-                .bg(pal.panel_surface)
-                .rounded(px(1.5))
-                .border_1()
-                .border_color(color),
-        )
-        // 顶层右上角折角切线
-        .child(
-            div()
-                .absolute()
-                .top(px(5.0))
-                .right(px(2.5))
-                .size(px(4.0))
-                .border_b_1()
-                .border_l_1()
-                .border_color(color),
-        )
-        .into_any_element()
-}
-
-/// 渲染全局搜索矢量图标 (VS Code 风格 45度倾斜放大镜)
-fn render_search_icon(color: Rgba) -> AnyElement {
-    div()
-        .size(px(22.0))
-        .relative()
-        // 放大镜圆形镜面
-        .child(
-            div()
-                .absolute()
-                .top(px(2.0))
-                .left(px(2.0))
-                .size(px(12.5))
-                .rounded_full()
-                .border_1()
-                .border_color(color),
-        )
-        // 放大镜 45 度斜手柄 (平滑步进像素)
-        .child(
-            div()
-                .absolute()
-                .top(px(12.0))
-                .left(px(12.0))
-                .size(px(2.5))
-                .rounded_xs()
-                .bg(color),
-        )
-        .child(
-            div()
-                .absolute()
-                .top(px(14.0))
-                .left(px(14.0))
-                .size(px(2.5))
-                .rounded_xs()
-                .bg(color),
-        )
-        .child(
-            div()
-                .absolute()
-                .top(px(16.0))
-                .left(px(16.0))
-                .size(px(2.5))
-                .rounded_xs()
-                .bg(color),
-        )
-        .child(
-            div()
-                .absolute()
-                .top(px(18.0))
-                .left(px(18.0))
-                .size(px(2.5))
-                .rounded_xs()
-                .bg(color),
-        )
-        .into_any_element()
-}
-
-/// 渲染源文件管理矢量图标 (VS Code 风格 Git 分支图与 3 个节点)
-fn render_source_control_icon(color: Rgba, pal: &crate::ui::theme::ThemePalette) -> AnyElement {
-    div()
-        .size(px(22.0))
-        .relative()
-        // 主干坚线
-        .child(
-            div()
-                .absolute()
-                .top(px(5.5))
-                .left(px(5.25))
-                .w(px(1.5))
-                .h(px(11.0))
-                .bg(color),
-        )
-        // 主干顶部节点
-        .child(
-            div()
-                .absolute()
-                .top(px(2.5))
-                .left(px(3.25))
-                .size(px(5.5))
-                .rounded_full()
-                .border_1()
-                .border_color(color)
-                .bg(pal.panel_surface),
-        )
-        // 主干底部节点
-        .child(
-            div()
-                .absolute()
-                .top(px(14.5))
-                .left(px(3.25))
-                .size(px(5.5))
-                .rounded_full()
-                .border_1()
-                .border_color(color)
-                .bg(pal.panel_surface),
-        )
-        // 分支横向折线
-        .child(
-            div()
-                .absolute()
-                .top(px(10.5))
-                .left(px(6.0))
-                .w(px(6.5))
-                .h(px(1.5))
-                .bg(color),
-        )
-        // 分支向上竖折线
-        .child(
-            div()
-                .absolute()
-                .top(px(7.5))
-                .left(px(12.5))
-                .w(px(1.5))
-                .h(px(4.0))
-                .bg(color),
-        )
-        // 分支右侧节点
-        .child(
-            div()
-                .absolute()
-                .top(px(4.0))
-                .left(px(10.5))
-                .size(px(5.5))
-                .rounded_full()
-                .border_1()
-                .border_color(color)
-                .bg(pal.panel_surface),
-        )
-        .into_any_element()
 }

@@ -44,6 +44,7 @@ pub fn get_en_menu(key: &str) -> Option<&'static str> {
         "menu.view_actors" => "Actor Manager",
         "menu.view_events" => "Event Manager",
         "menu.view_json" => "JSON Viewer",
+        "menu.view_plugins" => "Plugins Center (Ctrl+Shift+X)",
         "menu.toggle_sidebar" => "Toggle Sidebar",
         "menu.toggle_inspector" => "Toggle Inspector",
         "menu.fit_view" => "Fit / Center View",

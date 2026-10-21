@@ -1,0 +1,153 @@
+use crate::model::Graph;
+use crate::ui::sidebar::SidebarTab;
+use crate::ui::state::{ActiveSettingsField, AppState, DragState, FileFilterType, FileSortMode, GitCommitFocus};
+use crate::ui::state_types::{ActivityBarTab, AppWorkspaceTab, WelcomeTab};
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AppState {
+    /// 初始化应用主状态树
+    pub fn new() -> Self {
+        let mut graph = Graph::new("EventFlow");
+        graph.ensure_actors_populated();
+        let game_paths = crate::model::GamePathSettings::load_from_disk();
+        let game_lang = game_paths.language;
+
+        let mut state = Self {
+            graph,
+            pan: (100.0, 100.0),
+            zoom: 1.0,
+            selected_node_id: None,
+            hovered_node_id: None,
+            hovered_port: None,
+            drag_state: DragState::None,
+            knife_mode: false,
+            canvas_origin: (0.0, 0.0),
+            fps: 60.0,
+            active_sidebar_tab: SidebarTab::EntryPoints,
+            current_tab: AppWorkspaceTab::Welcome,
+            welcome_tab: WelcomeTab::QuickStart,
+            open_tabs: Vec::new(),
+            active_tab_id: None,
+            recent_projects: game_paths.recent_projects.clone(),
+            selected_actor_idx: 0,
+            is_adding_actor: false,
+            new_actor_name: String::new(),
+            new_actor_sub: String::new(),
+            show_actor_dropdown: false,
+            is_adding_action: false,
+            new_action_name: String::new(),
+            show_action_dropdown: false,
+            is_adding_query: false,
+            new_query_name: String::new(),
+            show_query_dropdown: false,
+            is_adding_param: false,
+            new_param_type: "Int".to_string(),
+            new_param_key: String::new(),
+            new_param_val: "0".to_string(),
+            show_param_dropdown: false,
+            toast: None,
+            quick_add_modal: None,
+            node_context_menu: None,
+            tab_context_menu: None,
+            file_tree_context_menu: None,
+            rename_modal: None,
+            delete_confirm_modal: None,
+            active_node_editor_modal: None,
+            unsaved_changes_modal: None,
+            is_exiting_app: false,
+            should_quit_app: false,
+            inspector_open: true,
+
+            sidebar_open: true,
+            sidebar_width: 290.0,
+            is_resizing_sidebar: false,
+            search_query: String::new(),
+            expand_all_params: false,
+            frame_time_ms: 1.0,
+            show_welcome_on_startup: true,
+            lang: crate::i18n::Language::Zh,
+            game_lang,
+            current_theme: crate::ui::theme::AppTheme::default(),
+            game_paths: game_paths.clone(),
+            settings_draft: game_paths,
+            settings_modal_open: false,
+            settings_modal_width: 860.0,
+            settings_modal_height: 580.0,
+            settings_modal_maximized: false,
+            is_resizing_settings: false,
+            settings_resize_start: None,
+            settings_active_tab: crate::ui::state_settings::SettingsTab::General,
+            active_settings_field: ActiveSettingsField::None,
+            grid_style: crate::ui::state_settings::GridStyle::Dots,
+            edge_curve_style: crate::ui::state_settings::EdgeCurveStyle::Bezier,
+            target_engine: crate::ui::state_settings::TargetEngine::BotW,
+            auto_backup: true,
+            show_perf_stats: true,
+            project_path: None,
+            ai_cache_manager: Default::default(),
+            project_name: None,
+            file_tree: Vec::new(),
+            expanded_tree_paths: std::collections::HashSet::new(),
+            selected_file_path: None,
+            file_search_query: String::new(),
+            file_search_focused: false,
+            file_search_case_sensitive: false,
+            file_tree_filter_type: FileFilterType::All,
+            file_sort_mode: FileSortMode::NameAsc,
+            file_tree_sort_menu_open: false,
+            file_tree_scroll_handle: gpui::UniformListScrollHandle::new(),
+            active_activity_tab: ActivityBarTab::Explorer,
+            global_search_query: String::new(),
+            global_search_focused: false,
+            global_search_case_sensitive: false,
+            global_search_whole_word: false,
+            global_search_use_regex: false,
+            global_search_include: String::new(),
+            global_search_exclude: String::new(),
+            global_search_show_filters: false,
+            global_search_results: Vec::new(),
+            global_search_scroll_handle: gpui::UniformListScrollHandle::new(),
+            git_is_repo: false,
+            git_branch: None,
+            git_staged: std::sync::Arc::new(Vec::new()),
+            git_unstaged: std::sync::Arc::new(Vec::new()),
+            git_staged_collapsed: false,
+            git_unstaged_collapsed: false,
+            git_commit_title: String::new(),
+            git_commit_desc: String::new(),
+            git_commit_focus: GitCommitFocus::None,
+            git_show_desc_field: false,
+            source_control_scroll_handle: gpui::UniformListScrollHandle::new(),
+            git_commits: std::sync::Arc::new(Vec::new()),
+            git_history_collapsed: false,
+            git_history_search_query: String::new(),
+            git_history_search_focused: false,
+            git_expanded_commit_hash: None,
+            git_expanded_commit_files: Vec::new(),
+            git_history_limit: 50,
+            active_diff_modal: None,
+            git_expanded_sarc_keys: std::collections::HashSet::new(),
+            git_sarc_subfiles_cache: std::collections::HashMap::new(),
+            git_commit_context_menu: None,
+            git_is_operating: false,
+            git_operating_files: std::collections::HashSet::new(),
+
+            // 插件系统管理状态
+            plugin_manager: crate::model::plugin::PluginManager::new(),
+            plugin_search_query: String::new(),
+            plugin_search_focused: false,
+            selected_plugin_id: None,
+            api_server_running: false,
+            api_server_port: 31415,
+        };
+
+        state.clean_invalid_recent_projects();
+        state.fit_view();
+        state
+    }
+}

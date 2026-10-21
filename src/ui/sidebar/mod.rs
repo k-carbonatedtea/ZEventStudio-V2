@@ -12,11 +12,14 @@ pub mod sarc_subfile_view;
 pub mod commit_context_menu;
 pub mod file_async_ops;
 pub mod file_context_menu;
+pub mod activity_bar_icons;
 pub mod file_modals;
+pub mod plugins;
 
 pub use activity_bar::render_activity_bar;
 pub use search_panel::render_search_panel;
 pub use source_control::render_source_control_panel;
+pub use plugins::render_plugins_panel;
 pub use diff_modal::render_git_diff_modal;
 pub use commit_context_menu::render_commit_context_menu;
 pub use file_async_ops::{pick_and_add_files, pick_and_export_container, pick_and_export_file, pick_and_replace_file};
@@ -72,6 +75,9 @@ pub fn render_sidebar(state: &AppState, model: &Entity<AppState>) -> impl IntoEl
                     }
                     ActivityBarTab::SourceControl => {
                         render_source_control_panel(state, model).into_any_element()
+                    }
+                    ActivityBarTab::Plugins => {
+                        render_plugins_panel(state, model).into_any_element()
                     }
                 })
         }))

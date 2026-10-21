@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "zevent-studio": {
+      "command": "python",
+      "args": [
+        "c:/Users/Administrator/Desktop/Zevent/ZEventStudio/plugins/zevent-mcp-bridge/mcp_server.py"
+      ]
+    }
+  }
+}

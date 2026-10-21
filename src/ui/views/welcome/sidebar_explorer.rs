@@ -1,6 +1,6 @@
 use gpui::*;
 use crate::ui::components::{render_file_search_and_sort_bar, render_file_tree};
-use crate::ui::sidebar::{render_activity_bar, render_search_panel, render_source_control_panel};
+use crate::ui::sidebar::{render_activity_bar, render_plugins_panel, render_search_panel, render_source_control_panel};
 use crate::ui::state::{ActivityBarTab, AppState};
 use crate::ui::views::welcome::quick_tab::{pick_and_load_file, pick_and_load_mod_folder, pick_and_load_pack_file};
 
@@ -37,6 +37,9 @@ pub fn render_welcome_sidebar(
                     }
                     ActivityBarTab::SourceControl => {
                         render_source_control_panel(state, model).into_any_element()
+                    }
+                    ActivityBarTab::Plugins => {
+                        render_plugins_panel(state, model).into_any_element()
                     }
                 })
         }))

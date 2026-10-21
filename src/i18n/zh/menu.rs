@@ -44,6 +44,7 @@ pub fn get_zh_menu(key: &str) -> Option<&'static str> {
         "menu.view_actors" => "角色管理器",
         "menu.view_events" => "事件流管理器",
         "menu.view_json" => "JSON 源码",
+        "menu.view_plugins" => "插件中心 (Ctrl+Shift+X)",
         "menu.toggle_sidebar" => "切换预设侧边栏",
         "menu.toggle_inspector" => "切换属性面板",
         "menu.fit_view" => "自适应居中视口",

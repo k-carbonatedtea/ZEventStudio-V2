@@ -14,6 +14,7 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
     let model_actors = model.clone();
     let model_events = model.clone();
     let model_json = model.clone();
+    let model_plugins = model.clone();
     let model_sidebar = model.clone();
     let model_inspector = model.clone();
     let model_fit = model.clone();
@@ -27,6 +28,7 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
     let label_actors = state.t("menu.view_actors").to_string();
     let label_events = state.t("menu.view_events").to_string();
     let label_json = state.t("menu.view_json").to_string();
+    let label_plugins = state.t("menu.view_plugins").to_string();
     let label_sidebar = state.t("menu.toggle_sidebar").to_string();
     let label_inspector = state.t("menu.toggle_inspector").to_string();
     let label_fit = state.t("menu.fit_view").to_string();
@@ -58,6 +60,7 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
             let m_act = model_actors.clone();
             let m_ev = model_events.clone();
             let m_js = model_json.clone();
+            let m_plg = model_plugins.clone();
             let m_sb = model_sidebar.clone();
             let m_ins = model_inspector.clone();
             let m_fit = model_fit.clone();
@@ -118,6 +121,16 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                         .on_click(move |_, _, cx| {
                             m_js.update(cx, |st, cx| {
                                 st.current_tab = AppWorkspaceTab::Json;
+                                cx.notify();
+                            });
+                        }),
+                )
+                .item(
+                    PopupMenuItem::new(label_plugins.clone())
+                        .on_click(move |_, _, cx| {
+                            m_plg.update(cx, |st, cx| {
+                                st.active_activity_tab = crate::ui::state::ActivityBarTab::Plugins;
+                                st.sidebar_open = true;
                                 cx.notify();
                             });
                         }),
