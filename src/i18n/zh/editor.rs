@@ -185,6 +185,7 @@ pub fn get_zh_editor(key: &str) -> Option<&'static str> {
         "toast.project_loaded" => "🗂️ 成功载入项目: ",
         "toast.file_loaded" => "📂 成功载入文件: ",
         "toast.file_load_error" => "❌ 读取文件失败: ",
+        "toast.json_parse_error" => "❌ JSON 语法解析错误: ",
         "toast.save_success" => "💾 文件保存成功",
         "toast.save_failed" => "❌ 保存文件失败",
         "toast.compile_failed" => "❌ 格式编译失败",

@@ -28,7 +28,6 @@ pub enum AppWorkspaceTab {
     CodeEditor,
     Actors,
     Events,
-    Json,
     DiffViewer,
 }
 

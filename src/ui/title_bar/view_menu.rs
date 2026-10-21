@@ -13,7 +13,6 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
     let model_code = model.clone();
     let model_actors = model.clone();
     let model_events = model.clone();
-    let model_json = model.clone();
     let model_plugins = model.clone();
     let model_sidebar = model.clone();
     let model_inspector = model.clone();
@@ -27,7 +26,6 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
     let label_code = state.t("menu.view_code_editor").to_string();
     let label_actors = state.t("menu.view_actors").to_string();
     let label_events = state.t("menu.view_events").to_string();
-    let label_json = state.t("menu.view_json").to_string();
     let label_plugins = state.t("menu.view_plugins").to_string();
     let label_sidebar = state.t("menu.toggle_sidebar").to_string();
     let label_inspector = state.t("menu.toggle_inspector").to_string();
@@ -59,7 +57,6 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
             let m_cd = model_code.clone();
             let m_act = model_actors.clone();
             let m_ev = model_events.clone();
-            let m_js = model_json.clone();
             let m_plg = model_plugins.clone();
             let m_sb = model_sidebar.clone();
             let m_ins = model_inspector.clone();
@@ -112,15 +109,6 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                         .on_click(move |_, _, cx| {
                             m_ev.update(cx, |st, cx| {
                                 st.current_tab = AppWorkspaceTab::Events;
-                                cx.notify();
-                            });
-                        }),
-                )
-                .item(
-                    PopupMenuItem::new(label_json.clone())
-                        .on_click(move |_, _, cx| {
-                            m_js.update(cx, |st, cx| {
-                                st.current_tab = AppWorkspaceTab::Json;
                                 cx.notify();
                             });
                         }),

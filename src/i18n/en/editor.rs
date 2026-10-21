@@ -190,6 +190,7 @@ pub fn get_en_editor(key: &str) -> Option<&'static str> {
         "toast.project_loaded" => "🗂️ Project loaded: ",
         "toast.file_loaded" => "📂 File loaded: ",
         "toast.file_load_error" => "❌ Failed to read file: ",
+        "toast.json_parse_error" => "❌ JSON parse error: ",
         "toast.save_success" => "💾 File saved successfully",
         "toast.save_failed" => "❌ Failed to save file",
         "toast.compile_failed" => "❌ Format compilation failed",

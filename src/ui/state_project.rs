@@ -116,44 +116,64 @@ impl AppState {
     /// 智能切换主工作区模式 (与已打开文档标签协同联动)
     pub fn switch_workspace_tab(&mut self, target_tab: AppWorkspaceTab) {
         self.clear_active_text_inputs();
+        if self.current_tab == target_tab {
+            return;
+        }
+
+        // 1. 若当前正处于代码编辑模式且即将切换到其他视图，先尝试将代码编辑器中的 JSON 同步回图拓扑
+        if self.current_tab == AppWorkspaceTab::CodeEditor {
+            self.sync_code_editor_to_graph_if_needed();
+        }
+
         match target_tab {
             AppWorkspaceTab::Flowchart => {
-                let is_flow_active = self
-                    .active_tab_id
-                    .as_deref()
+                let is_flow_active = self.active_tab_id.as_deref()
                     .and_then(|id| self.open_tabs.iter().find(|t| t.id == id))
-                    .is_some_and(|t| t.tab_kind == DocumentTabKind::Flowchart);
+                    .is_some_and(|t| t.tab_kind == DocumentTabKind::Flowchart || t.file_type == "bfevfl");
 
                 if is_flow_active {
                     self.current_tab = AppWorkspaceTab::Flowchart;
-                } else if let Some(existing_flow) = self
-                    .open_tabs
-                    .iter()
-                    .find(|t| t.tab_kind == DocumentTabKind::Flowchart)
-                    .cloned()
-                {
+                } else if let Some(existing_flow) = self.open_tabs.iter().find(|t| t.tab_kind == DocumentTabKind::Flowchart).cloned() {
                     self.switch_document_tab(&existing_flow.id);
                 } else {
-                    // 没有打开任何流程图文件时，重置为空白图，避免残留已关闭文件的节点
                     self.graph = Graph::new("EventFlow");
                     self.current_tab = AppWorkspaceTab::Flowchart;
                 }
             }
             AppWorkspaceTab::CodeEditor => {
-                let is_code_active = self
-                    .active_tab_id
-                    .as_deref()
+                // 如果当前激活的标签页是事件流（拥有图或 BFEVFL 格式），直接为其同步并加载最新的代码状态
+                if let Some(active_id) = self.active_tab_id.clone() {
+                    if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == active_id) {
+                        if tab.tab_kind == DocumentTabKind::Flowchart || tab.file_type == "bfevfl" || tab.graph.is_some() {
+                            let json_text = serde_json::to_string_pretty(&self.graph).unwrap_or_else(|_| "{}".to_string());
+                            if let Some(ref mut code) = tab.code_state {
+                                code.content = json_text;
+                                code.version += 1;
+                            } else {
+                                let mut code_state = crate::model::code_document::CodeDocumentState::new(
+                                    json_text.clone(),
+                                    crate::model::code_document::CodeFormat::Bfevfl,
+                                    crate::model::code_document::CodeEndian::Little,
+                                    tab.file_path.clone(),
+                                );
+                                if let Some(ref orig) = tab.original_graph {
+                                    code_state.original_content = serde_json::to_string_pretty(orig).unwrap_or_else(|_| json_text.clone());
+                                }
+                                tab.code_state = Some(code_state);
+                            }
+                            self.current_tab = AppWorkspaceTab::CodeEditor;
+                            return;
+                        }
+                    }
+                }
+
+                let is_code_active = self.active_tab_id.as_deref()
                     .and_then(|id| self.open_tabs.iter().find(|t| t.id == id))
                     .is_some_and(|t| t.tab_kind == DocumentTabKind::CodeEditor);
 
                 if is_code_active {
                     self.current_tab = AppWorkspaceTab::CodeEditor;
-                } else if let Some(existing_code) = self
-                    .open_tabs
-                    .iter()
-                    .find(|t| t.tab_kind == DocumentTabKind::CodeEditor)
-                    .cloned()
-                {
+                } else if let Some(existing_code) = self.open_tabs.iter().find(|t| t.tab_kind == DocumentTabKind::CodeEditor).cloned() {
                     self.switch_document_tab(&existing_code.id);
                 } else {
                     self.current_tab = AppWorkspaceTab::CodeEditor;

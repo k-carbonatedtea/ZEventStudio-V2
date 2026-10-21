@@ -8,6 +8,13 @@ impl AppState {
     pub fn save_document_tab(&mut self, tab_id: &str) -> bool {
         let is_active = self.active_tab_id.as_deref() == Some(tab_id);
 
+        if is_active
+            && self.current_tab == crate::ui::state_types::AppWorkspaceTab::CodeEditor
+            && !self.sync_code_editor_to_graph_if_needed()
+        {
+            return false;
+        }
+
         let tab_info = {
             let tab = match self.open_tabs.iter().find(|t| t.id == tab_id) {
                 Some(t) => t,
@@ -49,6 +56,12 @@ impl AppState {
                                 if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
                                     tab.original_graph = Some(target_graph.clone());
                                     tab.graph = Some(target_graph.clone());
+                                    if let Some(ref mut code) = tab.code_state {
+                                        let json_text = serde_json::to_string_pretty(&target_graph).unwrap_or_default();
+                                        code.content = json_text;
+                                        code.mark_saved();
+                                        code.version += 1;
+                                    }
                                     tab.is_modified = false;
                                     tab.last_disk_mtime = crate::model::document_tab::get_file_mtime(&file_path);
                                 }
@@ -333,5 +346,46 @@ impl AppState {
                 let _ = self.reload_tab_from_disk(&active_id);
             }
         }
+    }
+
+    /// 当离开代码编辑视图或保存时，将当前代码编辑器的 JSON 文本同步反序列化回内存图拓扑
+    pub fn sync_code_editor_to_graph_if_needed(&mut self) -> bool {
+        let active_id = match self.active_tab_id.as_deref() {
+            Some(id) => id.to_string(),
+            None => return true,
+        };
+
+        let (file_type, code_opt) = match self.open_tabs.iter().find(|t| t.id == active_id) {
+            Some(t) => (t.file_type.clone(), t.code_state.clone()),
+            None => return true,
+        };
+
+        if let Some(code) = code_opt {
+            if code.format == crate::model::code_document::CodeFormat::Bfevfl || file_type == "bfevfl" {
+                match serde_json::from_str::<crate::model::Graph>(&code.content) {
+                    Ok(mut parsed_graph) => {
+                        let title = self
+                            .open_tabs
+                            .iter()
+                            .find(|t| t.id == active_id)
+                            .map(|t| t.title.clone())
+                            .unwrap_or_default();
+                        parsed_graph.name = title;
+                        parsed_graph.ensure_actors_populated();
+                        self.graph = parsed_graph.clone();
+                        if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == active_id) {
+                            tab.graph = Some(parsed_graph);
+                            tab.recompute_modified();
+                        }
+                        return true;
+                    }
+                    Err(e) => {
+                        self.toast = Some(Toast::error(format!("{} {}", self.t("toast.json_parse_error"), e)));
+                        return false;
+                    }
+                }
+            }
+        }
+        true
     }
 }

@@ -189,6 +189,12 @@ impl OpenDocumentTab {
 
     /// 重新根据当前图或代码状态比对，精确更新 is_modified 状态
     pub fn recompute_modified(&mut self) {
+        if let Some(ref code) = self.code_state {
+            if code.is_modified() {
+                self.is_modified = true;
+                return;
+            }
+        }
         match self.tab_kind {
             DocumentTabKind::Flowchart => {
                 if let (Some(curr), Some(orig)) = (&self.graph, &self.original_graph) {

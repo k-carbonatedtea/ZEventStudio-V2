@@ -11,7 +11,7 @@ use crate::ui::state::{AppState, AppWorkspaceTab};
 use crate::ui::toolbar::render_toolbar;
 use crate::ui::views::{
     render_actor_manager_view, render_code_editor_view,
-    render_diff_viewer_view, render_event_manager_view, render_json_viewer_view,
+    render_diff_viewer_view, render_event_manager_view,
     render_welcome_view,
 };
 
@@ -300,7 +300,6 @@ impl Render for AppView {
                         .into_any_element(),
                         AppWorkspaceTab::Actors => wrap_fullscreen_tab(state, &self.model, render_actor_manager_view(state, &self.model)).into_any_element(),
                         AppWorkspaceTab::Events => wrap_fullscreen_tab(state, &self.model, render_event_manager_view(state, &self.model)).into_any_element(),
-                        AppWorkspaceTab::Json => wrap_fullscreen_tab(state, &self.model, render_json_viewer_view(state, &self.model)).into_any_element(),
                     }),
             )
             // Floating Toast notification
