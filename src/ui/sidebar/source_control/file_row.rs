@@ -47,13 +47,24 @@ pub fn render_file_row(
         .flex()
         .items_center()
         .justify_between()
-        // 点击在主工作区加载打开文件或对比（非SARC直接进入IDE对比模式，SARC封包定位并展开）
+        // 点击在主工作区加载打开文件或对比（若存在已打开文档标签页优先直接切换，否则进入对比模式）
         .on_mouse_down(MouseButton::Left, {
             let rp = rel_path.clone();
             move |_, _, cx| {
                 let rp = rp.clone();
                 model_click.update(cx, |st, cx| {
-                    st.open_working_file_diff_tab(&rp, is_staged);
+                    let matched_tab_id = st.open_tabs.iter().find(|t| {
+                        t.tab_kind != crate::model::DocumentTabKind::DiffViewer && {
+                            let norm = t.file_path.replace('\\', "/");
+                            norm.ends_with(&rp) || norm == rp
+                        }
+                    }).map(|t| t.id.clone());
+
+                    if let Some(tid) = matched_tab_id {
+                        st.switch_document_tab(&tid);
+                    } else {
+                        st.open_working_file_diff_tab(&rp, is_staged);
+                    }
                     cx.notify();
                 });
             }

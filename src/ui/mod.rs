@@ -14,6 +14,7 @@ pub mod state_editor;
 pub mod state_file_ops;
 pub mod state_node_editor;
 pub mod state_git;
+pub mod state_git_sync;
 pub mod state_input;
 pub mod state_project;
 pub mod state_recent;

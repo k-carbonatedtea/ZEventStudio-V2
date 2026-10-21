@@ -245,8 +245,9 @@ impl AppState {
         }
     }
 
-    /// 暂存单个文件
+    /// 暂存单个文件 (先自动保存所有未保存修改)
     pub fn git_stage_file(&mut self, rel_path: &str) {
+        self.save_all_modified_documents();
         if let Some(dir) = self.get_git_working_dir() {
             match crate::model::git::stage_file(&dir, rel_path) {
                 Ok(()) => {
@@ -259,8 +260,9 @@ impl AppState {
         }
     }
 
-    /// 暂存所有变更
+    /// 暂存所有变更 (先自动保存所有未保存修改)
     pub fn git_stage_all(&mut self) {
+        self.save_all_modified_documents();
         if let Some(dir) = self.get_git_working_dir() {
             match crate::model::git::stage_all(&dir) {
                 Ok(()) => {
@@ -304,15 +306,14 @@ impl AppState {
     /// 放弃单个文件的修改
     pub fn git_discard_file(&mut self, rel_path: &str, is_untracked: bool) {
         if let Some(dir) = self.get_git_working_dir() {
-            match crate::model::git::discard_file(&dir, rel_path, is_untracked) {
-                Ok(()) => {
-                    self.refresh_git_status();
-                    self.handle_git_discarded_file(rel_path, is_untracked);
-                    self.toast = Some(Toast::info(format!("已放弃更改并重新载入: {}", rel_path)));
-                }
-                Err(e) => {
-                    self.toast = Some(Toast::error(format!("放弃更改失败: {}", e)));
-                }
+            let is_open_mod = self.is_file_modified(rel_path);
+            let res = crate::model::git::discard_file(&dir, rel_path, is_untracked);
+            self.refresh_git_status();
+            self.handle_git_discarded_file(rel_path, is_untracked);
+            if res.is_ok() || is_open_mod {
+                self.toast = Some(Toast::info(format!("已放弃更改并重新载入: {}", rel_path)));
+            } else if let Err(e) = res {
+                self.toast = Some(Toast::error(format!("放弃更改失败: {}", e)));
             }
         }
     }
@@ -342,6 +343,9 @@ impl AppState {
                 self.git_commit_focus = GitCommitFocus::Title;
                 return;
             }
+
+            // 提交前先保存所有未保存修改
+            self.save_all_modified_documents();
 
             // 若暂存区为空，但工作区有改动，则先自动暂存所有
             if self.git_staged.is_empty() && !self.git_unstaged.is_empty() {

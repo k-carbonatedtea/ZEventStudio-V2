@@ -10,12 +10,7 @@ pub fn render_activity_bar(
     let pal = state.theme();
     let current_tab = state.active_activity_tab;
     let sidebar_open = state.sidebar_open;
-    let git_count = state.git_staged.len() + state.git_unstaged.len();
-    let source_control_badge = if state.git_is_repo {
-        git_count
-    } else {
-        state.modified_tabs_count()
-    };
+    let source_control_badge = state.total_changed_files_count();
 
     let model_settings = model.clone();
 

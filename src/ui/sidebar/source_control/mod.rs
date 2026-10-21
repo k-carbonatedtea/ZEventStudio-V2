@@ -30,14 +30,55 @@ pub fn render_source_control_panel(
     let unsaved_tabs: Vec<_> = state
         .open_tabs
         .iter()
-        .filter(|t| t.is_modified)
+        .filter(|t| t.is_modified && t.tab_kind != crate::model::DocumentTabKind::DiffViewer)
         .cloned()
         .collect();
     let unsaved_count = unsaved_tabs.len();
 
-    // 采用 Arc 快速克隆，零堆内存分配
+    // 采用 Arc 快速克隆，合并内存中未保存的已打开文档至未暂存列表
     let staged_items = state.git_staged.clone();
-    let unstaged_items = state.git_unstaged.clone();
+    let mut unstaged_items: Vec<crate::model::git::GitFileItem> = (*state.git_unstaged).clone();
+
+    let project_dir = state.get_git_working_dir();
+    for tab in &unsaved_tabs {
+        let norm_tab_path = tab.file_path.replace('\\', "/");
+        let rel_path = if let Some(ref root) = project_dir {
+            let norm_root = root.replace('\\', "/").trim_end_matches('/').to_string();
+            if let Some(stripped) = norm_tab_path.strip_prefix(&norm_root) {
+                stripped.trim_start_matches('/').to_string()
+            } else {
+                norm_tab_path.clone()
+            }
+        } else {
+            norm_tab_path.clone()
+        };
+
+        let in_staged = staged_items.iter().any(|item| item.rel_path.replace('\\', "/") == rel_path);
+        let in_unstaged = unstaged_items.iter().any(|item| item.rel_path.replace('\\', "/") == rel_path);
+
+        if !in_staged && !in_unstaged {
+            let path_obj = std::path::Path::new(&rel_path);
+            let file_name = path_obj
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or(&tab.title)
+                .to_string();
+            let dir_name = path_obj
+                .parent()
+                .and_then(|p| p.to_str())
+                .unwrap_or("")
+                .replace('\\', "/");
+            unstaged_items.push(crate::model::git::GitFileItem {
+                rel_path,
+                file_name,
+                dir_name,
+                full_path: tab.file_path.clone(),
+                status: crate::model::git::GitFileStatusKind::Modified,
+                is_staged: false,
+            });
+        }
+    }
+
     let staged_count = staged_items.len();
     let unstaged_count = unstaged_items.len();
     let total_git_changes = staged_count + unstaged_count;
@@ -123,7 +164,7 @@ pub fn render_source_control_panel(
                         .items_center()
                         .gap_1()
                         // 批量暂存所有更改 (+)
-                        .children((is_repo && unstaged_count > 0).then(|| {
+                        .children((is_repo && (unstaged_count > 0 || unsaved_count > 0)).then(|| {
                             div()
                                 .px_1p5()
                                 .py_0p5()
@@ -161,7 +202,7 @@ pub fn render_source_control_panel(
                                 .child("-")
                         }))
                         // 批量放弃所有未暂存更改 (↩)
-                        .children((is_repo && unstaged_count > 0).then(|| {
+                        .children((is_repo && (unstaged_count > 0 || unsaved_count > 0)).then(|| {
                             div()
                                 .px_1p5()
                                 .py_0p5()
@@ -232,7 +273,7 @@ pub fn render_source_control_panel(
                         let model_vlist = model.clone();
                         let pal_vlist = pal;
                         let staged_vlist = staged_items.clone();
-                        let unstaged_vlist = unstaged_items.clone();
+                        let unstaged_vlist = std::sync::Arc::new(unstaged_items);
 
                         let changes_height = if total_virtual_rows <= 5 {
                             px((total_virtual_rows as f32 * 30.0 + 8.0).max(40.0))

@@ -13,7 +13,8 @@ pub fn render_commit_box(
 
     let has_staged = !state.git_staged.is_empty();
     let has_unstaged = !state.git_unstaged.is_empty();
-    let has_any_changes = has_staged || has_unstaged;
+    let has_unsaved = state.modified_tabs_count() > 0;
+    let has_any_changes = has_staged || has_unstaged || has_unsaved;
     let has_title = !state.git_commit_title.trim().is_empty();
 
     let model_title_click = model.clone();
