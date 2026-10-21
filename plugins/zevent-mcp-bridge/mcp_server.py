@@ -3,6 +3,8 @@
 ZEventStudio Model Context Protocol (MCP) Server
 Bridge between AI assistants (Claude, Cursor, Antigravity) and ZEventStudio.
 Communicates with ZEventStudio local API server via HTTP on http://127.0.0.1:31415.
+Provides comprehensive querying, modifying, and deleting operations for files,
+code, flowcharts, and editor workspace tabs.
 """
 
 import sys
@@ -23,7 +25,7 @@ PROTOCOL_VERSION = "2024-11-05"
 
 SERVER_INFO = {
     "name": "zevent-mcp-bridge",
-    "version": "1.0.0"
+    "version": "1.1.0"
 }
 
 TOOLS = [
@@ -37,10 +39,227 @@ TOOLS = [
     },
     {
         "name": "zevent_get_project",
-        "description": "Get opened project path, file tree count, and project details",
+        "description": "Get opened project path, file tree summary, open tabs, and project details",
         "inputSchema": {
             "type": "object",
             "properties": {}
+        }
+    },
+    {
+        "name": "zevent_list_files",
+        "description": "Query and list all files and SARC archives in the opened project (supports filtering by extension, recursive traversal, and SARC subfile extraction)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Subdirectory path or SARC file path to list (defaults to project root)"
+                },
+                "recursive": {
+                    "type": "boolean",
+                    "description": "Recursively list all subdirectories and nested SARCs (default: true)"
+                },
+                "include_sarc": {
+                    "type": "boolean",
+                    "description": "Whether to unpack and list virtual files inside SARC/Yaz0 archives (default: true)"
+                },
+                "filter_ext": {
+                    "type": "string",
+                    "description": "Filter by file extension, e.g. '.bfevfl', '.byml', '.msbt', '.aamp'"
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum number of file entries to return (default: 2000)"
+                }
+            }
+        }
+    },
+    {
+        "name": "zevent_read_file",
+        "description": "Read the source code or formatted text representation of any file in the opened project or inside SARC archives (automatically decompiles BFEVFL to JSON graph, BYML/AAMP/MSBT to YAML/MSYT, and reads plain text or active in-memory editor tabs)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Target file path (can be absolute physical path, relative path in project, or SARC path like 'SARC:path.sbeventpack//Event/Demo.bfevfl')"
+                },
+                "format": {
+                    "type": "string",
+                    "enum": ["code", "raw"],
+                    "description": "Format mode: 'code' (default, parses to editable code/YAML/JSON) or 'raw' (UTF-8 text)"
+                }
+            },
+            "required": ["path"]
+        }
+    },
+    {
+        "name": "zevent_write_file",
+        "description": "Write, modify, or create a file or code in the opened project or inside SARC archives (automatically recompiles JSON graphs to BFEVFL, YAML to BYML/AAMP/MSBT, compresses with Yaz0 if needed, writes to disk or SARC pack, and live-synchronizes any open tabs in ZEventStudio)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Target file path (can be physical file or SARC virtual path like 'SARC:path.sbeventpack//Event/Demo.bfevfl')"
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Source code, JSON graph, YAML, or text content to write"
+                },
+                "format": {
+                    "type": "string",
+                    "enum": ["bfevfl", "byml", "aamp", "msbt", "json", "yaml", "text"],
+                    "description": "Format override. If omitted, auto-detected from path extension"
+                }
+            },
+            "required": ["path", "content"]
+        }
+    },
+    {
+        "name": "zevent_delete_file",
+        "description": "Delete a physical file/directory or remove a virtual subfile from within a SARC archive, and close any corresponding open tabs in ZEventStudio",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Path of physical file/directory or SARC virtual entry to delete"
+                }
+            },
+            "required": ["path"]
+        }
+    },
+    {
+        "name": "zevent_rename_file",
+        "description": "Rename or move a physical file/directory or a subfile within a SARC archive, updating all open document tabs in ZEventStudio",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "old_path": {
+                    "type": "string",
+                    "description": "Original file or SARC virtual entry path"
+                },
+                "new_name": {
+                    "type": "string",
+                    "description": "New file name or new inner path"
+                }
+            },
+            "required": ["old_path", "new_name"]
+        }
+    },
+    {
+        "name": "zevent_create_directory",
+        "description": "Create a new directory recursively in the opened project",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Directory path to create (relative to project root or absolute)"
+                }
+            },
+            "required": ["path"]
+        }
+    },
+    {
+        "name": "zevent_search_code",
+        "description": "Search for text or keywords across all files and SARC archives in the opened project (returns matching files, line numbers, and code snippets)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Keyword or string to search for"
+                },
+                "case_sensitive": {
+                    "type": "boolean",
+                    "description": "Case sensitive search (default: false)"
+                },
+                "file_pattern": {
+                    "type": "string",
+                    "description": "Filter by file path or extension pattern, e.g. '.bfevfl' or 'Actor'"
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Maximum matching lines to return (default: 50)"
+                }
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "zevent_get_tabs",
+        "description": "Get all currently opened document tabs in ZEventStudio (with tab ID, title, file path, type, active status, and modification state)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {}
+        }
+    },
+    {
+        "name": "zevent_open_file",
+        "description": "Open a file or SARC entry into an active document tab in ZEventStudio UI (supports BFEVFL flowchart view and code editor view)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "File path to open in editor tab"
+                }
+            },
+            "required": ["path"]
+        }
+    },
+    {
+        "name": "zevent_save_file",
+        "description": "Save the currently active document tab or a specified document tab to disk or SARC archive",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "tab_id": {
+                    "type": "string",
+                    "description": "Tab ID to save. If omitted, saves the currently active document"
+                }
+            }
+        }
+    },
+    {
+        "name": "zevent_close_file",
+        "description": "Close an opened document tab by tab ID or file path in ZEventStudio",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "tab_id": {
+                    "type": "string",
+                    "description": "Tab ID to close"
+                },
+                "path": {
+                    "type": "string",
+                    "description": "File path of tab to close"
+                }
+            }
+        }
+    },
+    {
+        "name": "zevent_reload_project",
+        "description": "Rescan and refresh the current project file tree and Git version control status in ZEventStudio",
+        "inputSchema": {
+            "type": "object",
+            "properties": {}
+        }
+    },
+    {
+        "name": "zevent_open_project",
+        "description": "Open and load a new project directory (Mod root) or SARC pack file (.sbeventpack, .sbactorpack, .pack) into ZEventStudio",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Project directory path or pack file path to open"
+                }
+            },
+            "required": ["path"]
         }
     },
     {
@@ -186,7 +405,7 @@ def http_get(path: str) -> dict:
     url = f"{API_BASE_URL}{path}"
     req = urllib.request.Request(url, headers={"User-Agent": "ZEvent-MCP-Server"})
     try:
-        with urllib.request.urlopen(req, timeout=3.0) as resp:
+        with urllib.request.urlopen(req, timeout=10.0) as resp:
             content = resp.read().decode("utf-8")
             return json.loads(content)
     except urllib.error.URLError as e:
@@ -206,7 +425,7 @@ def http_post(path: str, data: dict) -> dict:
         method="POST"
     )
     try:
-        with urllib.request.urlopen(req, timeout=5.0) as resp:
+        with urllib.request.urlopen(req, timeout=15.0) as resp:
             content = resp.read().decode("utf-8")
             return json.loads(content)
     except urllib.error.HTTPError as e:
@@ -225,6 +444,7 @@ def http_post(path: str, data: dict) -> dict:
 
 def handle_tool_call(tool_name: str, arguments: dict) -> dict:
     try:
+        # 1. 状态与概览查询
         if tool_name == "zevent_get_status":
             res = http_get("/api/status")
             return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
@@ -237,6 +457,84 @@ def handle_tool_call(tool_name: str, arguments: dict) -> dict:
             res = http_get("/api/graph")
             return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
 
+        # 2. 文件与代码查询
+        elif tool_name == "zevent_list_files":
+            payload = {"action": "list_files"}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        elif tool_name == "zevent_read_file":
+            payload = {"action": "read_file"}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        elif tool_name == "zevent_search_code":
+            payload = {"action": "search_code"}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        # 3. 文件修改、创建、删除、重命名
+        elif tool_name == "zevent_write_file":
+            payload = {"action": "write_file"}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        elif tool_name == "zevent_delete_file":
+            payload = {"action": "delete_file"}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        elif tool_name == "zevent_rename_file":
+            payload = {"action": "rename_file"}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        elif tool_name == "zevent_create_directory":
+            payload = {"action": "create_directory"}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        # 4. 工作区与标签页操作
+        elif tool_name == "zevent_get_tabs":
+            res = http_post("/api/action", {"action": "get_tabs"})
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        elif tool_name == "zevent_open_file":
+            payload = {"action": "open_file"}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        elif tool_name == "zevent_save_file":
+            payload = {"action": "save_file"}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        elif tool_name == "zevent_close_file":
+            payload = {"action": "close_file"}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        elif tool_name == "zevent_reload_project":
+            res = http_post("/api/action", {"action": "reload_project"})
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        elif tool_name == "zevent_open_project":
+            payload = {"action": "open_project"}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        # 5. 流程图节点与拓扑操作
         elif tool_name == "zevent_add_node":
             payload = {"action": "add_node"}
             payload.update(arguments)
@@ -394,6 +692,10 @@ def main():
             print(f"Connected successfully: {res}")
             status = http_get("/api/status")
             print(f"Current Status: {json.dumps(status, indent=2, ensure_ascii=False)}")
+            project = http_get("/api/project")
+            print(f"Current Project: {json.dumps(project, indent=2, ensure_ascii=False)}")
+            files = http_post("/api/action", {"action": "list_files", "limit": 10})
+            print(f"Sample Files: {json.dumps(files, indent=2, ensure_ascii=False)}")
         except Exception as e:
             print(f"Connection test failed: {e}")
             sys.exit(1)

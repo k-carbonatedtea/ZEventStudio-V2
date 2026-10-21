@@ -35,6 +35,9 @@ fn main() {
             let focus = app_view.read(cx).focus_handle.clone();
             focus.focus(window, cx);
 
+            // 自动启动本地 MCP 插件桥接服务 (监听 127.0.0.1:31415)
+            ui::state_plugins::start_plugin_bridge_server(&model, cx);
+
             window.on_window_should_close(cx, move |_window, cx| {
                 let model = model.clone();
                 let mut should_close = true;

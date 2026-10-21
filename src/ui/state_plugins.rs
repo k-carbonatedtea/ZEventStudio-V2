@@ -129,10 +129,28 @@ impl AppState {
             .and_then(|id| self.open_tabs.iter().find(|t| &t.id == id))
             .map(|t| t.file_path.clone());
 
+        let tabs: Vec<serde_json::Value> = self
+            .open_tabs
+            .iter()
+            .map(|t| {
+                serde_json::json!({
+                    "id": t.id,
+                    "title": t.title,
+                    "file_path": t.file_path,
+                    "file_type": t.file_type,
+                    "tab_kind": format!("{:?}", t.tab_kind),
+                    "is_modified": t.is_modified,
+                    "is_active": self.active_tab_id.as_deref() == Some(&t.id),
+                })
+            })
+            .collect();
+
         serde_json::json!({
             "project_name": self.project_name,
             "project_path": self.project_path,
             "active_file": active_file,
+            "file_count": self.file_tree.len(),
+            "open_tabs": tabs,
             "open_tabs_count": self.open_tabs.len(),
             "target_engine": format!("{:?}", self.target_engine),
             "actors_count": self.graph.actors.len(),
@@ -303,7 +321,7 @@ impl AppState {
                 self.toast = Some(Toast::info(msg));
                 Ok(serde_json::json!({ "status": "ok" }))
             }
-            _ => Err(format!("未知的操作指令: {}", action)),
+            _ => self.execute_plugin_file_action(action, &payload),
         }
     }
 }
