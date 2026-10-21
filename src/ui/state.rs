@@ -1,8 +1,6 @@
 use crate::model::Graph;
 use crate::ui::components::Toast;
 use crate::ui::sidebar::SidebarTab;
-
-
 pub use crate::ui::state_types::*;
 
 pub struct AppState {
@@ -87,7 +85,6 @@ pub struct AppState {
 
     // 资源管理器与项目目录/封包状态
     pub project_path: Option<String>,
-    // 游戏 AI 定义缓存 (用于自动填充事件参数)
     #[allow(dead_code)]
     pub ai_cache_manager: crate::model::ai_def::AiCacheManager,
     pub project_name: Option<String>,
@@ -104,7 +101,6 @@ pub struct AppState {
     pub file_sort_mode: FileSortMode,
     pub file_tree_sort_menu_open: bool,
     pub file_tree_scroll_handle: gpui::UniformListScrollHandle,
-
     // 活动栏当前功能 (Activity Bar: 资源管理器, 搜索, 源文件管理)
     pub active_activity_tab: ActivityBarTab,
     pub global_search_query: String,
@@ -133,6 +129,8 @@ pub struct AppState {
     pub git_commit_desc: String,
     pub git_commit_focus: GitCommitFocus,
     pub git_show_desc_field: bool,
+    pub git_is_operating: bool,
+    pub git_operating_files: std::collections::HashSet<String>,
     pub source_control_scroll_handle: gpui::UniformListScrollHandle,
 
     // Git 提交历史、分支图谱与修改差异状态
@@ -278,6 +276,8 @@ impl AppState {
             git_expanded_sarc_keys: std::collections::HashSet::new(),
             git_sarc_subfiles_cache: std::collections::HashMap::new(),
             git_commit_context_menu: None,
+            git_is_operating: false,
+            git_operating_files: std::collections::HashSet::new(),
         };
 
         state.clean_invalid_recent_projects();

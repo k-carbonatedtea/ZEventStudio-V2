@@ -155,6 +155,38 @@ pub fn render_source_control_panel(
                                 .gap_1()
                                 .child("🌿")
                                 .child(b_name.to_string())
+                        }))
+                        .children((state.git_is_operating || !state.git_operating_files.is_empty()).then(|| {
+                            div()
+                                .px_1p5()
+                                .py_0p5()
+                                .rounded_sm()
+                                .bg(pal.card_surface)
+                                .border_1()
+                                .border_color(pal.secondary_accent)
+                                .flex()
+                                .items_center()
+                                .gap_1()
+                                .child(
+                                    div()
+                                        .text_size(px(10.0))
+                                        .child("⏳")
+                                        .with_animation(
+                                            "sc_global_spinner",
+                                            Animation::new(std::time::Duration::from_millis(800)).repeat(),
+                                            |el, delta| {
+                                                let a = 0.3 + 0.7 * (delta * std::f32::consts::PI * 2.0).sin().abs();
+                                                el.opacity(a)
+                                            },
+                                        ),
+                                )
+                                .child(
+                                    div()
+                                        .text_size(px(9.5))
+                                        .font_weight(FontWeight::MEDIUM)
+                                        .text_color(pal.secondary_accent)
+                                        .child(state.t("source_control.processing")),
+                                )
                         })),
                 )
                 // 右侧全局动作按钮
@@ -203,6 +235,7 @@ pub fn render_source_control_panel(
                         }))
                         // 批量放弃所有未暂存更改 (↩)
                         .children((is_repo && (unstaged_count > 0 || unsaved_count > 0)).then(|| {
+                            let m_discard_all = model_discard_all.clone();
                             div()
                                 .px_1p5()
                                 .py_0p5()
@@ -212,10 +245,7 @@ pub fn render_source_control_panel(
                                 .text_color(pal.text_secondary)
                                 .hover(|s| s.bg(pal.card_hover).text_color(pal.secondary_accent))
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                                    model_discard_all.update(cx, |st, cx| {
-                                        st.git_discard_all();
-                                        cx.notify();
-                                    });
+                                    crate::ui::state_git_sync::git_discard_all_async(&m_discard_all, cx);
                                 })
                                 .child("↩")
                         }))
@@ -274,6 +304,8 @@ pub fn render_source_control_panel(
                         let pal_vlist = pal;
                         let staged_vlist = staged_items.clone();
                         let unstaged_vlist = std::sync::Arc::new(unstaged_items);
+                        let operating_vlist = state.git_operating_files.clone();
+                        let is_global_operating = state.git_is_operating;
 
                         let changes_height = if total_virtual_rows <= 5 {
                             px((total_virtual_rows as f32 * 30.0 + 8.0).max(40.0))
@@ -296,6 +328,8 @@ pub fn render_source_control_panel(
                                             let ust = unstaged_vlist.clone();
                                             let m = model_vlist.clone();
                                             let p = pal_vlist;
+                                            let op = operating_vlist.clone();
+                                            let glob_op = is_global_operating;
 
                                             range
                                                 .map(|ix| {
@@ -305,7 +339,8 @@ pub fn render_source_control_panel(
                                                                 .into_any_element()
                                                         } else {
                                                             if let Some(item) = st.get(ix - 1) {
-                                                                render_file_row(item, true, &m, &p).into_any_element()
+                                                                let busy = glob_op || op.contains(&item.rel_path);
+                                                                render_file_row(item, true, busy, &m, &p).into_any_element()
                                                             } else {
                                                                 div().h(px(30.0)).into_any_element()
                                                             }
@@ -317,7 +352,8 @@ pub fn render_source_control_panel(
                                                                 .into_any_element()
                                                         } else {
                                                             if let Some(item) = ust.get(rem_ix - 1) {
-                                                                render_file_row(item, false, &m, &p).into_any_element()
+                                                                let busy = glob_op || op.contains(&item.rel_path);
+                                                                render_file_row(item, false, busy, &m, &p).into_any_element()
                                                             } else {
                                                                 div().h(px(30.0)).into_any_element()
                                                             }

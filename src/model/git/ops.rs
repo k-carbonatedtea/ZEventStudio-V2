@@ -223,29 +223,21 @@ pub fn unstage_all(dir: &str) -> Result<(), String> {
     }
 }
 
-/// 放弃工作区文件变更 (git restore / git clean)
+/// 放弃工作区文件变更 (精准 checkout，未跟踪文件直接原生文件删除)
 pub fn discard_file(dir: &str, rel_path: &str, is_untracked: bool) -> Result<(), String> {
     let norm_path = rel_path.replace('\\', "/");
+    let p = Path::new(dir).join(&norm_path);
     if is_untracked {
-        let output = run_git_cmd(dir, &["clean", "-f", "-d", "--", &norm_path])?;
-        if output.status.success() {
-            return Ok(());
-        }
-        let p = Path::new(dir).join(&norm_path);
-        if p.is_dir() {
-            let _ = std::fs::remove_dir_all(&p);
-        } else {
-            let _ = std::fs::remove_file(&p);
+        if p.exists() {
+            if p.is_dir() {
+                let _ = std::fs::remove_dir_all(&p);
+            } else {
+                let _ = std::fs::remove_file(&p);
+            }
         }
         return Ok(());
     }
 
-    let output = run_git_cmd(dir, &["restore", "--", &norm_path]);
-    if let Ok(out) = output {
-        if out.status.success() {
-            return Ok(());
-        }
-    }
     let output = run_git_cmd(dir, &["checkout", "--", &norm_path])?;
     if output.status.success() {
         Ok(())
@@ -261,9 +253,8 @@ pub fn discard_file(dir: &str, rel_path: &str, is_untracked: bool) -> Result<(),
     }
 }
 
-/// 放弃所有工作区变更 (git restore . && git clean -fd)
+/// 放弃所有工作区变更 (git checkout -- . && git clean -fd)
 pub fn discard_all(dir: &str) -> Result<(), String> {
-    let _ = run_git_cmd(dir, &["restore", "."]);
     let _ = run_git_cmd(dir, &["checkout", "--", "."]);
     let _ = run_git_cmd(dir, &["clean", "-fd"]);
     Ok(())

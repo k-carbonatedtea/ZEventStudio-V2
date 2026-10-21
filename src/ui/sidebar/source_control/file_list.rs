@@ -259,10 +259,7 @@ pub fn render_unstaged_header(
                         .hover(|s| s.bg(pal.card_hover).text_color(pal.secondary_accent))
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                             cx.stop_propagation();
-                            model_discard_all.update(cx, |st, cx| {
-                                st.git_discard_all();
-                                cx.notify();
-                            });
+                            crate::ui::state_git_sync::git_discard_all_async(&model_discard_all, cx);
                         })
                         .child("↩"),
                 )

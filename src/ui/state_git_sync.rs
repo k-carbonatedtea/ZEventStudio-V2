@@ -1,4 +1,6 @@
+use gpui::*;
 use crate::model::DocumentTabKind;
+use crate::ui::components::Toast;
 use crate::ui::state::AppState;
 
 /// Git 变更同步与标签页多源状态计算扩展
@@ -38,12 +40,12 @@ impl AppState {
         changed_paths.len()
     }
 
-    /// 处理 Git 放弃修改后的标签页同步：关闭对应的 Diff 标签页，并重新从磁盘加载常规文档
-    pub fn handle_git_discarded_file(&mut self, rel_path: &str, is_untracked: bool) {
+    /// 快速丢弃关联文件的打开标签页的未保存修改并关闭相关 Diff 视图 (零延迟瞬时恢复)
+    pub fn fast_discard_open_tabs_for_file(&mut self, rel_path: &str, is_untracked: bool) {
         let norm_rel = rel_path.replace('\\', "/");
         let project_dir = self.get_git_working_dir();
 
-        // 1. 关闭关联的 Working Tree 差异对比标签页 (因为工作区修改已放弃，diff 不复存在)
+        // 1. 关闭关联的 Working Tree 差异对比标签页
         let diff_tabs_to_close: Vec<String> = self
             .open_tabs
             .iter()
@@ -60,7 +62,7 @@ impl AppState {
             self.close_document_tab(&dt_id);
         }
 
-        // 2. 查找关联的代码编辑器或流程图标签页并从磁盘重新加载
+        // 2. 查找关联的代码编辑器或流程图标签页并还原未保存修改
         let tabs_to_process: Vec<(String, String)> = self
             .open_tabs
             .iter()
@@ -85,21 +87,20 @@ impl AppState {
             .collect();
 
         for (tid, fpath) in tabs_to_process {
-            let is_missing = !std::path::Path::new(&fpath).exists();
             if is_untracked {
                 self.close_document_tab(&tid);
             } else {
-                let reload_failed = self.reload_tab_from_disk(&tid).is_err();
-                if reload_failed && is_missing {
+                self.discard_document_changes(&tid);
+                let is_missing = !std::path::Path::new(&fpath).exists();
+                if is_missing {
                     self.close_document_tab(&tid);
                 }
             }
         }
     }
 
-    /// 处理 Git 放弃全部未暂存修改后的标签页同步
-    pub fn handle_git_discard_all(&mut self) {
-        // 1. 关闭所有工作区差异对比标签页
+    /// 快速丢弃所有标签页的未保存修改并关闭所有工作区 Diff 视图
+    pub fn fast_discard_all_open_tabs(&mut self) {
         let diff_tabs_to_close: Vec<String> = self
             .open_tabs
             .iter()
@@ -111,16 +112,142 @@ impl AppState {
             self.close_document_tab(&dt_id);
         }
 
-        // 2. 从磁盘重新加载所有常规代码与流程图标签页
-        let tabs_to_reload: Vec<String> = self
-            .open_tabs
-            .iter()
-            .filter(|t| t.tab_kind != DocumentTabKind::DiffViewer)
-            .map(|t| t.id.clone())
-            .collect();
-
-        for tid in tabs_to_reload {
-            let _ = self.reload_tab_from_disk(&tid);
-        }
+        self.discard_all_modified_documents();
     }
+
+    /// 兼容旧接口：处理 Git 放弃修改后的标签页同步
+    #[allow(dead_code)]
+    pub fn handle_git_discarded_file(&mut self, rel_path: &str, is_untracked: bool) {
+        self.fast_discard_open_tabs_for_file(rel_path, is_untracked);
+    }
+
+    /// 兼容旧接口：处理 Git 放弃全部未暂存修改后的标签页同步
+    #[allow(dead_code)]
+    pub fn handle_git_discard_all(&mut self) {
+        self.fast_discard_all_open_tabs();
+    }
+}
+
+/// 异步放弃单个文件更改并在后台执行 Git checkout / 文件删除
+pub fn git_discard_file_async(
+    model: &Entity<AppState>,
+    rel_path: String,
+    is_untracked: bool,
+    cx: &mut App,
+) {
+    // 1. 立即执行内存中快速放弃 (0ms 延迟，UI 线程无感响应)
+    let git_dir = model.update(cx, |st, cx| {
+        if st.git_operating_files.contains(&rel_path) {
+            return None;
+        }
+        st.git_operating_files.insert(rel_path.clone());
+        st.fast_discard_open_tabs_for_file(&rel_path, is_untracked);
+        cx.notify();
+        st.get_git_working_dir()
+    });
+
+    let dir = match git_dir {
+        Some(d) => d,
+        None => return,
+    };
+
+    let model = model.clone();
+    let path_clone = rel_path.clone();
+
+    // 2. 在后台线程池异步执行 Git 进程或物理文件删除
+    cx.spawn(async move |cx| {
+        let path_bg = path_clone.clone();
+        let dir_bg = dir.clone();
+
+        let (discard_res, new_status) = cx
+            .background_executor()
+            .spawn(async move {
+                let res = crate::model::git::discard_file(&dir_bg, &path_bg, is_untracked);
+                let status = crate::model::git::get_repo_status(&dir_bg).ok();
+                (res, status)
+            })
+            .await;
+
+        // 3. 回到主线程更新状态与通知 UI
+        cx.update(|cx| {
+            model.update(cx, |st, cx| {
+                st.git_operating_files.remove(&path_clone);
+                if let Some(status) = new_status {
+                    st.apply_git_status(status);
+                }
+                match discard_res {
+                    Ok(()) => {
+                        st.toast = Some(Toast::info(format!(
+                            "{} 「{}」",
+                            st.t("source_control.discard_success"),
+                            path_clone
+                        )));
+                    }
+                    Err(e) => {
+                        st.toast = Some(Toast::error(format!(
+                            "{}: {}",
+                            st.t("source_control.discarding"),
+                            e
+                        )));
+                    }
+                }
+                cx.notify();
+            });
+        });
+    })
+    .detach();
+}
+
+/// 异步放弃所有未暂存更改并在后台执行 Git checkout / clean
+pub fn git_discard_all_async(model: &Entity<AppState>, cx: &mut App) {
+    let git_dir = model.update(cx, |st, cx| {
+        if st.git_is_operating {
+            return None;
+        }
+        st.git_is_operating = true;
+        st.fast_discard_all_open_tabs();
+        cx.notify();
+        st.get_git_working_dir()
+    });
+
+    let dir = match git_dir {
+        Some(d) => d,
+        None => return,
+    };
+
+    let model = model.clone();
+    cx.spawn(async move |cx| {
+        let dir_bg = dir.clone();
+        let (discard_res, new_status) = cx
+            .background_executor()
+            .spawn(async move {
+                let res = crate::model::git::discard_all(&dir_bg);
+                let status = crate::model::git::get_repo_status(&dir_bg).ok();
+                (res, status)
+            })
+            .await;
+
+        cx.update(|cx| {
+            model.update(cx, |st, cx| {
+                st.git_is_operating = false;
+                if let Some(status) = new_status {
+                    st.apply_git_status(status);
+                }
+                match discard_res {
+                    Ok(()) => {
+                        st.toast = Some(Toast::info(st.t("source_control.discard_success")));
+                    }
+                    Err(e) => {
+                        st.toast = Some(Toast::error(format!(
+                            "{}: {}",
+                            st.t("source_control.discarding"),
+                            e
+                        )));
+                    }
+                }
+                cx.notify();
+            });
+        });
+    })
+    .detach();
 }

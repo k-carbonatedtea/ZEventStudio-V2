@@ -1,10 +1,12 @@
 use gpui::*;
 use crate::model::git::{GitFileItem, GitFileStatusKind};
 use crate::ui::state::AppState;
+
 /// 渲染单行文件变更项 (高度恒定 30px，满足 uniform_list 约束)
 pub fn render_file_row(
     item: &GitFileItem,
     is_staged: bool,
+    is_busy: bool,
     model: &Entity<AppState>,
     pal: &crate::ui::theme::ThemePalette,
 ) -> impl IntoElement {
@@ -43,10 +45,7 @@ pub fn render_file_row(
         .px_2()
         .rounded_sm()
         .cursor_pointer()
-        .hover(|s| s.bg(pal.card_hover))
-        .flex()
-        .items_center()
-        .justify_between()
+        .hover(move |s| if !is_busy { s.bg(pal.card_hover) } else { s })
         // 点击在主工作区加载打开文件或对比（若存在已打开文档标签页优先直接切换，否则进入对比模式）
         .on_mouse_down(MouseButton::Left, {
             let rp = rel_path.clone();
@@ -69,6 +68,9 @@ pub fn render_file_row(
                 });
             }
         })
+        .flex()
+        .items_center()
+        .justify_between()
         // 左侧图标与文件名/目录
         .child(
             div()
@@ -92,7 +94,7 @@ pub fn render_file_row(
                             div()
                                 .text_size(px(10.5))
                                 .font_weight(FontWeight::BOLD)
-                                .text_color(status_color)
+                                .text_color(if is_busy { pal.text_secondary } else { status_color })
                                 .flex_shrink_0()
                                 .whitespace_nowrap()
                                 .child(item.file_name.clone()),
@@ -136,26 +138,47 @@ pub fn render_file_row(
                         })
                         .child("⇄")
                 })
-                // 放弃更改按钮 (仅未暂存可放弃)
+                // 放弃更改按钮 (仅未暂存可放弃；正在处理中则展示呼吸动画)
                 .children((!is_staged).then(|| {
-                    let rp = rel_path.clone();
-                    div()
-                        .px_1()
-                        .py_0p5()
-                        .rounded_xs()
-                        .cursor_pointer()
-                        .text_size(px(10.0))
-                        .text_color(pal.text_secondary)
-                        .hover(|s| s.bg(pal.card_surface).text_color(pal.secondary_accent))
-                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                            cx.stop_propagation();
-                            let p = rp.clone();
-                            model_discard.update(cx, |st, cx| {
-                                st.git_discard_file(&p, is_untracked);
-                                cx.notify();
-                            });
-                        })
-                        .child("↩")
+                    if is_busy {
+                        div()
+                            .px_1()
+                            .py_0p5()
+                            .rounded_xs()
+                            .text_size(px(10.0))
+                            .text_color(pal.secondary_accent)
+                            .child("⏳")
+                            .with_animation(
+                                SharedString::from(format!("git_file_busy_{}", rel_path)),
+                                Animation::new(std::time::Duration::from_millis(800)).repeat(),
+                                |el, delta| {
+                                    let a = 0.3 + 0.7 * (delta * std::f32::consts::PI * 2.0).sin().abs();
+                                    el.opacity(a)
+                                },
+                            )
+                            .into_any_element()
+                    } else {
+                        let rp = rel_path.clone();
+                        div()
+                            .px_1()
+                            .py_0p5()
+                            .rounded_xs()
+                            .cursor_pointer()
+                            .text_size(px(10.0))
+                            .text_color(pal.text_secondary)
+                            .hover(|s| s.bg(pal.card_surface).text_color(pal.secondary_accent))
+                            .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                                cx.stop_propagation();
+                                crate::ui::state_git_sync::git_discard_file_async(
+                                    &model_discard,
+                                    rp.clone(),
+                                    is_untracked,
+                                    cx,
+                                );
+                            })
+                            .child("↩")
+                            .into_any_element()
+                    }
                 }))
                 // 暂存 (+) 或 取消暂存 (-) 按钮
                 .child({

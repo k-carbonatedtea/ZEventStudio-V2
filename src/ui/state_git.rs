@@ -3,15 +3,18 @@ use crate::ui::state::{AppState, GitCommitFocus};
 
 /// Git 源代码管理与仓库操作状态扩展
 impl AppState {
+    /// 应用 Git 状态结构体更新
+    pub fn apply_git_status(&mut self, status: crate::model::git::GitRepoStatus) {
+        self.git_is_repo = status.is_repo;
+        self.git_branch = status.branch;
+        self.git_staged = status.staged;
+        self.git_unstaged = status.unstaged;
+    }
+
     pub fn refresh_git_status(&mut self) {
         if let Some(dir) = self.get_git_working_dir() {
             match crate::model::git::get_repo_status(&dir) {
-                Ok(status) => {
-                    self.git_is_repo = status.is_repo;
-                    self.git_branch = status.branch;
-                    self.git_staged = status.staged;
-                    self.git_unstaged = status.unstaged;
-                }
+                Ok(status) => self.apply_git_status(status),
                 Err(_) => {
                     self.git_is_repo = false;
                     self.git_branch = None;
@@ -19,7 +22,6 @@ impl AppState {
                     self.git_unstaged = std::sync::Arc::new(Vec::new());
                 }
             }
-            self.refresh_git_history();
         } else {
             self.git_is_repo = false;
             self.git_branch = None;
@@ -304,6 +306,7 @@ impl AppState {
     }
 
     /// 放弃单个文件的修改
+    #[allow(dead_code)]
     pub fn git_discard_file(&mut self, rel_path: &str, is_untracked: bool) {
         if let Some(dir) = self.get_git_working_dir() {
             let is_open_mod = self.is_file_modified(rel_path);
@@ -319,6 +322,7 @@ impl AppState {
     }
 
     /// 放弃所有修改
+    #[allow(dead_code)]
     pub fn git_discard_all(&mut self) {
         if let Some(dir) = self.get_git_working_dir() {
             match crate::model::git::discard_all(&dir) {
