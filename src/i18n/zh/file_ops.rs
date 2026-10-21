@@ -31,6 +31,8 @@ pub fn get_zh_file_ops(key: &str) -> Option<&'static str> {
         "toast.add_error" => "添加文件失败",
         "toast.export_success" => "导出成功",
         "toast.export_error" => "导出失败",
+        "toast.file_not_found" => "目标文件或路径不存在",
+        "toast.explorer_open_failed" => "打开系统文件资源管理器失败",
 
         _ => return None,
     };

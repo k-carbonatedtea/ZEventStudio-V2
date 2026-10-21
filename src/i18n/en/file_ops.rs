@@ -31,6 +31,8 @@ pub fn get_en_file_ops(key: &str) -> Option<&'static str> {
         "toast.add_error" => "Failed to add file",
         "toast.export_success" => "Exported successfully",
         "toast.export_error" => "Export failed",
+        "toast.file_not_found" => "Target file or path does not exist",
+        "toast.explorer_open_failed" => "Failed to open File Explorer",
 
         _ => return None,
     };

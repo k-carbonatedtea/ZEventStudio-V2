@@ -126,7 +126,7 @@ impl AppState {
     }
 
     /// 在系统原生资源管理器中定位并高亮显示目标文件
-    pub fn reveal_item_in_file_explorer(&self, path: &str) {
+    pub fn reveal_item_in_file_explorer(&mut self, path: &str) {
         let physical = if path.starts_with("SARC:") {
             let clean = path.trim_start_matches("SARC:");
             clean.split("//").next().unwrap_or(clean)
@@ -134,16 +134,80 @@ impl AppState {
             path
         };
 
+        // 处理相对路径，转换为绝对路径
+        let mut target_path = std::path::PathBuf::from(physical);
+        if !target_path.is_absolute() {
+            if let Some(ref project_root) = self.project_path {
+                let candidate = std::path::Path::new(project_root).join(&target_path);
+                if candidate.exists() {
+                    target_path = candidate;
+                }
+            }
+        }
+        if !target_path.is_absolute() {
+            if let Ok(abs) = std::path::absolute(&target_path) {
+                target_path = abs;
+            }
+        }
+
+        // 规范化路径字符串 (去除 Windows 下 UNC \\?\ 前缀，转为标准反斜杠)
+        let mut path_str = target_path.to_string_lossy().to_string();
+        if let Some(stripped) = path_str.strip_prefix(r"\\?\") {
+            path_str = stripped.to_string();
+        }
+
+        #[cfg(target_os = "windows")]
+        let normalized = path_str.replace('/', "\\").trim_end_matches('\\').to_string();
+        #[cfg(not(target_os = "windows"))]
+        let normalized = path_str;
+
+        let check_path = std::path::Path::new(&normalized);
+        let (final_path, is_file) = if check_path.exists() {
+            (normalized.clone(), !check_path.is_dir() || path.starts_with("SARC:"))
+        } else if let Some(parent) = check_path.parent() {
+            if parent.exists() {
+                let parent_str = parent.to_string_lossy().to_string();
+                #[cfg(target_os = "windows")]
+                let p_norm = parent_str.replace('/', "\\").trim_end_matches('\\').to_string();
+                #[cfg(not(target_os = "windows"))]
+                let p_norm = parent_str;
+                (p_norm, false)
+            } else {
+                self.toast = Some(Toast::error(format!("{}: {}", self.t("toast.file_not_found"), normalized)));
+                return;
+            }
+        } else {
+            self.toast = Some(Toast::error(format!("{}: {}", self.t("toast.file_not_found"), normalized)));
+            return;
+        };
+
         #[cfg(target_os = "windows")]
         {
-            let _ = std::process::Command::new("explorer")
-                .arg(format!("/select,{}", physical))
-                .spawn();
+            use std::os::windows::process::CommandExt;
+            let mut cmd = std::process::Command::new("explorer");
+            if is_file {
+                cmd.raw_arg(format!("/select,\"{}\"", final_path));
+            } else {
+                cmd.raw_arg(format!("\"{}\"", final_path));
+            }
+            if let Err(e) = cmd.spawn() {
+                self.toast = Some(Toast::error(format!("{}: {}", self.t("toast.explorer_open_failed"), e)));
+            }
         }
-        #[cfg(not(target_os = "windows"))]
+        #[cfg(target_os = "macos")]
         {
-            let _ = std::process::Command::new("open")
-                .arg(physical)
+            let mut cmd = std::process::Command::new("open");
+            if is_file {
+                cmd.arg("-R").arg(&final_path);
+            } else {
+                cmd.arg(&final_path);
+            }
+            let _ = cmd.spawn();
+        }
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        {
+            let _ = std::process::Command::new("xdg-open")
+                .arg(&final_path)
                 .spawn();
         }
     }
