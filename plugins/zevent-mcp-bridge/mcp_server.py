@@ -311,6 +311,10 @@ TOOLS = [
                 "params": {
                     "type": "object",
                     "description": "Parameters dictionary { key: value }"
+                },
+                "autofill": {
+                    "type": "boolean",
+                    "description": "Whether to automatically populate standard parameters from BotW Game AI definitions (default: false)"
                 }
             },
             "required": ["name"]
@@ -407,6 +411,56 @@ TOOLS = [
                 }
             },
             "required": ["message"]
+        }
+    },
+    {
+        "name": "zevent_autofill_parameters",
+        "description": "Auto-fill standard game parameters for an Action, Query, or Switch node in ZEventStudio using the local BotW Game AI database (supports Switch RomFS & Wii U Content dumps)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "node_id": {
+                    "type": "string",
+                    "description": "Target node ID to populate parameters for"
+                }
+            },
+            "required": ["node_id"]
+        }
+    },
+    {
+        "name": "zevent_reorder_parameters",
+        "description": "Reorder parameters of an Action, Query, or Switch node according to official BotW Game AI definition ordering",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "node_id": {
+                    "type": "string",
+                    "description": "Target node ID to sort parameters for"
+                }
+            },
+            "required": ["node_id"]
+        }
+    },
+    {
+        "name": "zevent_get_ai_parameters",
+        "description": "Query official BotW Game AI parameter definitions (names, types, default values) for a specific Actor action or query without modifying the flowchart",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "actor": {
+                    "type": "string",
+                    "description": "Actor name (e.g. 'EventSystemActor', 'GameROMPlayer', 'Npc_Zora001')"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Action or Query name (e.g. 'Demo_OpenMessageDialog', 'GeneralTalk')"
+                },
+                "is_query": {
+                    "type": "boolean",
+                    "description": "Whether this is a Query instead of an Action (default: false)"
+                }
+            },
+            "required": ["actor", "name"]
         }
     },
     {
@@ -721,6 +775,13 @@ def handle_tool_call(tool_name: str, arguments: dict) -> dict:
 
         elif tool_name == "zevent_auto_layout":
             res = http_post("/api/action", {"action": "auto_layout"})
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        elif tool_name in ("zevent_autofill_parameters", "zevent_reorder_parameters", "zevent_get_ai_parameters"):
+            action = tool_name.replace("zevent_", "")
+            payload = {"action": action}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
             return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
 
         elif tool_name == "zevent_toast":

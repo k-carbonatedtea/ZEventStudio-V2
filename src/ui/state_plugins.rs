@@ -239,7 +239,11 @@ impl AppState {
                 }
 
                 let new_id = node.id.clone();
+                let should_autofill = payload.get("autofill").and_then(|v| v.as_bool()).unwrap_or(false);
                 self.graph.nodes.push(node);
+                if should_autofill {
+                    self.autofill_node_parameters(&new_id);
+                }
                 self.mark_current_tab_modified();
                 self.toast = Some(Toast::success(format!("MCP: 添加节点 「{}」", name)));
                 Ok(serde_json::json!({ "status": "ok", "node_id": new_id }))
@@ -295,6 +299,13 @@ impl AppState {
                         }
                     }
                 }
+                let should_autofill = payload.get("autofill").and_then(|v| v.as_bool()).unwrap_or(false);
+                let should_reorder = payload.get("reorder").and_then(|v| v.as_bool()).unwrap_or(false);
+                if should_autofill {
+                    self.autofill_node_parameters(node_id);
+                } else if should_reorder {
+                    self.reorder_node_parameters(node_id);
+                }
                 self.mark_current_tab_modified();
                 Ok(serde_json::json!({ "status": "ok", "updated": node_id }))
             }
@@ -320,6 +331,63 @@ impl AppState {
                     .unwrap_or("来自插件的通知");
                 self.toast = Some(Toast::info(msg));
                 Ok(serde_json::json!({ "status": "ok" }))
+            }
+            "autofill_parameters" => {
+                let node_id = payload
+                    .get("node_id")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| "缺少 node_id".to_string())?;
+                self.autofill_node_parameters(node_id);
+                let node = self.graph.find_node(node_id)
+                    .ok_or_else(|| format!("未找到节点 {}", node_id))?;
+                let props: Vec<_> = node.properties.iter().map(|p| {
+                    serde_json::json!({
+                        "key": p.key,
+                        "type": p.val_type,
+                        "value": p.val
+                    })
+                }).collect();
+                Ok(serde_json::json!({
+                    "status": "ok",
+                    "node_id": node_id,
+                    "properties": props
+                }))
+            }
+            "reorder_parameters" => {
+                let node_id = payload
+                    .get("node_id")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| "缺少 node_id".to_string())?;
+                self.reorder_node_parameters(node_id);
+                let node = self.graph.find_node(node_id)
+                    .ok_or_else(|| format!("未找到节点 {}", node_id))?;
+                let props: Vec<_> = node.properties.iter().map(|p| {
+                    serde_json::json!({
+                        "key": p.key,
+                        "type": p.val_type,
+                        "value": p.val
+                    })
+                }).collect();
+                Ok(serde_json::json!({
+                    "status": "ok",
+                    "node_id": node_id,
+                    "properties": props
+                }))
+            }
+            "get_ai_parameters" => {
+                let actor = payload.get("actor").and_then(|v| v.as_str()).unwrap_or("");
+                let name = payload.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                let is_query = payload.get("is_query").and_then(|v| v.as_bool()).unwrap_or(false);
+                let search_dirs = self.build_game_ai_search_dirs();
+                match crate::model::ai_def::get_autofill_parameters(actor, name, is_query, &search_dirs) {
+                    Ok(params) => Ok(serde_json::json!({
+                        "status": "ok",
+                        "actor": actor,
+                        "name": name,
+                        "parameters": params
+                    })),
+                    Err(e) => Err(format!("获取游戏参数失败: {}", e)),
+                }
             }
             _ => self.execute_plugin_file_action(action, &payload),
         }
