@@ -611,9 +611,12 @@ TOOLS = [
 
 def http_get(path: str) -> dict:
     url = f"{API_BASE_URL}{path}"
-    req = urllib.request.Request(url, headers={"User-Agent": "ZEvent-MCP-Server"})
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "ZEvent-MCP-Server", "Connection": "close"}
+    )
     try:
-        with urllib.request.urlopen(req, timeout=10.0) as resp:
+        with urllib.request.urlopen(req, timeout=60.0) as resp:
             content = resp.read().decode("utf-8")
             return json.loads(content)
     except urllib.error.URLError as e:
@@ -629,11 +632,15 @@ def http_post(path: str, data: dict) -> dict:
     req = urllib.request.Request(
         url,
         data=body,
-        headers={"Content-Type": "application/json", "User-Agent": "ZEvent-MCP-Server"},
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "ZEvent-MCP-Server",
+            "Connection": "close"
+        },
         method="POST"
     )
     try:
-        with urllib.request.urlopen(req, timeout=15.0) as resp:
+        with urllib.request.urlopen(req, timeout=60.0) as resp:
             content = resp.read().decode("utf-8")
             return json.loads(content)
     except urllib.error.HTTPError as e:
