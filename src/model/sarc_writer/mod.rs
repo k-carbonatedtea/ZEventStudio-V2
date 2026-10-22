@@ -1,8 +1,11 @@
 mod extract;
 mod ops;
+mod pack;
 mod update;
 
 pub use extract::{copy_dir_all, extract_sarc_to_dir};
+#[allow(unused_imports)]
+pub use pack::{pack_dir_to_sarc_bytes, pack_dir_to_sarc_file};
 use ops::{delete_nested_sarc_entry, rename_nested_sarc_entry};
 use std::fs;
 use std::path::Path;

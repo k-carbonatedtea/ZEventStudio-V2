@@ -16,7 +16,7 @@ pub fn decompress_if_yaz0(data: &[u8]) -> Vec<u8> {
 pub fn should_compress_yaz0(file_path: &str) -> bool {
     let lower = file_path.to_lowercase();
     let name = lower.rsplit(['/', '\\']).next().unwrap_or(&lower);
-    name.starts_with('s') && (
+    (name.starts_with('s') && (
         name.ends_with(".sbactorpack")
             || name.ends_with(".sbeventpack")
             || name.ends_with(".ssarc")
@@ -28,7 +28,59 @@ pub fn should_compress_yaz0(file_path: &str) -> bool {
             || name.ends_with(".smsbt")
             || name.ends_with(".sbfevfl")
             || name.ends_with(".sbaiprog")
-    ) || lower.ends_with(".zs")
+            || name.ends_with(".sbquestpack")
+            || name.ends_with(".smubin")
+            || name.ends_with(".sbgdata")
+            || name.ends_with(".sbgsvdata")
+            || name.ends_with(".sbdef")
+            || name.ends_with(".sbdrop")
+            || name.ends_with(".sgenvb")
+            || name.ends_with(".sbref")
+    )) || lower.ends_with(".zs")
+}
+
+/// 检查文件路径是否属于任天堂二进制 YAML 格式扩展名
+pub fn is_byml_extension(file_path: &str) -> bool {
+    let lower = file_path.to_lowercase();
+    lower.ends_with(".byml")
+        || lower.ends_with(".sbyml")
+        || lower.ends_with(".sbgyml")
+        || lower.ends_with(".bquestpack")
+        || lower.ends_with(".sbquestpack")
+        || lower.ends_with(".bgdata")
+        || lower.ends_with(".sbgdata")
+        || lower.ends_with(".bgsvdata")
+        || lower.ends_with(".sbgsvdata")
+        || lower.ends_with(".mubin")
+        || lower.ends_with(".smubin")
+        || lower.ends_with(".bdef")
+        || lower.ends_with(".sbdef")
+        || lower.ends_with(".bdrop")
+        || lower.ends_with(".sbdrop")
+        || lower.ends_with(".genvb")
+        || lower.ends_with(".sgenvb")
+        || lower.ends_with(".bref")
+        || lower.ends_with(".sbref")
+}
+
+/// 根据已读取的二进制数据魔数特征推断文件原生端序
+pub fn detect_endianness_from_bytes(data: &[u8]) -> Option<CodeEndian> {
+    let decompressed = decompress_if_yaz0(data);
+    if decompressed.len() >= 2 {
+        if &decompressed[0..2] == b"BY" {
+            return Some(CodeEndian::Big);
+        } else if &decompressed[0..2] == b"YB" {
+            return Some(CodeEndian::Little);
+        }
+    }
+    if decompressed.len() >= 10 && &decompressed[0..8] == b"MsgStdBn" {
+        if &decompressed[8..10] == b"\xfe\xff" {
+            return Some(CodeEndian::Big);
+        } else {
+            return Some(CodeEndian::Little);
+        }
+    }
+    None
 }
 
 /// 将任意二进制文件转换为可供代码编辑器编辑的文本表示

@@ -117,8 +117,22 @@ impl AppState {
 
         let resolved_path = self.resolve_target_path(raw_path);
         let format_param = payload.get("format").and_then(|value| value.as_str());
+        let endian_param = payload.get("endian").and_then(|value| value.as_str());
 
-        let final_bytes = compile_content_to_target_bytes(&resolved_path, content, format_param)?;
+        let target_endian = match endian_param {
+            Some("big") => CodeEndian::Big,
+            Some("little") => CodeEndian::Little,
+            _ => {
+                if let Ok(existing_bytes) = read_file_from_path(&resolved_path) {
+                    crate::model::detect_endianness_from_bytes(&existing_bytes)
+                        .unwrap_or_else(|| default_endian_by_extension(&resolved_path))
+                } else {
+                    default_endian_by_extension(&resolved_path)
+                }
+            }
+        };
+
+        let final_bytes = compile_content_to_target_bytes(&resolved_path, content, format_param, target_endian)?;
         write_file_to_target(&resolved_path, &final_bytes)?;
 
         let tab_synced = self.sync_memory_tab_after_write(&resolved_path, content);
@@ -137,6 +151,7 @@ impl AppState {
             "status": "ok",
             "path": resolved_path,
             "bytes_written": final_bytes.len(),
+            "endian": match target_endian { CodeEndian::Big => "big", CodeEndian::Little => "little" },
             "synced_tab": tab_synced,
         }))
     }
@@ -182,19 +197,35 @@ impl AppState {
     }
 }
 
-/// 辅助函数：将文本内容编译回目标格式的二进制字节流 (支持 Yaz0 自动压缩)
+/// 根据扩展名推断默认端序
+fn default_endian_by_extension(path: &str) -> CodeEndian {
+    let lower = path.to_lowercase();
+    if lower.ends_with(".sbquestpack") || lower.ends_with(".bquestpack") {
+        CodeEndian::Big
+    } else {
+        CodeEndian::Little
+    }
+}
+
+/// 辅助函数：将文本内容编译回目标格式的二进制字节流 (支持 Yaz0 自动压缩与端序控制)
 fn compile_content_to_target_bytes(
     path: &str,
     content: &str,
     format_override: Option<&str>,
+    target_endian: CodeEndian,
 ) -> Result<Vec<u8>, String> {
     let lower_path = path.to_lowercase();
     let format_str = format_override.unwrap_or("");
 
-    let raw_bytes = if format_str == "bfevfl" || lower_path.ends_with(".bfevfl") {
+    if format_str == "bfevfl" || lower_path.ends_with(".bfevfl") {
         let graph: Graph = serde_json::from_str(content)
             .map_err(|error| format!("解析 BFEVFL 流程图 JSON 语法错误: {}", error))?;
-        crate::model::evfl::save_bfevfl_to_bytes(&graph)?
+        let raw = crate::model::evfl::save_bfevfl_to_bytes(&graph)?;
+        if should_compress_yaz0(path) {
+            Ok(roead::yaz0::compress(&raw))
+        } else {
+            Ok(raw)
+        }
     } else {
         let code_format = match format_str {
             "byml" => CodeFormat::Byml,
@@ -203,7 +234,7 @@ fn compile_content_to_target_bytes(
             "json" => CodeFormat::Json,
             "yaml" => CodeFormat::Yaml,
             _ => {
-                if lower_path.ends_with(".byml") || lower_path.ends_with(".sbyml") || lower_path.ends_with(".sbgyml") {
+                if crate::model::is_byml_extension(&lower_path) {
                     CodeFormat::Byml
                 } else if lower_path.ends_with(".aamp") || lower_path.ends_with(".baiprog") || lower_path.ends_with(".bxml") {
                     CodeFormat::Aamp
@@ -218,12 +249,7 @@ fn compile_content_to_target_bytes(
                 }
             }
         };
-        compile_code_to_bytes(content, code_format, CodeEndian::Little, path)?
-    };
-
-    if should_compress_yaz0(path) {
-        Ok(roead::yaz0::compress(&raw_bytes))
-    } else {
-        Ok(raw_bytes)
+        // compile_code_to_bytes 内部已经根据 should_compress_yaz0 执行过 Yaz0 压缩
+        compile_code_to_bytes(content, code_format, target_endian, path)
     }
 }

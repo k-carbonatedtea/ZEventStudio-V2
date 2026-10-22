@@ -1,5 +1,7 @@
+pub mod byml_msbt_ops;
 pub mod file_read_write;
 pub mod file_tree_ops;
+pub mod sarc_ops;
 pub mod tab_ops;
 
 use crate::ui::state::AppState;
@@ -20,6 +22,12 @@ impl AppState {
             "rename_file" => self.api_rename_file(payload),
             "create_directory" => self.api_create_directory(payload),
             "search_code" => self.api_search_code(payload),
+            "query_byml" => self.api_query_byml(payload),
+            "patch_byml" => self.api_patch_byml(payload),
+            "read_msbt" => self.api_read_msbt(payload),
+            "write_msbt" => self.api_write_msbt(payload),
+            "pack_sarc" => self.api_pack_sarc(payload),
+            "unpack_sarc" => self.api_unpack_sarc(payload),
             "open_file" => self.api_open_file(payload),
             "save_file" => self.api_save_file(payload),
             "close_file" => self.api_close_file(payload),

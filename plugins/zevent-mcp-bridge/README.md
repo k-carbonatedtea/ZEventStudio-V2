@@ -25,10 +25,16 @@
 | 工具名称 | 功能说明 | 关键参数 |
 | :--- | :--- | :--- |
 | `zevent_read_file` | 查看指定文件的源码/反编译内容（优先读取活跃未保存标签） | `path`, `format` ("code" / "raw") |
-| `zevent_write_file` | 写入/修改/创建物理文件或 SARC 封包内虚拟文件（自动编译与热重载） | `path`, `content`, `format` |
+| `zevent_write_file` | 写入/修改/创建物理文件或 SARC 封包内虚拟文件（自动编译与热重载） | `path`, `content`, `format`, `endian` |
 | `zevent_delete_file` | 删除物理文件/文件夹或 SARC 封包内虚拟子文件（自动关闭对应标签） | `path` |
 | `zevent_rename_file` | 重命名物理文件/文件夹或 SARC 封包内虚拟子文件（自动同步对应标签） | `old_path`, `new_name` |
 | `zevent_create_directory` | 递归创建物理文件夹目录 | `path` |
+| `zevent_query_byml` | 高性能检索/查询 BYML 子结构（避免传输庞大 YAML，支持 JSON Pointer） | `path`, `query_path`, `summary_only` |
+| `zevent_patch_byml` | 细粒度修改/追加 BYML 节点（如添加任务、设置 Flag，自动 Yaz0/SARC 写回） | `path`, `patch_op`, `query_path`, `value`, `endian` |
+| `zevent_read_msbt` | 快速读取 MSBT 对话或任务提示词条为键值字典 | `path` |
+| `zevent_write_msbt` | 快速写入/批量更新 MSBT 文本词条（自动创建或追加至 SARC 封包） | `path`, `entries`, `endian` |
+| `zevent_pack_sarc` | 将物理文件夹递归打包为 SARC 归档封包（支持端序与 Yaz0 压缩） | `source_dir`, `target_file`, `endian`, `compress_yaz0` |
+| `zevent_unpack_sarc` | 将 SARC 封包或封包内虚拟子目录解包导出到指定物理文件夹 | `source_file`, `target_dir` |
 
 ### 3. 工作区与标签页协同 (Workspace & Tabs)
 | 工具名称 | 功能说明 | 关键参数 |

@@ -23,6 +23,11 @@ if hasattr(sys.stdout, 'reconfigure'):
 API_BASE_URL = "http://127.0.0.1:31415"
 PROTOCOL_VERSION = "2024-11-05"
 
+# Bypass any environment/system proxies for local communication
+proxy_handler = urllib.request.ProxyHandler({})
+opener = urllib.request.build_opener(proxy_handler)
+urllib.request.install_opener(opener)
+
 SERVER_INFO = {
     "name": "zevent-mcp-bridge",
     "version": "1.1.0"
@@ -111,6 +116,11 @@ TOOLS = [
                     "type": "string",
                     "enum": ["bfevfl", "byml", "aamp", "msbt", "json", "yaml", "text"],
                     "description": "Format override. If omitted, auto-detected from path extension"
+                },
+                "endian": {
+                    "type": "string",
+                    "enum": ["big", "little"],
+                    "description": "Byte endianness ('big' or 'little'). If omitted, automatically detected from original file or format convention"
                 }
             },
             "required": ["path", "content"]
@@ -397,6 +407,141 @@ TOOLS = [
             },
             "required": ["message"]
         }
+    },
+    {
+        "name": "zevent_query_byml",
+        "description": "Query or inspect BYML data structures using JSON pointer without transferring massive YAML files (supports BotW QuestProduct, GameData, SaveData, Mubin, etc.)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Target BYML file path (physical or SARC virtual path like 'SARC:Pack/TitleBG.pack//Quest/QuestProduct.sbquestpack')"
+                },
+                "query_path": {
+                    "type": "string",
+                    "description": "JSON pointer to query, e.g. '/Quest', '/Quest/170', '/data/bool_data' (defaults to root '')"
+                },
+                "summary_only": {
+                    "type": "boolean",
+                    "description": "If true, returns array length or object keys instead of full recursive tree"
+                }
+            },
+            "required": ["path"]
+        }
+    },
+    {
+        "name": "zevent_patch_byml",
+        "description": "Perform high-performance targeted modification (append, set, delete) on a BYML file without rewriting the entire file (supports Big/Little Endian, auto Yaz0 compression, and SARC packing)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Target BYML file path (physical or SARC virtual path like 'SARC:Pack/TitleBG.pack//Quest/QuestProduct.sbquestpack')"
+                },
+                "patch_op": {
+                    "type": "string",
+                    "enum": ["append", "set", "delete"],
+                    "description": "Patch operation: 'append' to push to an array, 'set' to update/assign a value, 'delete' to remove a key/index"
+                },
+                "query_path": {
+                    "type": "string",
+                    "description": "JSON pointer path where operation applies, e.g. '/Quest' for append, or '/Quest/170/Name' for set"
+                },
+                "value": {
+                    "description": "JSON value to set or append (can be string, number, boolean, array, or object)"
+                },
+                "endian": {
+                    "type": "string",
+                    "enum": ["big", "little"],
+                    "description": "Target endianness ('big' or 'little'). If omitted, automatically detected from original file or format convention"
+                }
+            },
+            "required": ["path", "patch_op"]
+        }
+    },
+    {
+        "name": "zevent_read_msbt",
+        "description": "Read dialogue and text entries from an MSBT localization file as a key-value dictionary (supports plain text extraction, SARC archives, and auto Yaz0 decompression)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Target MSBT file path (physical or SARC virtual path like 'SARC:Pack/Bootup_CNzh.pack//QuestMsg/QL_Test.msbt')"
+                }
+            },
+            "required": ["path"]
+        }
+    },
+    {
+        "name": "zevent_write_msbt",
+        "description": "Write or batch update text entries into an MSBT localization file (automatically creates new MSBT or updates existing entries, packages into SARC, and compresses with Yaz0 if needed)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Target MSBT file path (physical or SARC virtual path like 'SARC:Pack/Bootup_CNzh.pack//QuestMsg/QL_Test.msbt')"
+                },
+                "entries": {
+                    "type": "object",
+                    "description": "Dictionary of label-text pairs to write, e.g. {'QL_Test_Name': '测试任务', 'QL_Test_Desc': '任务描述'}"
+                },
+                "endian": {
+                    "type": "string",
+                    "enum": ["big", "little"],
+                    "description": "Target endianness ('little' for Switch, 'big' for WiiU). If omitted, automatically detected from original file or defaults to little"
+                }
+            },
+            "required": ["path", "entries"]
+        }
+    },
+    {
+        "name": "zevent_pack_sarc",
+        "description": "Recursively pack a physical directory of files into a SARC (.pack / .sarc / .ssarc) archive (supports Yaz0 compression and Big/Little Endian)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "source_dir": {
+                    "type": "string",
+                    "description": "Source physical directory path containing files to pack"
+                },
+                "target_file": {
+                    "type": "string",
+                    "description": "Target SARC pack file path (e.g. 'Pack/TitleBG.pack')"
+                },
+                "endian": {
+                    "type": "string",
+                    "enum": ["big", "little"],
+                    "description": "Endianness of SARC header and filenames table (default: 'big')"
+                },
+                "compress_yaz0": {
+                    "type": "boolean",
+                    "description": "Whether to compress the resulting SARC archive with Yaz0 (default: true for .s... extensions)"
+                }
+            },
+            "required": ["source_dir", "target_file"]
+        }
+    },
+    {
+        "name": "zevent_unpack_sarc",
+        "description": "Unpack all files from a SARC (.pack / .sarc / .ssarc) archive or virtual sub-directory into a destination physical directory",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "source_file": {
+                    "type": "string",
+                    "description": "Path of SARC archive to extract (physical file or SARC virtual entry)"
+                },
+                "target_dir": {
+                    "type": "string",
+                    "description": "Destination physical directory path"
+                }
+            },
+            "required": ["source_file", "target_dir"]
+        }
     }
 ]
 
@@ -497,6 +642,20 @@ def handle_tool_call(tool_name: str, arguments: dict) -> dict:
 
         elif tool_name == "zevent_create_directory":
             payload = {"action": "create_directory"}
+            payload.update(arguments)
+            res = http_post("/api/action", payload)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}
+
+        elif tool_name in (
+            "zevent_query_byml",
+            "zevent_patch_byml",
+            "zevent_read_msbt",
+            "zevent_write_msbt",
+            "zevent_pack_sarc",
+            "zevent_unpack_sarc",
+        ):
+            action = tool_name.replace("zevent_", "")
+            payload = {"action": action}
             payload.update(arguments)
             res = http_post("/api/action", payload)
             return {"content": [{"type": "text", "text": json.dumps(res, indent=2, ensure_ascii=False)}]}

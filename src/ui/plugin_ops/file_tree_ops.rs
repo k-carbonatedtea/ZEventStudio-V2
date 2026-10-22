@@ -196,6 +196,25 @@ impl AppState {
     /// 解析路径，支持相对于已打开工程目录的路径及文件名模糊定位
     pub fn resolve_target_path(&self, raw_path: &str) -> String {
         if raw_path.starts_with("SARC:") {
+            let clean = raw_path.trim_start_matches("SARC:");
+            let parts: Vec<&str> = clean.split("//").collect();
+            if let Some(first) = parts.first() {
+                let first_path = Path::new(first);
+                if !first_path.is_absolute() {
+                    let resolved_root = if let Some(matched) = self.find_path_in_tree(&self.file_tree, first) {
+                        matched
+                    } else if let Some(root) = &self.project_path {
+                        let clean_sub = first.trim_start_matches(['/', '\\']);
+                        Path::new(root).join(clean_sub).to_string_lossy().to_string()
+                    } else {
+                        first.to_string()
+                    };
+                    let clean_root = resolved_root.trim_start_matches("SARC:").to_string();
+                    let mut new_parts = vec![clean_root];
+                    new_parts.extend(parts[1..].iter().map(|s| s.to_string()));
+                    return format!("SARC:{}", new_parts.join("//"));
+                }
+            }
             return raw_path.to_string();
         }
         let path_obj = Path::new(raw_path);
