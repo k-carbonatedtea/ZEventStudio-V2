@@ -153,31 +153,64 @@ pub fn render_node_detail(
                         })),
                 ),
         )
-        // 3.5. 自动填充参数按钮 (仅 Action / Query 可见)
+        // 3.5. 自动填充与规范重排参数按钮 (针对 Action / Query / Switch 节点)
         .children(
-            if node.kind == crate::model::NodeKind::Action || node.kind == crate::model::NodeKind::Query {
+            if matches!(node.kind, crate::model::NodeKind::Action | crate::model::NodeKind::Query | crate::model::NodeKind::Switch) {
                 let n_id = node.id.clone();
+                let n_id_sort = node.id.clone();
                 let model_autofill = model.clone();
+                let model_sort = model.clone();
+                let has_props = !node.properties.is_empty();
                 Some(
                     div()
-                        .py_1p5()
-                        .rounded_lg()
-                        .bg(hsla(215.0 / 360.0, 0.45, 0.32, 1.0))
-                        .hover(|s| s.bg(hsla(215.0 / 360.0, 0.55, 0.40, 1.0)))
-                        .cursor_pointer()
                         .flex()
                         .items_center()
-                        .justify_center()
-                        .text_size(px(11.5))
-                        .font_weight(FontWeight::BOLD)
-                        .text_color(rgb(0xFFFFFF))
-                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                            model_autofill.update(cx, |st, cx| {
-                                st.autofill_node_parameters(&n_id);
-                                cx.notify();
-                            });
-                        })
-                        .child(state.t("inspector.autofill_btn")),
+                        .gap_1p5()
+                        .child(
+                            div()
+                                .flex_1()
+                                .py_1p5()
+                                .rounded_lg()
+                                .bg(hsla(215.0 / 360.0, 0.45, 0.32, 1.0))
+                                .hover(|s| s.bg(hsla(215.0 / 360.0, 0.55, 0.40, 1.0)))
+                                .cursor_pointer()
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .text_size(px(11.5))
+                                .font_weight(FontWeight::BOLD)
+                                .text_color(rgb(0xFFFFFF))
+                                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                                    model_autofill.update(cx, |st, cx| {
+                                        st.autofill_node_parameters(&n_id);
+                                        cx.notify();
+                                    });
+                                })
+                                .child(state.t("inspector.autofill_btn")),
+                        )
+                        .children(has_props.then(|| {
+                            div()
+                                .px_2p5()
+                                .py_1p5()
+                                .rounded_lg()
+                                .bg(pal.card_surface)
+                                .border_1()
+                                .border_color(pal.card_border)
+                                .hover(|s| s.bg(pal.card_hover))
+                                .cursor_pointer()
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .text_size(px(11.0))
+                                .text_color(pal.text_secondary)
+                                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                                    model_sort.update(cx, |st, cx| {
+                                        st.reorder_node_parameters(&n_id_sort);
+                                        cx.notify();
+                                    });
+                                })
+                                .child(format!("↓↑ {}", state.t("modal.sort_params")))
+                        })),
                 )
             } else {
                 None

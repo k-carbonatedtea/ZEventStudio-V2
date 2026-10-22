@@ -85,18 +85,23 @@ fn render_inline_query_bar(
     actor_idx: usize,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
-    let suggestions = [
-        "CheckFlag",
-        "GeneralQuery",
-        "CheckGameDataInt",
-        "CheckGameDataFloat",
-        "CheckPlayerState",
-        "CheckItemCount",
-        "CheckTargetDistance",
-        "CheckEquipWeapon",
-        "CheckCurrentTime",
-        "CheckWeather",
-    ];
+    let actor_name = state.graph.actors.get(actor_idx).map(|a| a.name.as_str()).unwrap_or("");
+    let search_dirs = state.build_game_ai_search_dirs();
+    let mut suggestions = crate::model::ai_def::get_actor_available_queries(actor_name, &search_dirs);
+    if suggestions.is_empty() {
+        suggestions = vec![
+            "CheckFlag".to_string(),
+            "GeneralQuery".to_string(),
+            "CheckGameDataInt".to_string(),
+            "CheckGameDataFloat".to_string(),
+            "CheckPlayerState".to_string(),
+            "CheckItemCount".to_string(),
+            "CheckTargetDistance".to_string(),
+            "CheckEquipWeapon".to_string(),
+            "CheckCurrentTime".to_string(),
+            "CheckWeather".to_string(),
+        ];
+    }
 
     let model_confirm = model.clone();
     let model_toggle_dd = model.clone();

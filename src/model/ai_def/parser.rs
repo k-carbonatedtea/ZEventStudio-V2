@@ -153,20 +153,12 @@ pub fn parse_baiprog(data: &[u8], prog: &mut ActorAiProg) -> Result<(), String> 
         if let Some(list) = pio.param_root.lists.get(list_name) {
             for (_, item_list) in list.lists.iter() {
                 if let Some(def_obj) = item_list.objects.get("Def") {
-                    let mut class_name = String::new();
-                    let mut name = String::new();
-
-                    for (param_name, param_val) in def_obj.0.iter() {
-                        if param_name == &roead::aamp::Name::from("ClassName") {
-                            if let Some(s) = extract_aamp_string(param_val) {
-                                class_name = s;
-                            }
-                        } else if param_name == &roead::aamp::Name::from("Name") {
-                            if let Some(s) = extract_aamp_string(param_val) {
-                                name = s;
-                            }
-                        }
-                    }
+                    let class_name = def_obj.get("ClassName")
+                        .and_then(extract_aamp_string)
+                        .unwrap_or_default();
+                    let name = def_obj.get("Name")
+                        .and_then(extract_aamp_string)
+                        .unwrap_or_default();
 
                     if !class_name.is_empty() {
                         let final_name = if !name.is_empty() { name } else { class_name.clone() };

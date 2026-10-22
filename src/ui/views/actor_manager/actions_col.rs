@@ -85,20 +85,25 @@ fn render_inline_action_bar(
     actor_idx: usize,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
-    let suggestions = [
-        "Demo_WaitFrame",
-        "Demo_FlagON",
-        "Demo_FlagOFF",
-        "Demo_OpenMessageDialog",
-        "Demo_AdvanceQuest",
-        "Demo_PlayAS",
-        "Demo_ChangeScene",
-        "Demo_SetGameDataInt",
-        "Demo_Talk",
-        "Demo_TurnAndLookToObject",
-        "Demo_PlaySound",
-        "Demo_SetActorPos",
-    ];
+    let actor_name = state.graph.actors.get(actor_idx).map(|a| a.name.as_str()).unwrap_or("");
+    let search_dirs = state.build_game_ai_search_dirs();
+    let mut suggestions = crate::model::ai_def::get_actor_available_actions(actor_name, &search_dirs);
+    if suggestions.is_empty() {
+        suggestions = vec![
+            "Demo_WaitFrame".to_string(),
+            "Demo_FlagON".to_string(),
+            "Demo_FlagOFF".to_string(),
+            "Demo_OpenMessageDialog".to_string(),
+            "Demo_AdvanceQuest".to_string(),
+            "Demo_PlayAS".to_string(),
+            "Demo_ChangeScene".to_string(),
+            "Demo_SetGameDataInt".to_string(),
+            "Demo_Talk".to_string(),
+            "Demo_TurnAndLookToObject".to_string(),
+            "Demo_PlaySound".to_string(),
+            "Demo_SetActorPos".to_string(),
+        ];
+    }
 
     let model_confirm = model.clone();
     let model_toggle_dd = model.clone();

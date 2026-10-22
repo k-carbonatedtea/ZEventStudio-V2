@@ -1,5 +1,5 @@
 use gpui::*;
-use crate::model::{NodeKind, PropertyItem};
+use crate::model::NodeKind;
 use crate::ui::canvas::node_editor::NodeEditorModalState;
 use crate::ui::state::AppState;
 
@@ -24,11 +24,24 @@ pub fn render_actor_action_selectors(
     };
 
     let current_actor = state.graph.actors.iter().find(|a| a.name == modal.actor_name);
-    let available_actions: Vec<String> = if modal.node_kind == NodeKind::Action {
+    let mut available_actions: Vec<String> = if modal.node_kind == NodeKind::Action {
         current_actor.map(|a| a.actions.clone()).unwrap_or_default()
     } else {
         current_actor.map(|a| a.queries.clone()).unwrap_or_default()
     };
+
+    let search_dirs = state.build_game_ai_search_dirs();
+    let game_actions = if modal.node_kind == NodeKind::Action {
+        crate::model::ai_def::get_actor_available_actions(&modal.actor_name, &search_dirs)
+    } else {
+        crate::model::ai_def::get_actor_available_queries(&modal.actor_name, &search_dirs)
+    };
+    for act in game_actions {
+        if !available_actions.contains(&act) {
+            available_actions.push(act);
+        }
+    }
+    available_actions.sort();
 
     div()
         .flex()
@@ -246,53 +259,3 @@ pub fn render_actor_action_selectors(
         }))
 }
 
-/// 依据当前动作名称自动填充 BotW 标准参数模版
-pub fn autofill_modal_params(modal: &mut NodeEditorModalState) {
-    let act = modal.action_name.as_str();
-    if act.contains("FlagON") || act.contains("FlagOFF") || act.contains("Flag") {
-        modal.properties = vec![
-            PropertyItem {
-                key: "FlagName".into(),
-                val: "100enemy_Clear_Middle".into(),
-                val_type: "string".into(),
-            },
-            PropertyItem {
-                key: "IsWaitFinish".into(),
-                val: "true".into(),
-                val_type: "bool".into(),
-            },
-        ];
-    } else if act.contains("Message") || act.contains("Talk") {
-        modal.properties = vec![
-            PropertyItem {
-                key: "MessageId".into(),
-                val: "Talk_01".into(),
-                val_type: "string".into(),
-            },
-            PropertyItem {
-                key: "IsWaitFinish".into(),
-                val: "true".into(),
-                val_type: "bool".into(),
-            },
-        ];
-    } else if act.contains("Animation") || act.contains("PlayAnm") {
-        modal.properties = vec![
-            PropertyItem {
-                key: "AnmName".into(),
-                val: "Wait".into(),
-                val_type: "string".into(),
-            },
-            PropertyItem {
-                key: "IsWaitFinish".into(),
-                val: "true".into(),
-                val_type: "bool".into(),
-            },
-        ];
-    } else if !modal.properties.iter().any(|p| p.key == "IsWaitFinish") {
-        modal.properties.push(PropertyItem {
-            key: "IsWaitFinish".into(),
-            val: "true".into(),
-            val_type: "bool".into(),
-        });
-    }
-}

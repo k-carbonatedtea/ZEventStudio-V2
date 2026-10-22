@@ -16,6 +16,7 @@ pub fn render_node_context_menu(
     let model_below = model.clone();
     let model_delete = model.clone();
     let model_autofill = model.clone();
+    let model_sort = model.clone();
     let n_id = node_id.to_string();
 
     let (screen_x, screen_y) = (
@@ -27,6 +28,18 @@ pub fn render_node_context_menu(
     let menu_h = 200.0;
     let pos_x = (screen_x + 6.0).clamp(20.0, 2400.0 - menu_w);
     let pos_y = (screen_y + 6.0).clamp(20.0, 1400.0 - menu_h);
+
+    let is_param_node = state
+        .graph
+        .find_node(node_id)
+        .is_some_and(|n| {
+            matches!(
+                n.kind,
+                crate::model::NodeKind::Action
+                    | crate::model::NodeKind::Query
+                    | crate::model::NodeKind::Switch
+            )
+        });
 
     let node_title = state
         .graph
@@ -127,32 +140,57 @@ pub fn render_node_context_menu(
                 )
 
                 // 0.5. 自动填充参数 (Auto-fill Parameters)
-                .child(
+                .children(is_param_node.then(|| {
+                    let n_id_auto = n_id.clone();
+                    let model_auto = model_autofill.clone();
                     div()
                         .px_2p5()
                         .py_1p5()
                         .rounded_lg()
                         .cursor_pointer()
                         .hover(|s| s.bg(hsla(215.0 / 360.0, 0.45, 0.32, 1.0)))
-                        .on_mouse_down(MouseButton::Left, {
-                            let n_id = n_id.clone();
-                            move |_, _, cx| {
-                                cx.stop_propagation();
-                                model_autofill.update(cx, |st, cx| {
-                                    st.node_context_menu = None;
-                                    st.autofill_node_parameters(&n_id);
-                                    cx.notify();
-                                });
-                            }
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            cx.stop_propagation();
+                            model_auto.update(cx, |st, cx| {
+                                st.node_context_menu = None;
+                                st.autofill_node_parameters(&n_id_auto);
+                                cx.notify();
+                            });
                         })
                         .child(
                             div()
                                 .text_size(px(12.0))
                                 .font_weight(FontWeight::MEDIUM)
                                 .text_color(rgb(0xffffff))
-                                .child("✨ 自动填充参数"),
-                        ),
-                )
+                                .child(state.t("context_menu.autofill_params")),
+                        )
+                }))
+                // 0.6. 规范排序参数 (Sort Parameters)
+                .children(is_param_node.then(|| {
+                    let n_id_sort = n_id.clone();
+                    let model_sort = model_sort.clone();
+                    div()
+                        .px_2p5()
+                        .py_1p5()
+                        .rounded_lg()
+                        .cursor_pointer()
+                        .hover(|s| s.bg(hsla(215.0 / 360.0, 0.45, 0.32, 1.0)))
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            cx.stop_propagation();
+                            model_sort.update(cx, |st, cx| {
+                                st.node_context_menu = None;
+                                st.reorder_node_parameters(&n_id_sort);
+                                cx.notify();
+                            });
+                        })
+                        .child(
+                            div()
+                                .text_size(px(12.0))
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(rgb(0xffffff))
+                                .child(state.t("context_menu.sort_params")),
+                        )
+                }))
                 // 1. 在上方插入前驱节点
                 .child(
                     div()

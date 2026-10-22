@@ -1,8 +1,6 @@
 use gpui::*;
 use crate::model::{NodeKind, PropertyItem};
-use crate::ui::canvas::node_editor::actor_action_selectors::{
-    autofill_modal_params, render_actor_action_selectors,
-};
+use crate::ui::canvas::node_editor::actor_action_selectors::render_actor_action_selectors;
 use crate::ui::canvas::node_editor::param_row::render_param_row;
 use crate::ui::canvas::node_editor::NodeEditorModalState;
 use crate::ui::components::Toast;
@@ -70,10 +68,7 @@ pub fn render_params_table_editor(
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     cx.stop_propagation();
                                     model_autofill.update(cx, |st, cx| {
-                                        if let Some(ref mut m) = st.active_node_editor_modal {
-                                            autofill_modal_params(m);
-                                        }
-                                        st.toast = Some(Toast::success(st.t("modal.autofill_success")));
+                                        st.autofill_modal_parameters();
                                         cx.notify();
                                     });
                                 })
@@ -95,10 +90,7 @@ pub fn render_params_table_editor(
                                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                                     cx.stop_propagation();
                                     model_sort.update(cx, |st, cx| {
-                                        if let Some(ref mut m) = st.active_node_editor_modal {
-                                            m.properties.sort_by(|a, b| a.key.cmp(&b.key));
-                                        }
-                                        st.toast = Some(Toast::info(st.t("modal.sort_success")));
+                                        st.reorder_modal_parameters();
                                         cx.notify();
                                     });
                                 })
