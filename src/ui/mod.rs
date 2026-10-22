@@ -22,6 +22,8 @@ pub mod state_plugin_bridge;
 pub mod state_plugins;
 pub mod state_project;
 pub mod state_recent;
+pub mod state_reveal;
+pub mod state_save;
 pub mod state_search;
 pub mod state_settings;
 pub mod state_tabs;

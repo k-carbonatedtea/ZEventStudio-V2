@@ -10,8 +10,9 @@ pub struct Edge {
     pub label: Option<String>,
     pub color_override: Option<String>,
     pub is_dashed: bool,
+    #[serde(skip_serializing, default)]
     pub selected: bool,
-    #[serde(default)]
+    #[serde(skip_serializing, default)]
     pub waypoints: Vec<(f32, f32)>,
 }
 

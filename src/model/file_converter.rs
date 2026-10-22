@@ -90,9 +90,9 @@ pub fn parse_file_to_code(
     if (decompressed.len() >= 6 && &decompressed[0..6] == b"BFEVFL")
         || lower_path.ends_with(".bfevfl")
     {
-        match crate::model::evfl::load_bfevfl_from_bytes(&decompressed) {
-            Ok(graph) => {
-                let json_text = serde_json::to_string_pretty(&graph)
+        match crate::model::evfl::load_eventflow_from_bytes(&decompressed) {
+            Ok(evfl) => {
+                let json_text = serde_json::to_string_pretty(&evfl)
                     .map_err(|e| format!("格式化 BFEVFL JSON 失败: {:?}", e))?;
                 return Ok((json_text, CodeFormat::Bfevfl, CodeEndian::Little));
             }
@@ -164,16 +164,16 @@ pub fn compile_code_to_bytes(
                 .map_err(|e| format!("编译 MSBT 字节流失败: {:?}", e))?
         }
         CodeFormat::Bfevfl => {
-            // 优先解析 JSON Graph 拓扑
-            let graph: crate::model::Graph = if text.trim_start().starts_with('{') {
-                serde_json::from_str(text)
-                    .map_err(|e| format!("BFEVFL JSON 语法错误: {:?}", e))?
+            // 优先解析原生 EventFlow 结构并编译为官方 BFEVFL 二进制字节流；若为旧版 Graph 则兼容降级
+            if let Ok(evfl) = serde_json::from_str::<revfl::evfl::EventFlow>(text) {
+                crate::model::evfl::save_eventflow_to_bytes(&evfl)
+                    .map_err(|e| format!("编译 BFEVFL 失败: {}", e))?
+            } else if let Ok(graph) = serde_json::from_str::<crate::model::Graph>(text) {
+                crate::model::evfl::save_bfevfl_to_bytes(&graph)
+                    .map_err(|e| format!("编译 BFEVFL 失败: {}", e))?
             } else {
-                serde_yaml::from_str(text)
-                    .map_err(|e| format!("BFEVFL YAML 语法错误: {:?}", e))?
-            };
-            crate::model::evfl::save_bfevfl_to_bytes(&graph)
-                .map_err(|e| format!("编译 BFEVFL 失败: {}", e))?
+                return Err("BFEVFL JSON 语法错误: 无法反序列化为 EventFlow 或 Graph 结构".to_string());
+            }
         }
         CodeFormat::Json | CodeFormat::Yaml | CodeFormat::Text | CodeFormat::Generic => {
             text.as_bytes().to_vec()
@@ -242,5 +242,30 @@ mod tests {
         let (parsed_yaml, fmt, _) = parse_file_to_code(&compiled, "Lynel.baiprog").unwrap();
         assert_eq!(fmt, CodeFormat::Aamp);
         assert!(parsed_yaml.contains("param_root"));
+    }
+
+    #[test]
+    fn test_bfevfl_native_eventflow_roundtrip() {
+        let bfevfl_raw = include_bytes!("../../100enemy.bfevfl");
+        let (json_code, fmt, end) = parse_file_to_code(bfevfl_raw, "100enemy.bfevfl").unwrap();
+        assert_eq!(fmt, CodeFormat::Bfevfl);
+        assert_eq!(end, CodeEndian::Little);
+
+        // 验证不再包含编辑器 UI 画布结构，而是任天堂原生 EventFlow 反序列化格式
+        assert!(json_code.contains("\"flowchart\""));
+        assert!(json_code.contains("\"actors\""));
+        assert!(json_code.contains("\"events\""));
+        assert!(!json_code.contains("\"kind\": \"EntryPoint\""));
+        assert!(!json_code.contains("\"color_override\""));
+
+        // 重新编译为 BFEVFL 字节流
+        let compiled = compile_code_to_bytes(&json_code, CodeFormat::Bfevfl, CodeEndian::Little, "100enemy.bfevfl").unwrap();
+        assert!(compiled.len() >= 8);
+        assert_eq!(&compiled[0..6], b"BFEVFL");
+
+        // 再次解析编译出的二进制，确认往返完全一致且可正常反序列化
+        let (reparsed_code, fmt2, _) = parse_file_to_code(&compiled, "100enemy.bfevfl").unwrap();
+        assert_eq!(fmt2, CodeFormat::Bfevfl);
+        assert!(reparsed_code.contains("\"flowchart\""));
     }
 }

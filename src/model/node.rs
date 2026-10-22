@@ -112,6 +112,10 @@ pub struct PropertyItem {
     pub val_type: String, // "string", "number", "bool", "actor", "event"
 }
 
+fn default_node_size() -> (f32, f32) {
+    (240.0, 130.0)
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeData {
@@ -119,12 +123,16 @@ pub struct NodeData {
     pub title: String,
     pub subtitle: Option<String>,
     pub kind: NodeKind,
+    #[serde(skip_serializing, default)]
     pub pos: (f32, f32),
+    #[serde(skip_serializing, default = "default_node_size")]
     pub size: (f32, f32),
     pub inputs: Vec<Port>,
     pub outputs: Vec<Port>,
     pub properties: Vec<PropertyItem>,
+    #[serde(skip_serializing, default)]
     pub selected: bool,
+    #[serde(skip_serializing, default)]
     pub collapsed: bool,
 }
 

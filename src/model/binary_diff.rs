@@ -272,6 +272,15 @@ pub fn get_sarc_changed_subfiles(
             continue;
         }
 
+        // 若旧数据与新数据皆存在，且两者经反编译为规范代码后完全一致（如忽略画布排版坐标后的事件流），则在逻辑上视为无变动
+        if let (Some(od), Some(nd)) = (old_data, new_data) {
+            if let (Ok((ot, _, _)), Ok((nt, _, _))) = (parse_file_to_code(od, &key), parse_file_to_code(nd, &key)) {
+                if ot == nt {
+                    continue;
+                }
+            }
+        }
+
         let status = match (old_data.is_some(), new_data.is_some()) {
             (true, true) => GitFileStatusKind::Modified,
             (false, true) => GitFileStatusKind::Added,
