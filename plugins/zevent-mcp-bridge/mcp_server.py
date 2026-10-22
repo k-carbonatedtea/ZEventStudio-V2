@@ -13,8 +13,9 @@ import urllib.request
 import urllib.error
 
 # Ensure UTF-8 streams for stdio JSON-RPC on Windows
-if hasattr(sys.stdout, 'reconfigure'):
+if hasattr(sys.stdin, 'reconfigure'):
     try:
+        sys.stdin.reconfigure(encoding='utf-8')
         sys.stdout.reconfigure(encoding='utf-8')
         sys.stderr.reconfigure(encoding='utf-8')
     except Exception:

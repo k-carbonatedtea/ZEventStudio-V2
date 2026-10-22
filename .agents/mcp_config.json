@@ -1,9 +1,11 @@
 {
   "mcpServers": {
     "zevent-studio": {
-      "command": "python",
+      "command": "cmd.exe",
       "args": [
-        "c:/Users/Administrator/Desktop/Zevent/ZEventStudio/plugins/zevent-mcp-bridge/mcp_server.py"
+        "/c",
+        "C:\\Users\\Administrator\\.pyenv\\pyenv-win\\versions\\3.8.10\\python.exe",
+        "C:\\Users\\Administrator\\Desktop\\Zevent\\ZEventStudio\\plugins\\zevent-mcp-bridge\\mcp_server.py"
       ]
     }
   }

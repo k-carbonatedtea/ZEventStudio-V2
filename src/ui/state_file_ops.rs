@@ -211,4 +211,43 @@ impl AppState {
                 .spawn();
         }
     }
+
+    /// 获取当前操作文件或当前打开项目的有效平台类型 (Switch vs Wii U)
+    pub fn effective_platform_for_path(&self, path: &str) -> crate::model::PlatformType {
+        // 1. 优先从目标文件自身绝对路径或相对路径判断
+        if let Some(plat) = crate::model::detect_platform_from_path(path) {
+            return plat;
+        }
+        // 2. 其次从当前已打开的项目根路径判断
+        if let Some(ref proj) = self.project_path {
+            if let Some(plat) = crate::model::detect_platform_from_path(proj) {
+                return plat;
+            }
+        }
+        // 3. 兜底回退至系统全局配置中的当前平台偏好
+        self.game_paths.current_platform
+    }
+
+    /// 解析指定路径文件的最终生效端序
+    /// 优先级：1. 显式指定参数 -> 2. 已有文件二进制魔数/BOM -> 3. 平台默认规则 (Switch 全小端，Wii U 多数大端但 BFEVFL/AAMP 小端)
+    pub fn resolve_file_endian(
+        &self,
+        path: &str,
+        existing_bytes: Option<&[u8]>,
+        explicit_endian: Option<&str>,
+    ) -> crate::model::code_document::CodeEndian {
+        match explicit_endian {
+            Some("big") | Some("be") => crate::model::code_document::CodeEndian::Big,
+            Some("little") | Some("le") => crate::model::code_document::CodeEndian::Little,
+            _ => {
+                if let Some(bytes) = existing_bytes {
+                    if let Some(detected) = crate::model::detect_endianness_from_bytes(bytes) {
+                        return detected;
+                    }
+                }
+                let platform = self.effective_platform_for_path(path);
+                platform.default_endian(path)
+            }
+        }
+    }
 }

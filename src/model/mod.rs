@@ -33,7 +33,7 @@ pub use subgraph::{compute_subgraph_groups, SubgraphGroup};
 pub use bcml::import_bcml_paths;
 #[allow(unused_imports)]
 pub use binary_diff::{get_sarc_changed_subfiles, resolve_smart_code_diff, SarcSubFileChange};
-pub use settings::{GamePathSettings, PlatformType, RecentProjectItem};
+pub use settings::{detect_platform_from_path, GamePathSettings, PlatformType, RecentProjectItem};
 
 pub use actor::*;
 pub use code_document::CodeDocumentState;

@@ -73,12 +73,29 @@ pub fn detect_endianness_from_bytes(data: &[u8]) -> Option<CodeEndian> {
             return Some(CodeEndian::Little);
         }
     }
+    if decompressed.len() >= 8 && &decompressed[0..4] == b"SARC" {
+        if &decompressed[6..8] == b"\xfe\xff" {
+            return Some(CodeEndian::Big);
+        } else if &decompressed[6..8] == b"\xff\xfe" {
+            return Some(CodeEndian::Little);
+        }
+    }
     if decompressed.len() >= 10 && &decompressed[0..8] == b"MsgStdBn" {
         if &decompressed[8..10] == b"\xfe\xff" {
             return Some(CodeEndian::Big);
         } else {
             return Some(CodeEndian::Little);
         }
+    }
+    if decompressed.len() >= 6 && &decompressed[0..4] == b"BFEV" {
+        if &decompressed[4..6] == b"\xfe\xff" {
+            return Some(CodeEndian::Big);
+        } else if &decompressed[4..6] == b"\xff\xfe" {
+            return Some(CodeEndian::Little);
+        }
+    }
+    if decompressed.len() >= 4 && &decompressed[0..4] == b"AAMP" {
+        return Some(CodeEndian::Little);
     }
     None
 }

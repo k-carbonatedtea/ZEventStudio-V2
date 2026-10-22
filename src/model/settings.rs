@@ -22,6 +22,62 @@ impl PlatformType {
     pub const fn is_wiiu(&self) -> bool {
         matches!(self, Self::WiiU)
     }
+
+    /// 根据平台推断指定文件或格式的默认端序
+    pub fn default_endian(&self, file_path: &str) -> crate::model::code_document::CodeEndian {
+        if self.is_switch() {
+            // Switch 架构为 ARM64，所有游戏文件一律为小端 (Little Endian)
+            crate::model::code_document::CodeEndian::Little
+        } else {
+            // Wii U 架构为 PowerPC，绝大多数游戏文件为大端 (Big Endian)
+            // 但有例外格式在 Wii U 上也是小端 (Little Endian)：
+            // 1. BFEVFL (.bfevfl): 采用 64 位平台指针布局，在 Wii U 上保持小端
+            // 2. AAMP (.aamp, .baiprog, .bxml 等): 跨平台参数格式统一为小端
+            let lower = file_path.to_lowercase();
+            if lower.ends_with(".bfevfl")
+                || lower.ends_with(".sbfevfl")
+                || lower.ends_with(".aamp")
+                || lower.ends_with(".baiprog")
+                || lower.ends_with(".sbaiprog")
+                || lower.ends_with(".bxml")
+                || lower.ends_with(".sbxml")
+                || lower.ends_with(".baglenv")
+                || lower.ends_with(".bactparam")
+            {
+                crate::model::code_document::CodeEndian::Little
+            } else {
+                crate::model::code_document::CodeEndian::Big
+            }
+        }
+    }
+}
+
+/// 根据文件路径特征自动推断平台 (Switch vs Wii U)
+pub fn detect_platform_from_path(path: &str) -> Option<PlatformType> {
+    let lower = path.to_lowercase();
+    // Switch 路径特征：Title ID (0100...)，atmosphere，sxos，romfs 等
+    if lower.contains("01007ef00011")
+        || lower.contains("0100")
+        || lower.contains("atmosphere")
+        || lower.contains("sxos")
+        || lower.contains("switch")
+        || lower.contains("mods_nx")
+    {
+        return Some(PlatformType::Switch);
+    }
+    // Wii U 路径特征：Title ID (00050000...)，cemu，content，aoc 等
+    if lower.contains("00050000")
+        || lower.contains("cemu")
+        || lower.contains("wiiu")
+        || lower.contains("graphicpacks")
+        || lower.contains("content\\")
+        || lower.contains("content/")
+        || lower.contains("aoc\\")
+        || lower.contains("aoc/")
+    {
+        return Some(PlatformType::WiiU);
+    }
+    None
 }
 
 /// Wii U 平台路径配置

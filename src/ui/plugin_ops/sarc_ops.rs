@@ -20,11 +20,12 @@ impl AppState {
         let resolved_src = self.resolve_target_path(raw_src);
         let resolved_dst = self.resolve_target_path(raw_dst);
 
-        let endian_str = payload.get("endian").and_then(|v| v.as_str()).unwrap_or("big");
-        let endian = if endian_str.eq_ignore_ascii_case("little") {
-            Endian::Little
-        } else {
-            Endian::Big
+        let endian_param = payload.get("endian").and_then(|v| v.as_str());
+        let existing_bytes = std::fs::read(&resolved_dst).ok();
+        let target_endian = self.resolve_file_endian(&resolved_dst, existing_bytes.as_deref(), endian_param);
+        let endian = match target_endian {
+            crate::model::code_document::CodeEndian::Big => Endian::Big,
+            crate::model::code_document::CodeEndian::Little => Endian::Little,
         };
 
         let compress_yaz0 = payload

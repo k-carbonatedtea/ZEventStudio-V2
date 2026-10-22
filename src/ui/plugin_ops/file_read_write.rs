@@ -118,19 +118,8 @@ impl AppState {
         let resolved_path = self.resolve_target_path(raw_path);
         let format_param = payload.get("format").and_then(|value| value.as_str());
         let endian_param = payload.get("endian").and_then(|value| value.as_str());
-
-        let target_endian = match endian_param {
-            Some("big") => CodeEndian::Big,
-            Some("little") => CodeEndian::Little,
-            _ => {
-                if let Ok(existing_bytes) = read_file_from_path(&resolved_path) {
-                    crate::model::detect_endianness_from_bytes(&existing_bytes)
-                        .unwrap_or_else(|| default_endian_by_extension(&resolved_path))
-                } else {
-                    default_endian_by_extension(&resolved_path)
-                }
-            }
-        };
+        let existing_bytes = read_file_from_path(&resolved_path).ok();
+        let target_endian = self.resolve_file_endian(&resolved_path, existing_bytes.as_deref(), endian_param);
 
         let final_bytes = compile_content_to_target_bytes(&resolved_path, content, format_param, target_endian)?;
         write_file_to_target(&resolved_path, &final_bytes)?;
@@ -197,15 +186,6 @@ impl AppState {
     }
 }
 
-/// 根据扩展名推断默认端序
-fn default_endian_by_extension(path: &str) -> CodeEndian {
-    let lower = path.to_lowercase();
-    if lower.ends_with(".sbquestpack") || lower.ends_with(".bquestpack") {
-        CodeEndian::Big
-    } else {
-        CodeEndian::Little
-    }
-}
 
 /// 辅助函数：将文本内容编译回目标格式的二进制字节流 (支持 Yaz0 自动压缩与端序控制)
 fn compile_content_to_target_bytes(

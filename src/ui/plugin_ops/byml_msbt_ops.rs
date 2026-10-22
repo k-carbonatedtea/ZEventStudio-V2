@@ -1,5 +1,5 @@
 use crate::model::code_document::CodeEndian;
-use crate::model::file_converter::{decompress_if_yaz0, detect_endianness_from_bytes, should_compress_yaz0};
+use crate::model::file_converter::{decompress_if_yaz0, should_compress_yaz0};
 use crate::model::file_tree::read_file_from_path;
 use crate::model::sarc_writer::write_file_to_target;
 use crate::ui::components::Toast;
@@ -73,24 +73,10 @@ impl AppState {
         let query_path = payload.get("query_path").and_then(|v| v.as_str()).unwrap_or("");
 
         let existing_bytes = read_file_from_path(&resolved_path).ok();
-        let detected_endian = existing_bytes.as_deref().and_then(detect_endianness_from_bytes);
-
         let endian_param = payload.get("endian").and_then(|v| v.as_str());
-        let target_endian = match endian_param {
-            Some("big") => Endian::Big,
-            Some("little") => Endian::Little,
-            _ => match detected_endian {
-                Some(CodeEndian::Big) => Endian::Big,
-                Some(CodeEndian::Little) => Endian::Little,
-                None => {
-                    let lower = resolved_path.to_lowercase();
-                    if lower.ends_with(".sbquestpack") || lower.ends_with(".bquestpack") {
-                        Endian::Big
-                    } else {
-                        Endian::Little
-                    }
-                }
-            },
+        let target_endian = match self.resolve_file_endian(&resolved_path, existing_bytes.as_deref(), endian_param) {
+            CodeEndian::Big => Endian::Big,
+            CodeEndian::Little => Endian::Little,
         };
 
         let mut root_val = if let Some(bytes) = existing_bytes {
@@ -211,10 +197,9 @@ impl AppState {
             .ok_or_else(|| "缺少 entries 词条字典对象".to_string())?;
 
         let existing_bytes = read_file_from_path(&resolved_path).ok();
-        let detected_endian = existing_bytes.as_deref().and_then(detect_endianness_from_bytes);
 
-        let mut msyt_json = if let Some(bytes) = existing_bytes {
-            let decomp = decompress_if_yaz0(&bytes);
+        let mut msyt_json = if let Some(ref bytes) = existing_bytes {
+            let decomp = decompress_if_yaz0(bytes);
             if let Ok(doc) = msyt::Msyt::from_msbt_bytes(&decomp) {
                 serde_json::to_value(&doc).unwrap_or_else(|_| create_empty_msyt_json())
             } else {
@@ -255,13 +240,9 @@ impl AppState {
             .map_err(|e| format!("生成 MSYT 结构失败: {}", e))?;
 
         let endian_param = payload.get("endian").and_then(|v| v.as_str());
-        let msyt_endian = match endian_param {
-            Some("big") => msyt::Endianness::Big,
-            Some("little") => msyt::Endianness::Little,
-            _ => match detected_endian {
-                Some(CodeEndian::Big) => msyt::Endianness::Big,
-                _ => msyt::Endianness::Little,
-            },
+        let msyt_endian = match self.resolve_file_endian(&resolved_path, existing_bytes.as_deref(), endian_param) {
+            CodeEndian::Big => msyt::Endianness::Big,
+            CodeEndian::Little => msyt::Endianness::Little,
         };
 
         let msbt_bytes = msyt_doc
