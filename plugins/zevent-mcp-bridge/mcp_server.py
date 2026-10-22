@@ -37,7 +37,7 @@ SERVER_INFO = {
 TOOLS = [
     {
         "name": "zevent_get_status",
-        "description": "Get current status, opened project, active document tab, and graph summary of ZEventStudio",
+        "description": "获取 ZEventStudio 当前运行状态、已打开项目、当前激活的文件标签页以及事件图概览信息",
         "inputSchema": {
             "type": "object",
             "properties": {}
@@ -45,7 +45,7 @@ TOOLS = [
     },
     {
         "name": "zevent_get_project",
-        "description": "Get opened project path, file tree summary, open tabs, and project details",
+        "description": "获取当前已打开项目的路径、文件树概要、打开的所有标签页以及项目详细配置",
         "inputSchema": {
             "type": "object",
             "properties": {}
@@ -53,47 +53,47 @@ TOOLS = [
     },
     {
         "name": "zevent_list_files",
-        "description": "Query and list all files and SARC archives in the opened project (supports filtering by extension, recursive traversal, and SARC subfile extraction)",
+        "description": "查询并列出当前项目中的所有物理文件与 SARC 虚拟归档文件（支持按扩展名过滤、递归遍历以及解包展示 SARC 内部子文件）",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Subdirectory path or SARC file path to list (defaults to project root)"
+                    "description": "要列出的子目录路径或 SARC 文件路径（默认为项目根目录）"
                 },
                 "recursive": {
                     "type": "boolean",
-                    "description": "Recursively list all subdirectories and nested SARCs (default: true)"
+                    "description": "是否递归遍历所有子目录及嵌套 SARC 封包（默认: true）"
                 },
                 "include_sarc": {
                     "type": "boolean",
-                    "description": "Whether to unpack and list virtual files inside SARC/Yaz0 archives (default: true)"
+                    "description": "是否解包并展开 SARC/Yaz0 封包内的虚拟文件（默认: true）"
                 },
                 "filter_ext": {
                     "type": "string",
-                    "description": "Filter by file extension, e.g. '.bfevfl', '.byml', '.msbt', '.aamp'"
+                    "description": "按文件扩展名过滤，例如 '.bfevfl', '.byml', '.msbt', '.aamp'"
                 },
                 "limit": {
                     "type": "integer",
-                    "description": "Maximum number of file entries to return (default: 2000)"
+                    "description": "返回的最大文件条目数量（默认: 2000）"
                 }
             }
         }
     },
     {
         "name": "zevent_read_file",
-        "description": "Read the source code or formatted text representation of any file in the opened project or inside SARC archives (automatically decompiles BFEVFL to JSON graph, BYML/AAMP/MSBT to YAML/MSYT, and reads plain text or active in-memory editor tabs)",
+        "description": "读取当前项目或 SARC 封包内任意文件的源码或格式化文本（自动将 BFEVFL 反编译为 JSON 图结构，BYML/AAMP/MSBT 转为 YAML/MSYT，支持读取内存中已修改但未保存的激活标签页）",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Target file path (can be absolute physical path, relative path in project, or SARC path like 'SARC:path.sbeventpack//Event/Demo.bfevfl')"
+                    "description": "目标文件路径（支持物理绝对路径、项目相对路径或 SARC 虚拟路径，如 'SARC:path.sbeventpack//Event/Demo.bfevfl'）"
                 },
                 "format": {
                     "type": "string",
                     "enum": ["code", "raw"],
-                    "description": "Format mode: 'code' (default, parses to editable code/YAML/JSON) or 'raw' (UTF-8 text)"
+                    "description": "格式模式：'code'（默认，解析为可编辑的结构代码/YAML/JSON）或 'raw'（原始 UTF-8 文本）"
                 }
             },
             "required": ["path"]
@@ -101,27 +101,27 @@ TOOLS = [
     },
     {
         "name": "zevent_write_file",
-        "description": "Write, modify, or create a file or code in the opened project or inside SARC archives (automatically recompiles JSON graphs to BFEVFL, YAML to BYML/AAMP/MSBT, compresses with Yaz0 if needed, writes to disk or SARC pack, and live-synchronizes any open tabs in ZEventStudio)",
+        "description": "写入、修改或创建项目中的文件或代码（自动将 JSON 图结构重编译为 BFEVFL，YAML 转为 BYML/AAMP/MSBT，按需自动进行 Yaz0 压缩并写回磁盘或 SARC 封包，同时实时热同步编辑器中打开的标签页）",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Target file path (can be physical file or SARC virtual path like 'SARC:path.sbeventpack//Event/Demo.bfevfl')"
+                    "description": "目标文件路径（可为物理文件或 SARC 内部虚拟路径）"
                 },
                 "content": {
                     "type": "string",
-                    "description": "Source code, JSON graph, YAML, or text content to write"
+                    "description": "要写入的源代码、JSON 流程图结构、YAML 或纯文本内容"
                 },
                 "format": {
                     "type": "string",
                     "enum": ["bfevfl", "byml", "aamp", "msbt", "json", "yaml", "text"],
-                    "description": "Format override. If omitted, auto-detected from path extension"
+                    "description": "指定覆盖格式类型（若省略则自动根据文件扩展名推断）"
                 },
                 "endian": {
                     "type": "string",
                     "enum": ["big", "little"],
-                    "description": "Byte endianness ('big' or 'little'). If omitted, automatically detected from original file or format convention"
+                    "description": "字节端序（'big' 大端序或 'little' 小端序，若省略则自动沿用原文件或格式规范）"
                 }
             },
             "required": ["path", "content"]
@@ -129,13 +129,13 @@ TOOLS = [
     },
     {
         "name": "zevent_delete_file",
-        "description": "Delete a physical file/directory or remove a virtual subfile from within a SARC archive, and close any corresponding open tabs in ZEventStudio",
+        "description": "删除物理文件/目录，或从 SARC 封包内移除指定的虚拟子文件，并同步关闭编辑器中对应的标签页",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Path of physical file/directory or SARC virtual entry to delete"
+                    "description": "要删除的物理文件/目录路径，或 SARC 内部虚拟子文件路径"
                 }
             },
             "required": ["path"]
@@ -143,17 +143,17 @@ TOOLS = [
     },
     {
         "name": "zevent_rename_file",
-        "description": "Rename or move a physical file/directory or a subfile within a SARC archive, updating all open document tabs in ZEventStudio",
+        "description": "重命名或移动物理文件/目录，或重命名 SARC 封包内的虚拟子文件，并自动更新编辑器中已打开的标签页",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "old_path": {
                     "type": "string",
-                    "description": "Original file or SARC virtual entry path"
+                    "description": "原始文件路径或 SARC 虚拟条目路径"
                 },
                 "new_name": {
                     "type": "string",
-                    "description": "New file name or new inner path"
+                    "description": "新文件名或新的内部相对路径"
                 }
             },
             "required": ["old_path", "new_name"]
@@ -161,13 +161,13 @@ TOOLS = [
     },
     {
         "name": "zevent_create_directory",
-        "description": "Create a new directory recursively in the opened project",
+        "description": "在当前项目中递归创建新文件夹目录",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Directory path to create (relative to project root or absolute)"
+                    "description": "要创建的目录路径（相对于项目根目录或绝对路径）"
                 }
             },
             "required": ["path"]
@@ -175,25 +175,25 @@ TOOLS = [
     },
     {
         "name": "zevent_search_code",
-        "description": "Search for text or keywords across all files and SARC archives in the opened project (returns matching files, line numbers, and code snippets)",
+        "description": "在当前项目所有文件及 SARC 封包中全文搜索文本或关键字（返回匹配的文件路径、行号及代码片段）",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Keyword or string to search for"
+                    "description": "要搜索的关键字或文本字符串"
                 },
                 "case_sensitive": {
                     "type": "boolean",
-                    "description": "Case sensitive search (default: false)"
+                    "description": "是否区分大小写（默认: false）"
                 },
                 "file_pattern": {
                     "type": "string",
-                    "description": "Filter by file path or extension pattern, e.g. '.bfevfl' or 'Actor'"
+                    "description": "按文件路径或后缀通配过滤，如 '.bfevfl' 或 'Actor'"
                 },
                 "max_results": {
                     "type": "integer",
-                    "description": "Maximum matching lines to return (default: 50)"
+                    "description": "返回的最大匹配行数（默认: 50）"
                 }
             },
             "required": ["query"]
@@ -201,7 +201,7 @@ TOOLS = [
     },
     {
         "name": "zevent_get_tabs",
-        "description": "Get all currently opened document tabs in ZEventStudio (with tab ID, title, file path, type, active status, and modification state)",
+        "description": "获取 ZEventStudio 当前所有已打开的文档标签页信息（包含标签 ID、标题、文件路径、类型、激活状态与修改状态）",
         "inputSchema": {
             "type": "object",
             "properties": {}
@@ -209,13 +209,13 @@ TOOLS = [
     },
     {
         "name": "zevent_open_file",
-        "description": "Open a file or SARC entry into an active document tab in ZEventStudio UI (supports BFEVFL flowchart view and code editor view)",
+        "description": "在 ZEventStudio 编辑器界面中打开指定文件或 SARC 条目为新标签页（支持 BFEVFL 流程图视图与代码编辑器视图）",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "File path to open in editor tab"
+                    "description": "要在编辑器中打开的文件路径"
                 }
             },
             "required": ["path"]
@@ -223,37 +223,37 @@ TOOLS = [
     },
     {
         "name": "zevent_save_file",
-        "description": "Save the currently active document tab or a specified document tab to disk or SARC archive",
+        "description": "将当前激活的文档标签页或指定标签页保存到磁盘或 SARC 封包中",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "tab_id": {
                     "type": "string",
-                    "description": "Tab ID to save. If omitted, saves the currently active document"
+                    "description": "要保存的标签页 ID（若省略则保存当前激活的文档）"
                 }
             }
         }
     },
     {
         "name": "zevent_close_file",
-        "description": "Close an opened document tab by tab ID or file path in ZEventStudio",
+        "description": "在 ZEventStudio 中根据标签页 ID 或文件路径关闭已打开的文档标签页",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "tab_id": {
                     "type": "string",
-                    "description": "Tab ID to close"
+                    "description": "要关闭的标签页 ID"
                 },
                 "path": {
                     "type": "string",
-                    "description": "File path of tab to close"
+                    "description": "要关闭的标签页文件路径"
                 }
             }
         }
     },
     {
         "name": "zevent_reload_project",
-        "description": "Rescan and refresh the current project file tree and Git version control status in ZEventStudio",
+        "description": "重新扫描并刷新 ZEventStudio 当前项目文件树及 Git 版本控制状态",
         "inputSchema": {
             "type": "object",
             "properties": {}
@@ -261,13 +261,13 @@ TOOLS = [
     },
     {
         "name": "zevent_open_project",
-        "description": "Open and load a new project directory (Mod root) or SARC pack file (.sbeventpack, .sbactorpack, .pack) into ZEventStudio",
+        "description": "在 ZEventStudio 中加载并打开新项目目录（Mod 根目录）或 SARC 封包文件（.sbeventpack、.sbactorpack、.pack 等）",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Project directory path or pack file path to open"
+                    "description": "要打开的项目文件夹路径或封包文件路径"
                 }
             },
             "required": ["path"]
@@ -275,7 +275,7 @@ TOOLS = [
     },
     {
         "name": "zevent_get_graph",
-        "description": "Get the complete event flowchart graph (nodes, edges, actors, properties) for the active document",
+        "description": "获取当前激活文档的完整事件流程图数据（包含所有节点、连线、角色 Actor 与属性列表）",
         "inputSchema": {
             "type": "object",
             "properties": {}
@@ -283,38 +283,38 @@ TOOLS = [
     },
     {
         "name": "zevent_add_node",
-        "description": "Add a new node (Action, Query, Switch, Fork, Join, SubFlow, EntryPoint, Comment) to the active flowchart in ZEventStudio",
+        "description": "在 ZEventStudio 当前激活的流程图中添加新节点（Action、Query、Switch、Fork、Join、SubFlow、EntryPoint、Comment，支持一键自动填充参数）",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "name": {
                     "type": "string",
-                    "description": "Node title/action name (e.g. 'Demo_PlayAnimation')"
+                    "description": "节点标题 / 动作名称（如 'Demo_PlayAnimation'）"
                 },
                 "kind": {
                     "type": "string",
                     "enum": ["Action", "Query", "Switch", "Fork", "Join", "SubFlow", "EntryPoint", "Comment"],
-                    "description": "Node type. Default is 'Action'"
+                    "description": "节点类型（Action、Query、Switch、Fork、Join、SubFlow、EntryPoint、Comment，默认: 'Action'）"
                 },
                 "actor": {
                     "type": "string",
-                    "description": "Actor name for this node (e.g. 'Link', 'WorldManager')"
+                    "description": "绑定的角色名称（如 'Link', 'WorldManager', 'EventSystemActor'）"
                 },
                 "x": {
                     "type": "number",
-                    "description": "Canvas X position"
+                    "description": "画布 X 轴像素坐标"
                 },
                 "y": {
                     "type": "number",
-                    "description": "Canvas Y position"
+                    "description": "画布 Y 轴像素坐标"
                 },
                 "params": {
                     "type": "object",
-                    "description": "Parameters dictionary { key: value }"
+                    "description": "自定义参数字典键值对 { key: value }"
                 },
                 "autofill": {
                     "type": "boolean",
-                    "description": "Whether to automatically populate standard parameters from BotW Game AI definitions (default: false)"
+                    "description": "是否自动根据《旷野之息》游戏 AI 规范补全标准参数项（默认: false）"
                 }
             },
             "required": ["name"]
@@ -322,25 +322,25 @@ TOOLS = [
     },
     {
         "name": "zevent_connect_nodes",
-        "description": "Connect two nodes with a directed edge in the active flowchart",
+        "description": "在当前流程图的两个节点之间创建有向连接边",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "from_node": {
                     "type": "string",
-                    "description": "Source node ID"
+                    "description": "源节点 ID"
                 },
                 "from_port": {
                     "type": "string",
-                    "description": "Source port name (default: 'out')"
+                    "description": "源端口名称（默认: 'out'）"
                 },
                 "to_node": {
                     "type": "string",
-                    "description": "Target node ID"
+                    "description": "目标节点 ID"
                 },
                 "to_port": {
                     "type": "string",
-                    "description": "Target port name (default: 'in')"
+                    "description": "目标端口名称（默认: 'in'）"
                 }
             },
             "required": ["from_node", "to_node"]
@@ -348,25 +348,33 @@ TOOLS = [
     },
     {
         "name": "zevent_update_node",
-        "description": "Update properties, title, or actor of an existing node in the active flowchart",
+        "description": "更新当前流程图中指定节点的属性、标题、角色或触发参数自动填充/排序",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "node_id": {
                     "type": "string",
-                    "description": "Target node ID"
+                    "description": "目标节点 ID"
                 },
                 "name": {
                     "type": "string",
-                    "description": "New title/action name"
+                    "description": "新的节点标题 / 动作名称"
                 },
                 "actor": {
                     "type": "string",
-                    "description": "New actor name"
+                    "description": "新的角色名称"
                 },
                 "params": {
                     "type": "object",
-                    "description": "Parameters dictionary { key: value }"
+                    "description": "要更新或追加的参数字典 { key: value }"
+                },
+                "autofill": {
+                    "type": "boolean",
+                    "description": "是否自动根据游戏 AI 补全标准参数（默认: false）"
+                },
+                "reorder": {
+                    "type": "boolean",
+                    "description": "是否按任天堂官方规范重新排序参数（默认: false）"
                 }
             },
             "required": ["node_id"]
@@ -374,13 +382,13 @@ TOOLS = [
     },
     {
         "name": "zevent_delete_node",
-        "description": "Delete a node and its connected edges from the active flowchart",
+        "description": "从当前激活的流程图中删除指定节点及其所有关联连线",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "node_id": {
                     "type": "string",
-                    "description": "ID of node to delete"
+                    "description": "要删除的节点 ID"
                 }
             },
             "required": ["node_id"]
@@ -388,7 +396,7 @@ TOOLS = [
     },
     {
         "name": "zevent_auto_layout",
-        "description": "Automatically calculate Sugiyama hierarchical layout for the active flowchart and fit view",
+        "description": "对当前流程图自动执行 Sugiyama 分层布局算法并自适应居中缩放画布",
         "inputSchema": {
             "type": "object",
             "properties": {}
@@ -396,18 +404,18 @@ TOOLS = [
     },
     {
         "name": "zevent_toast",
-        "description": "Display a popup toast notification inside the ZEventStudio UI",
+        "description": "在 ZEventStudio 编辑器界面右上角弹出 Toast 消息提示气泡",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "message": {
                     "type": "string",
-                    "description": "Message to show"
+                    "description": "提示文本内容"
                 },
                 "level": {
                     "type": "string",
                     "enum": ["info", "success", "error"],
-                    "description": "Notification level"
+                    "description": "消息级别（'info', 'success', 'error'）"
                 }
             },
             "required": ["message"]
@@ -415,13 +423,13 @@ TOOLS = [
     },
     {
         "name": "zevent_autofill_parameters",
-        "description": "Auto-fill standard game parameters for an Action, Query, or Switch node in ZEventStudio using the local BotW Game AI database (supports Switch RomFS & Wii U Content dumps)",
+        "description": "利用本地《旷野之息》游戏 AI 参数库（支持 Switch RomFS 与 Wii U Content dump），为指定 Action / Query / Switch 节点自动填充标准参数并规范排布",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "node_id": {
                     "type": "string",
-                    "description": "Target node ID to populate parameters for"
+                    "description": "要执行参数自动填充的目标节点 ID"
                 }
             },
             "required": ["node_id"]
@@ -429,13 +437,13 @@ TOOLS = [
     },
     {
         "name": "zevent_reorder_parameters",
-        "description": "Reorder parameters of an Action, Query, or Switch node according to official BotW Game AI definition ordering",
+        "description": "根据《旷野之息》官方游戏 AI 定义的先后顺序，对指定节点的参数项进行规范重排",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "node_id": {
                     "type": "string",
-                    "description": "Target node ID to sort parameters for"
+                    "description": "要规范排序参数的目标节点 ID"
                 }
             },
             "required": ["node_id"]
@@ -443,21 +451,21 @@ TOOLS = [
     },
     {
         "name": "zevent_get_ai_parameters",
-        "description": "Query official BotW Game AI parameter definitions (names, types, default values) for a specific Actor action or query without modifying the flowchart",
+        "description": "查询《旷野之息》官方游戏 AI 参数定义（名称、类型、默认值），无需修改画布流程图即可直接获取角色规范",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "actor": {
                     "type": "string",
-                    "description": "Actor name (e.g. 'EventSystemActor', 'GameROMPlayer', 'Npc_Zora001')"
+                    "description": "角色名称（如 'EventSystemActor', 'GameROMPlayer', 'Npc_Zora001'）"
                 },
                 "name": {
                     "type": "string",
-                    "description": "Action or Query name (e.g. 'Demo_OpenMessageDialog', 'GeneralTalk')"
+                    "description": "动作或查询名称（如 'Demo_OpenMessageDialog', 'GeneralTalk'）"
                 },
                 "is_query": {
                     "type": "boolean",
-                    "description": "Whether this is a Query instead of an Action (default: false)"
+                    "description": "是否为 Query 查询节点（默认为 false 即 Action）"
                 }
             },
             "required": ["actor", "name"]
@@ -465,21 +473,21 @@ TOOLS = [
     },
     {
         "name": "zevent_query_byml",
-        "description": "Query or inspect BYML data structures using JSON pointer without transferring massive YAML files (supports BotW QuestProduct, GameData, SaveData, Mubin, etc.)",
+        "description": "使用 JSON 指针高效查询与透视 BYML 数据结构，无需反编译传输超大 YAML（支持任务产品 QuestProduct、GameData、SaveData、Mubin 地图等）",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Target BYML file path (physical or SARC virtual path like 'SARC:Pack/TitleBG.pack//Quest/QuestProduct.sbquestpack')"
+                    "description": "目标 BYML 文件路径（物理路径或 SARC 虚拟路径，如 'SARC:Pack/TitleBG.pack//Quest/QuestProduct.sbquestpack'）"
                 },
                 "query_path": {
                     "type": "string",
-                    "description": "JSON pointer to query, e.g. '/Quest', '/Quest/170', '/data/bool_data' (defaults to root '')"
+                    "description": "要检索的 JSON 指针路径，如 '/Quest', '/Quest/170', '/data/bool_data'（留空默认根目录）"
                 },
                 "summary_only": {
                     "type": "boolean",
-                    "description": "If true, returns array length or object keys instead of full recursive tree"
+                    "description": "为 true 时仅返回数组长度或对象键列表，避免传输庞大递归树"
                 }
             },
             "required": ["path"]
@@ -487,30 +495,30 @@ TOOLS = [
     },
     {
         "name": "zevent_patch_byml",
-        "description": "Perform high-performance targeted modification (append, set, delete) on a BYML file without rewriting the entire file (supports Big/Little Endian, auto Yaz0 compression, and SARC packing)",
+        "description": "对 BYML 文件执行高性能局部修改（追加 append、设置 set、删除 delete），无需全量重写（支持大/小端序、自动 Yaz0 压缩与 SARC 封装）",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Target BYML file path (physical or SARC virtual path like 'SARC:Pack/TitleBG.pack//Quest/QuestProduct.sbquestpack')"
+                    "description": "目标 BYML 文件路径（物理路径或 SARC 虚拟路径）"
                 },
                 "patch_op": {
                     "type": "string",
                     "enum": ["append", "set", "delete"],
-                    "description": "Patch operation: 'append' to push to an array, 'set' to update/assign a value, 'delete' to remove a key/index"
+                    "description": "修改操作类型：'append'（向数组追加）、'set'（设置/覆盖值）、'delete'（删除键或索引）"
                 },
                 "query_path": {
                     "type": "string",
-                    "description": "JSON pointer path where operation applies, e.g. '/Quest' for append, or '/Quest/170/Name' for set"
+                    "description": "操作生效的 JSON 指针路径，如 '/Quest' 或 '/Quest/170/Name'"
                 },
                 "value": {
-                    "description": "JSON value to set or append (can be string, number, boolean, array, or object)"
+                    "description": "要设置或追加的 JSON 数据值（支持字符串、数字、布尔、数组或对象）"
                 },
                 "endian": {
                     "type": "string",
                     "enum": ["big", "little"],
-                    "description": "Target endianness ('big' or 'little'). If omitted, automatically detected from original file or format convention"
+                    "description": "目标端序（'big' 或 'little'，若省略则自动检测）"
                 }
             },
             "required": ["path", "patch_op"]
@@ -518,13 +526,13 @@ TOOLS = [
     },
     {
         "name": "zevent_read_msbt",
-        "description": "Read dialogue and text entries from an MSBT localization file as a key-value dictionary (supports plain text extraction, SARC archives, and auto Yaz0 decompression)",
+        "description": "将 MSBT 本地化文本文件读取为键值对字典格式（支持文本提取、SARC 封包解析与自动 Yaz0 解压）",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Target MSBT file path (physical or SARC virtual path like 'SARC:Pack/Bootup_CNzh.pack//QuestMsg/QL_Test.msbt')"
+                    "description": "目标 MSBT 文件路径（物理路径或 SARC 虚拟路径，如 'SARC:Pack/Bootup_CNzh.pack//QuestMsg/QL_Test.msbt'）"
                 }
             },
             "required": ["path"]
@@ -532,22 +540,22 @@ TOOLS = [
     },
     {
         "name": "zevent_write_msbt",
-        "description": "Write or batch update text entries into an MSBT localization file (automatically creates new MSBT or updates existing entries, packages into SARC, and compresses with Yaz0 if needed)",
+        "description": "向 MSBT 本地化文件中写入或批量更新文本条目（自动创建或就地更新、打包进 SARC 并按需 Yaz0 压缩）",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Target MSBT file path (physical or SARC virtual path like 'SARC:Pack/Bootup_CNzh.pack//QuestMsg/QL_Test.msbt')"
+                    "description": "目标 MSBT 文件路径（物理路径或 SARC 虚拟路径）"
                 },
                 "entries": {
                     "type": "object",
-                    "description": "Dictionary of label-text pairs to write, e.g. {'QL_Test_Name': '测试任务', 'QL_Test_Desc': '任务描述'}"
+                    "description": "要写入的标签-文本键值对字典，如 {'QL_Test_Name': '测试任务', 'QL_Test_Desc': '任务描述'}"
                 },
                 "endian": {
                     "type": "string",
                     "enum": ["big", "little"],
-                    "description": "Target endianness ('little' for Switch, 'big' for WiiU). If omitted, automatically detected from original file or defaults to little"
+                    "description": "端序（Switch 为 'little'，Wii U 为 'big'，默认自动检测）"
                 }
             },
             "required": ["path", "entries"]
@@ -555,26 +563,26 @@ TOOLS = [
     },
     {
         "name": "zevent_pack_sarc",
-        "description": "Recursively pack a physical directory of files into a SARC (.pack / .sarc / .ssarc) archive (supports Yaz0 compression and Big/Little Endian)",
+        "description": "将物理文件夹递归打包为 SARC（.pack / .sarc / .ssarc）封包文件（支持 Yaz0 压缩与大/小端序）",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "source_dir": {
                     "type": "string",
-                    "description": "Source physical directory path containing files to pack"
+                    "description": "包含待封包文件的物理源目录路径"
                 },
                 "target_file": {
                     "type": "string",
-                    "description": "Target SARC pack file path (e.g. 'Pack/TitleBG.pack')"
+                    "description": "目标 SARC 封包文件路径（如 'Pack/TitleBG.pack'）"
                 },
                 "endian": {
                     "type": "string",
                     "enum": ["big", "little"],
-                    "description": "Endianness of SARC header and filenames table (default: 'big')"
+                    "description": "SARC 文件头与文件名表的字节端序（默认: 'big'）"
                 },
                 "compress_yaz0": {
                     "type": "boolean",
-                    "description": "Whether to compress the resulting SARC archive with Yaz0 (default: true for .s... extensions)"
+                    "description": "是否使用 Yaz0 压缩生成的 SARC 封包（默认: 对 .s... 扩展名自动启用）"
                 }
             },
             "required": ["source_dir", "target_file"]
@@ -582,17 +590,17 @@ TOOLS = [
     },
     {
         "name": "zevent_unpack_sarc",
-        "description": "Unpack all files from a SARC (.pack / .sarc / .ssarc) archive or virtual sub-directory into a destination physical directory",
+        "description": "将 SARC（.pack / .sarc / .ssarc）封包或其虚拟子目录解压提取至目标物理文件夹",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "source_file": {
                     "type": "string",
-                    "description": "Path of SARC archive to extract (physical file or SARC virtual entry)"
+                    "description": "要解压的 SARC 封包路径（物理文件或 SARC 虚拟条目）"
                 },
                 "target_dir": {
                     "type": "string",
-                    "description": "Destination physical directory path"
+                    "description": "解压释放的目标物理文件夹路径"
                 }
             },
             "required": ["source_file", "target_dir"]
