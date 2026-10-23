@@ -209,8 +209,13 @@ pub fn render_diff_header(
                             div()
                                 .text_size(px(9.5))
                                 .font_weight(if is_active { FontWeight::BOLD } else { FontWeight::NORMAL })
-                                .text_color(if is_active { pal.text_primary } else { pal.text_secondary })
-                                .child(sub.sub_path.clone()),
+                                .child(
+                                    std::path::Path::new(&sub.sub_path)
+                                        .file_name()
+                                        .and_then(|s| s.to_str())
+                                        .unwrap_or(&sub.sub_path)
+                                        .to_string(),
+                                ),
                         )
                         .child(
                             div()

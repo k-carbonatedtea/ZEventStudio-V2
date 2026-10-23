@@ -65,10 +65,14 @@ impl AppState {
 
         let tab_id = format!("diff:commit:{}:{}", new_rev, rel_path);
 
-        // 如果该对比 Tab 已打开，直接切换至该 Tab
-        if self.open_tabs.iter().any(|t| t.id == tab_id) {
-            self.switch_document_tab(&tab_id);
-            return;
+        // 如果该对比 Tab 已打开且包含子文件，直接切换；若旧 Tab 为空且为 SARC 则重新解析
+        if let Some(pos) = self.open_tabs.iter().position(|t| t.id == tab_id) {
+            let has_subs = self.open_tabs[pos].diff_state.as_ref().map(|d| !d.sub_files.is_empty()).unwrap_or(false);
+            if !is_sarc_extension(rel_path) || has_subs {
+                self.switch_document_tab(&tab_id);
+                return;
+            }
+            self.open_tabs.remove(pos);
         }
 
         // 1. 获取基础 git diff
@@ -159,10 +163,14 @@ impl AppState {
 
         let tab_id = format!("{}:{}", tab_id_prefix, rel_path);
 
-        // 如果该对比 Tab 已打开，直接切换至该 Tab
-        if self.open_tabs.iter().any(|t| t.id == tab_id) {
-            self.switch_document_tab(&tab_id);
-            return;
+        // 如果该对比 Tab 已打开且包含子文件，直接切换；若旧 Tab 为空且为 SARC 则重新解析
+        if let Some(pos) = self.open_tabs.iter().position(|t| t.id == tab_id) {
+            let has_subs = self.open_tabs[pos].diff_state.as_ref().map(|d| !d.sub_files.is_empty()).unwrap_or(false);
+            if !is_sarc_extension(rel_path) || has_subs {
+                self.switch_document_tab(&tab_id);
+                return;
+            }
+            self.open_tabs.remove(pos);
         }
 
         // 1. 获取工作区/暂存区文件的统一差异数据

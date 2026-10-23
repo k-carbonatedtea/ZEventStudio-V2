@@ -53,17 +53,64 @@ pub fn get_working_tree_file_bytes(dir: &str, rel_path: &str, is_staged: bool) -
     }
 }
 
-/// 解包 SARC 归档，提取内部所有文件的路径与原始字节流
-pub fn unpack_sarc_files(data: &[u8]) -> Option<HashMap<String, Vec<u8>>> {
+/// 递归解包 SARC 归档内部所有文件 (支持最多 4 层嵌套 SARC 展开)
+fn unpack_sarc_files_recursive(
+    data: &[u8],
+    prefix: &str,
+    depth: usize,
+    max_depth: usize,
+    map: &mut HashMap<String, Vec<u8>>,
+) -> bool {
     let decompressed = roead::yaz0::decompress(data).unwrap_or_else(|_| data.to_vec());
-    let sarc = Sarc::new(&decompressed).ok()?;
-    let mut map = HashMap::new();
-    for f in sarc.files() {
-        if let Some(name) = f.name() {
-            map.insert(name.to_string(), f.data().to_vec());
+    let sarc = match Sarc::new(&decompressed) {
+        Ok(s) => s,
+        Err(_) => return false,
+    };
+
+    let files: Vec<(String, Vec<u8>)> = sarc
+        .files()
+        .filter_map(|f| f.name().map(|n| (n.to_string(), f.data().to_vec())))
+        .collect();
+
+    if files.is_empty() {
+        return false;
+    }
+
+    for (name, file_data) in files {
+        let full_path = if prefix.is_empty() {
+            name.clone()
+        } else {
+            format!("{}/{}", prefix, name)
+        };
+
+        let is_nested = is_sarc_extension(&name);
+        if is_nested && depth < max_depth {
+            let unpacked = unpack_sarc_files_recursive(
+                &file_data,
+                &full_path,
+                depth + 1,
+                max_depth,
+                map,
+            );
+            if !unpacked {
+                map.insert(full_path, file_data);
+            }
+        } else {
+            map.insert(full_path, file_data);
         }
     }
-    Some(map)
+
+    true
+}
+
+/// 解包 SARC 归档，提取内部所有文件的路径与原始字节流 (支持多层嵌套 SARC 递归展开)
+pub fn unpack_sarc_files(data: &[u8]) -> Option<HashMap<String, Vec<u8>>> {
+    let mut map = HashMap::new();
+    if unpack_sarc_files_recursive(data, "", 0, 4, &mut map) {
+        Some(map)
+    } else {
+        None
+    }
 }
 
 /// 计算两份文本字符串之间的 Unified Diff (基于 git diff --no-index 算法引擎)
@@ -147,22 +194,30 @@ pub fn resolve_smart_code_diff(
             let old_code_res = old_data.and_then(|d| parse_file_to_code(d, &key).ok());
             let new_code_res = new_data.and_then(|d| parse_file_to_code(d, &key).ok());
 
-            // 若两者都无法解析为代码，则跳过
-            if old_code_res.is_none() && new_code_res.is_none() {
-                continue;
-            }
+            let (old_text, new_text, format_name) = match (old_code_res, new_code_res) {
+                (Some((ot, ofmt, _)), Some((nt, _, _))) => {
+                    if ot == nt {
+                        continue;
+                    }
+                    (ot, nt, ofmt.display_name().to_string())
+                }
+                (Some((ot, ofmt, _)), None) => (ot, String::new(), ofmt.display_name().to_string()),
+                (None, Some((nt, nfmt, _))) => (String::new(), nt, nfmt.display_name().to_string()),
+                (None, None) => {
+                    let old_size = old_data.map(|d| d.len()).unwrap_or(0);
+                    let new_size = new_data.map(|d| d.len()).unwrap_or(0);
+                    let bin_old = format!("# 二进制文件 (旧版本): {} ({} 字节)", key, old_size);
+                    let bin_new = format!("# 二进制文件 (新版本): {} ({} 字节)", key, new_size);
+                    (bin_old, bin_new, "Binary".to_string())
+                }
+            };
 
-            let format_name = new_code_res
-                .as_ref()
-                .map(|(_, fmt, _)| fmt.display_name())
-                .or_else(|| old_code_res.as_ref().map(|(_, fmt, _)| fmt.display_name()))
-                .unwrap_or("Code")
-                .to_string();
+            let clean_name = Path::new(&key)
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or(&key);
 
-            let old_text = old_code_res.map(|(t, _, _)| t).unwrap_or_default();
-            let new_text = new_code_res.map(|(t, _, _)| t).unwrap_or_default();
-
-            if let Ok(diff) = diff_two_texts(&old_text, &new_text, &key) {
+            if let Ok(diff) = diff_two_texts(&old_text, &new_text, clean_name) {
                 if !diff.lines.is_empty() {
                     let rows = align_unified_diff(&diff);
                     sub_diffs.push(SubFileDiffItem {
@@ -231,14 +286,9 @@ impl SarcSubFileChange {
             "⚡"
         } else if lower.ends_with(".msbt") {
             "💬"
-        } else if lower.ends_with(".bxml")
-            || lower.ends_with(".baev")
-            || lower.ends_with(".baischedule")
-            || lower.ends_with(".genvb")
-            || lower.ends_with(".bactparam")
-        {
+        } else if [".bxml", ".baev", ".baischedule", ".genvb", ".bactparam"].iter().any(|ext| lower.ends_with(ext)) {
             "⚙️"
-        } else if lower.ends_with(".byml") || lower.ends_with(".bgyml") {
+        } else if [".byml", ".bgyml", ".bgdata", ".sbgdata", ".sbquestpack"].iter().any(|ext| lower.ends_with(ext)) {
             "{ }"
         } else {
             "📄"
@@ -300,14 +350,9 @@ pub fn get_sarc_changed_subfiles(
             .map(|(_, fmt, _)| fmt.display_name().to_string())
             .unwrap_or_else(|| {
                 let lk = key.to_lowercase();
-                if lk.ends_with(".bxml")
-                    || lk.ends_with(".baev")
-                    || lk.ends_with(".baischedule")
-                    || lk.ends_with(".genvb")
-                    || lk.ends_with(".bactparam")
-                {
+                if [".bxml", ".baev", ".baischedule", ".genvb", ".bactparam"].iter().any(|ext| lk.ends_with(ext)) {
                     "AAMP".to_string()
-                } else if lk.ends_with(".byml") || lk.ends_with(".bgyml") {
+                } else if [".byml", ".bgyml", ".bgdata", ".sbgdata", ".bquestpack", ".sbquestpack"].iter().any(|ext| lk.ends_with(ext)) {
                     "BYML".to_string()
                 } else if lk.ends_with(".bfevfl") {
                     "BFEVFL".to_string()
