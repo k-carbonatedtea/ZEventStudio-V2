@@ -1,6 +1,6 @@
 use gpui::*;
 use crate::ui::state::AppState;
-use crate::ui::views::quest_map::map_renderer::draw_hyrule_base_map;
+use crate::ui::views::quest_map::map_renderer::{draw_hyrule_base_map, draw_section_grid};
 use crate::ui::views::quest_map::pins_layer::{
     collect_rendered_pins, draw_quest_trajectories_coords, extract_quest_trajectories,
     render_pins_elements,
@@ -128,7 +128,7 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                 cx.notify();
             });
         })
-        // 1. 底层底图、地形轮廓与分区网格 (绝对定位填充)
+        // 1. 底层降级底图与地形轮廓 (当瓦片未覆盖或加载时作为后备底图)
         .child(
             div()
                 .absolute()
@@ -141,21 +141,43 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                             let orig_y: f32 = bounds.origin.y.into();
                             let center = (orig_x, orig_y);
 
-                            // 绘制海拉鲁底图、特征与网格
-                            draw_hyrule_base_map(bounds, center, pan, zoom, show_grid, hovered_coord, window);
+                            // 绘制海拉鲁主体轮廓与特征水体 (作为后备底图)
+                            draw_hyrule_base_map(bounds, center, pan, zoom, window);
+                        },
+                    )
+                    .size_full(),
+                ),
+        )
+        // 2. 真实海拉鲁高精卫星地图瓦片图层 (无缝微重叠消除接缝)
+        .child(crate::ui::views::quest_map::tiles_layer::render_tiles_layer(pan, zoom, state.project_path.as_deref()))
+        // 3. 顶层分区网格与任务推进轨迹连线 (覆盖在瓦片之上，开启时清晰呈现，关闭时不遮挡)
+        .child(
+            div()
+                .absolute()
+                .inset_0()
+                .child(
+                    canvas(
+                        |_bounds, _window, _cx| {},
+                        move |bounds, _, window, _cx| {
+                            let orig_x: f32 = bounds.origin.x.into();
+                            let orig_y: f32 = bounds.origin.y.into();
+                            let center = (orig_x, orig_y);
 
-                            // 绘制任务标点间推进连线轨迹
+                            // 当用户在工具栏开启网格时，在瓦片上方绘制清晰的分区网格
+                            if show_grid {
+                                draw_section_grid(center, pan, zoom, hovered_coord, window);
+                            }
+
+                            // 绘制任务标点间推进连线轨迹 (位于瓦片之上)
                             draw_quest_trajectories_coords(&trajectories, center, pan, zoom, window);
                         },
                     )
                     .size_full(),
                 ),
         )
-        // 1.5. 真实海拉鲁卫星地图瓦片图层 (来自已打开项目或游戏 Dump)
-        .child(crate::ui::views::quest_map::tiles_layer::render_tiles_layer(pan, zoom, state.project_path.as_deref()))
-        // 2. 地理地标与塔微标识浮层
+        // 4. 地理地标与塔微标识浮层
         .child(render_landmarks_overlay(pan, zoom, is_zh))
-        // 3. 任务标点浮层 (可点击交互)
+        // 5. 任务标点浮层 (可点击交互)
         .child(render_pins_elements(&pins, model))
 }
 

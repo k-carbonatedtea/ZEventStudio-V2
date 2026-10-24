@@ -7,8 +7,6 @@ pub fn draw_hyrule_base_map(
     center: (f32, f32),
     pan: (f32, f32),
     zoom: f32,
-    show_grid: bool,
-    hovered_coord: Option<(f32, f32)>,
     window: &mut Window,
 ) {
     let w: f32 = bounds.size.width.into();
@@ -22,11 +20,6 @@ pub fn draw_hyrule_base_map(
 
     // 2. 绘制主要地理特征 (死亡之山火山口、初始台地断崖、海利亚湖水系、海布拉雪峰)
     draw_geographic_features(center, pan, zoom, window);
-
-    // 3. 绘制 BotW 标准 10x8 分区网格 (A-1 至 J-8)
-    if show_grid {
-        draw_section_grid(center, pan, zoom, hovered_coord, window);
-    }
 }
 
 /// 绘制海拉鲁主体大陆多边形与海岸线
@@ -123,7 +116,7 @@ fn draw_geographic_features(center: (f32, f32), pan: (f32, f32), zoom: f32, wind
 }
 
 /// 绘制 BotW 12x10 分区网格 (Z-0 至 K-9)
-fn draw_section_grid(
+pub fn draw_section_grid(
     center: (f32, f32),
     pan: (f32, f32),
     zoom: f32,

@@ -246,8 +246,53 @@ pub fn col_to_world_x(col: char) -> Option<f32> {
     }
 }
 
-/// 渲染官方真实海拉鲁卫星地图瓦片图层 (支持项目专有瓦片与视口裁剪 Viewport Culling)
+/// 获取统一拼接的海拉鲁全景整图路径 (项目专有优先，全局缓存回退)
+pub fn get_unified_world_map_path(project_path: Option<&str>) -> Option<PathBuf> {
+    if let Some(proj) = project_path {
+        let p_map = get_project_tiles_cache_dir(proj).join("world_map_full.png");
+        if p_map.exists() {
+            return Some(p_map);
+        }
+    }
+    let g_map = get_global_map_tiles_cache_dir().join("world_map_full.png");
+    if g_map.exists() {
+        return Some(g_map);
+    }
+    None
+}
+
+/// 渲染官方真实海拉鲁卫星地图图层 (对齐 ice-spear：统一整图单 Render Pass 绘制，零瓦片重叠)
 pub fn render_tiles_layer(pan: (f32, f32), zoom: f32, project_path: Option<&str>) -> impl IntoElement {
+    // 方案对齐 ice-spear：
+    // 在 ice-spear 中，120 个瓦片载入单个连续纹理并在同一个 Render Pass 中绘制，无缝且零重叠。
+    // 此处优先检测并使用 120 个瓦片拼合而成的统一海拉鲁全景大图 (world_map_full.png)。
+    if let Some(unified_map) = get_unified_world_map_path(project_path) {
+        // 海拉鲁大陆世界坐标范围：X: -6000.0 ~ 6000.0 (宽 12000), Z: -5000.0 ~ 5000.0 (高 10000)
+        let sx = pan.0 - 6000.0 * zoom;
+        let sy = pan.1 - 5000.0 * zoom;
+        let w = 12000.0 * zoom;
+        let h = 10000.0 * zoom;
+
+        // 视口边界快速裁剪
+        if sx + w > -50.0 && sx < 3500.0 && sy + h > -50.0 && sy < 2500.0 {
+            return div()
+                .absolute()
+                .inset_0()
+                .child(
+                    img(unified_map)
+                        .id("unified_hyrule_world_map")
+                        .absolute()
+                        .left(px(sx))
+                        .top(px(sy))
+                        .w(px(w))
+                        .h(px(h))
+                        .object_fit(ObjectFit::Fill),
+                )
+                .into_any_element();
+        }
+    }
+
+    // 备用降级路径 (当整图尚在生成中时，按网格紧密连续绘制，严丝合缝，零重叠)
     let proj_owned = project_path.map(|s| s.to_string());
     let cols = ['Z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
 
@@ -258,31 +303,34 @@ pub fn render_tiles_layer(pan: (f32, f32), zoom: f32, project_path: Option<&str>
             let world_x = col_to_world_x(c_char)?;
             let proj_ref = proj_owned.clone();
             Some((0..=9).filter_map(move |r_num| {
-                // 计算当前分区在世界坐标系中的左上角点 (Section 尺寸为 1000x1000)
                 let world_z = -5000.0 + (r_num as f32) * 1000.0;
+                let next_world_x = world_x + 1000.0;
+                let next_world_z = world_z + 1000.0;
 
-                // 投影至画布相对像素坐标
                 let sx = pan.0 + world_x * zoom;
                 let sy = pan.1 + world_z * zoom;
-                let tile_size = 1000.0 * zoom;
+                let next_sx = pan.0 + next_world_x * zoom;
+                let next_sy = pan.1 + next_world_z * zoom;
+                let w = next_sx - sx;
+                let h = next_sy - sy;
 
-                // 视口边界快速裁剪 (剔除可视区域外瓦片，保障 60+ FPS)
-                if sx + tile_size < -50.0 || sx > 3000.0 || sy + tile_size < -50.0 || sy > 2000.0 {
+                if next_sx < -100.0 || sx > 3500.0 || next_sy < -100.0 || sy > 2500.0 {
                     return None;
                 }
 
                 let tile_path = get_tile_path(c_char, r_num, proj_ref.as_deref())?;
 
                 Some(
-                    div()
+                    img(tile_path)
                         .id(SharedString::from(format!("tile_{}-{}", c_char, r_num)))
                         .absolute()
                         .left(px(sx))
                         .top(px(sy))
-                        .size(px(tile_size))
-                        .overflow_hidden()
-                        .child(img(tile_path).size_full()),
+                        .w(px(w))
+                        .h(px(h))
+                        .object_fit(ObjectFit::Fill),
                 )
             }))
         }).flatten())
+        .into_any_element()
 }

@@ -162,7 +162,7 @@ impl AppState {
             quest_map_selected_pin: None,
             quest_map_is_dragging: false,
             quest_map_drag_start: (0.0, 0.0),
-            quest_map_show_grid: true,
+            quest_map_show_grid: false,
             quest_map_show_all_pins: false,
             quest_map_is_extracting_tiles: false,
         };

@@ -64,6 +64,25 @@ def process_tile(src_file, out_dir, exe_path):
     except Exception as e:
         pass
 
+def stitch_full_world_map(out_dir):
+    cols = ['Z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
+    full_path = os.path.join(out_dir, "world_map_full.png")
+    full_img = Image.new('RGB', (12 * 560, 10 * 560), (90, 77, 35))
+    valid = False
+    for col_idx, col in enumerate(cols):
+        for r_num in range(10):
+            fn = os.path.join(out_dir, f"{col}-{r_num}.png")
+            if os.path.exists(fn):
+                try:
+                    tile = Image.open(fn).convert('RGB')
+                    full_img.paste(tile, (col_idx * 560, r_num * 560))
+                    valid = True
+                except Exception:
+                    pass
+    if valid:
+        full_img.save(full_path, "PNG")
+        print(f"Stitched unified world map: {full_path}")
+
 def extract_from_dir(src_dir, out_dir):
     exe_path = get_exe_path()
     if not exe_path:
@@ -75,6 +94,8 @@ def extract_from_dir(src_dir, out_dir):
         for f in files:
             ex.submit(process_tile, f, out_dir, exe_path)
     count = len(glob.glob(os.path.join(out_dir, "*.png")))
+    if count >= 10:
+        stitch_full_world_map(out_dir)
     return count
 
 if __name__ == '__main__':
@@ -82,3 +103,4 @@ if __name__ == '__main__':
     out = sys.argv[2] if len(sys.argv) > 2 else r"C:\Users\Administrator\Desktop\Zevent\ZEventStudio\.cache\map_tiles"
     cnt = extract_from_dir(src, out)
     print(f"Extraction complete: {cnt} tiles in {out}")
+
