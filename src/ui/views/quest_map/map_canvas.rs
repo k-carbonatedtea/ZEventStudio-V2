@@ -17,8 +17,12 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
     let hovered_coord = state.quest_map_hovered_coord;
     let is_zh = state.lang == crate::i18n::Language::Zh;
 
+    let is_dragging = state.quest_map_is_dragging;
+
     let model_down = model.clone();
     let model_up = model.clone();
+    let model_mid_down = model.clone();
+    let model_mid_up = model.clone();
     let model_move = model.clone();
     let model_scroll = model.clone();
 
@@ -34,7 +38,12 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
         .size_full()
         .bg(rgb(0x0a0f1d)) // 深空黑夜海拉鲁外海基底
         .overflow_hidden()
-        // 鼠标按下：开始拖拽平移
+        .cursor(if is_dragging {
+            CursorStyle::ClosedHand
+        } else {
+            CursorStyle::Arrow
+        })
+        // 鼠标左键按下：开始拖拽平移
         .on_mouse_down(MouseButton::Left, move |e, _, cx| {
             let mx: f32 = e.position.x.into();
             let my: f32 = e.position.y.into();
@@ -44,9 +53,26 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                 cx.notify();
             });
         })
-        // 鼠标抬起：停止拖拽
+        // 鼠标左键抬起：停止拖拽
         .on_mouse_up(MouseButton::Left, move |_, _, cx| {
             model_up.update(cx, |st, cx| {
+                st.quest_map_is_dragging = false;
+                cx.notify();
+            });
+        })
+        // 鼠标中键按下：直接开始拖拽平移
+        .on_mouse_down(MouseButton::Middle, move |e, _, cx| {
+            let mx: f32 = e.position.x.into();
+            let my: f32 = e.position.y.into();
+            model_mid_down.update(cx, |st, cx| {
+                st.quest_map_is_dragging = true;
+                st.quest_map_drag_start = (mx, my);
+                cx.notify();
+            });
+        })
+        // 鼠标中键抬起：停止拖拽
+        .on_mouse_up(MouseButton::Middle, move |_, _, cx| {
+            model_mid_up.update(cx, |st, cx| {
                 st.quest_map_is_dragging = false;
                 cx.notify();
             });
