@@ -29,6 +29,7 @@ pub enum AppWorkspaceTab {
     Actors,
     Events,
     DiffViewer,
+    Quests,
 }
 
 #[allow(dead_code)]

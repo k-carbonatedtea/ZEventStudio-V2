@@ -168,6 +168,18 @@ pub struct AppState {
     pub quest_creator_modal: Option<QuestCreatorModalState>,
     #[allow(dead_code)]
     pub quests_scroll_handle: gpui::UniformListScrollHandle,
+
+    // 2D 任务地图交互与展示状态
+    pub quest_map_pan: (f32, f32),
+    pub quest_map_zoom: f32,
+    pub quest_map_hovered_coord: Option<(f32, f32)>,
+    pub quest_map_hovered_pin: Option<(String, usize, usize)>,
+    pub quest_map_selected_pin: Option<(String, usize, usize)>,
+    pub quest_map_is_dragging: bool,
+    pub quest_map_drag_start: (f32, f32),
+        pub quest_map_show_grid: bool,
+    pub quest_map_show_all_pins: bool,
+    pub quest_map_is_extracting_tiles: bool,
 }
 
 #[allow(dead_code)]

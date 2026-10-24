@@ -209,12 +209,14 @@ where
                         }
                     }
                     ActivityBarTab::Quests => {
-                        if st.active_activity_tab == ActivityBarTab::Quests && st.sidebar_open {
+                        if st.active_activity_tab == ActivityBarTab::Quests && st.sidebar_open && st.current_tab == crate::ui::state_types::AppWorkspaceTab::Quests {
                             st.sidebar_open = false;
                         } else {
                             st.active_activity_tab = ActivityBarTab::Quests;
                             st.sidebar_open = true;
+                            st.current_tab = crate::ui::state_types::AppWorkspaceTab::Quests;
                             st.refresh_quests_list();
+                            st.focus_selected_quest_on_map();
                         }
                     }
                 }

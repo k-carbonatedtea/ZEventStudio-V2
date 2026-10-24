@@ -13,6 +13,7 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
     let model_code = model.clone();
     let model_actors = model.clone();
     let model_events = model.clone();
+    let model_quests = model.clone();
     let model_plugins = model.clone();
     let model_sidebar = model.clone();
     let model_inspector = model.clone();
@@ -26,6 +27,7 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
     let label_code = state.t("menu.view_code_editor").to_string();
     let label_actors = state.t("menu.view_actors").to_string();
     let label_events = state.t("menu.view_events").to_string();
+    let label_quests = state.t("menu.view_quests").to_string();
     let label_plugins = state.t("menu.view_plugins").to_string();
     let label_sidebar = state.t("menu.toggle_sidebar").to_string();
     let label_inspector = state.t("menu.toggle_inspector").to_string();
@@ -57,6 +59,7 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
             let m_cd = model_code.clone();
             let m_act = model_actors.clone();
             let m_ev = model_events.clone();
+            let m_qst = model_quests.clone();
             let m_plg = model_plugins.clone();
             let m_sb = model_sidebar.clone();
             let m_ins = model_inspector.clone();
@@ -109,6 +112,19 @@ pub fn render_view_menu(state: &AppState, model: &Entity<AppState>) -> impl Into
                         .on_click(move |_, _, cx| {
                             m_ev.update(cx, |st, cx| {
                                 st.current_tab = AppWorkspaceTab::Events;
+                                cx.notify();
+                            });
+                        }),
+                )
+                .item(
+                    PopupMenuItem::new(label_quests.clone())
+                        .on_click(move |_, _, cx| {
+                            m_qst.update(cx, |st, cx| {
+                                st.active_activity_tab = crate::ui::state::ActivityBarTab::Quests;
+                                st.sidebar_open = true;
+                                st.current_tab = AppWorkspaceTab::Quests;
+                                st.refresh_quests_list();
+                                st.focus_selected_quest_on_map();
                                 cx.notify();
                             });
                         }),

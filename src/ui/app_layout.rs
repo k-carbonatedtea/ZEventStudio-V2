@@ -48,7 +48,7 @@ pub fn wrap_sidebar_workspace(
                                 .overflow_hidden()
                                 .child(body),
                         )
-                        .children(state.is_active_flowchart().then(|| {
+                        .children((state.is_active_flowchart() || state.current_tab == crate::ui::state::AppWorkspaceTab::Quests).then(|| {
                             render_bottom_tabs(state, model)
                         })),
                 )

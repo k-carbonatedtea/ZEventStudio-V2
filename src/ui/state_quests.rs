@@ -111,4 +111,138 @@ impl AppState {
             self.quests_selected_id = Some(quest_name.to_string());
         }
     }
+
+    /// 获取当前选中的任务定义
+    pub fn get_selected_quest(&self) -> Option<&QuestDefinition> {
+        self.quests_selected_id
+            .as_ref()
+            .and_then(|id| self.quests_list.iter().find(|q| &q.name == id))
+    }
+
+    /// 将 2D 地图聚焦居中到选中的任务标点群
+    pub fn focus_selected_quest_on_map(&mut self) {
+        if let Some(quest) = self.get_selected_quest() {
+            let mut sum_x = 0.0f32;
+            let mut sum_z = 0.0f32;
+            let mut count = 0usize;
+
+            for step in &quest.steps {
+                for ind in &step.indicators {
+                    sum_x += ind.position.0;
+                    sum_z += ind.position.2;
+                    count += 1;
+                }
+            }
+
+            if count > 0 {
+                let center_x = sum_x / (count as f32);
+                let center_z = sum_z / (count as f32);
+                self.quest_map_zoom = 0.18;
+                self.quest_map_pan = (-center_x * self.quest_map_zoom, -center_z * self.quest_map_zoom);
+            }
+        }
+    }
+
+    /// 将 2D 地图精确定位聚焦至指定标点世界坐标 (X, Y, Z)
+    pub fn focus_pin_on_map(&mut self, pos: (f32, f32, f32)) {
+        self.quest_map_zoom = 0.25;
+        self.quest_map_pan = (-pos.0 * self.quest_map_zoom, -pos.2 * self.quest_map_zoom);
+    }
+
+    /// 重置 2D 地图至海拉鲁全景
+    pub fn reset_quest_map_view(&mut self) {
+        self.quest_map_pan = (0.0, 0.0);
+        self.quest_map_zoom = 0.085;
+        self.quest_map_selected_pin = None;
+    }
+
+    /// 缩放 2D 地图
+    pub fn zoom_quest_map(&mut self, factor: f32) {
+        self.quest_map_zoom = (self.quest_map_zoom * factor).clamp(0.02, 1.8);
+    }
+
+    /// 触发从已打开项目或游戏本体 Dump 提取海拉鲁地图瓦片
+    pub fn trigger_extract_map_tiles(&mut self, model: &gpui::Entity<AppState>, cx: &mut gpui::App) {
+        if self.quest_map_is_extracting_tiles {
+            return;
+        }
+
+        let proj_path = self.project_path.clone();
+        let game_paths = self.game_paths.clone();
+
+        // 1. 解析瓦片来源目录 (优先项目内部，若无则回退游戏本体 Dump)
+        let (src_dir, is_project) = match crate::ui::views::quest_map::tiles_layer::resolve_maptex_source(
+            proj_path.as_deref(),
+            Some(&game_paths),
+        ) {
+            Some(pair) => pair,
+            None => {
+                self.toast = Some(Toast::error(self.t("quests.maptex_not_found")));
+                return;
+            }
+        };
+
+        // 2. 目标输出缓存目录 (项目优先输出至项目内部 .cache/map_tiles，实现隔离)
+        let out_dir = if let Some(ref p) = proj_path {
+            crate::ui::views::quest_map::tiles_layer::get_project_tiles_cache_dir(p)
+        } else {
+            crate::ui::views::quest_map::tiles_layer::get_global_map_tiles_cache_dir()
+        };
+
+        self.quest_map_is_extracting_tiles = true;
+        if is_project {
+            self.toast = Some(Toast::info(self.t("quests.extracting_project_tiles")));
+        } else {
+            self.toast = Some(Toast::info(self.t("quests.extracting_game_tiles")));
+        }
+
+        let model = model.clone();
+        cx.spawn(async move |cx| {
+            let src = src_dir.clone();
+            let out = out_dir.clone();
+
+            let res = cx
+                .background_executor()
+                .spawn(async move {
+                    crate::ui::views::quest_map::tiles_layer::execute_tile_extraction(&src, &out)
+                })
+                .await;
+
+            cx.update(|cx| {
+                model.update(cx, |st, cx| {
+                    st.quest_map_is_extracting_tiles = false;
+                    match res {
+                        Ok(count) => {
+                            let msg = if is_project {
+                                format!(
+                                    "{} ({} {})",
+                                    st.t("quests.extract_project_success"),
+                                    count,
+                                    st.t("quests.tiles_unit")
+                                )
+                            } else {
+                                format!(
+                                    "{} ({} {})",
+                                    st.t("quests.extract_game_success"),
+                                    count,
+                                    st.t("quests.tiles_unit")
+                                )
+                            };
+                            st.toast = Some(Toast::success(msg));
+                        }
+                        Err(e) => {
+                            st.toast = Some(Toast::error(format!(
+                                "{}: {}",
+                                st.t("quests.extract_failed"),
+                                e
+                            )));
+                        }
+                    }
+                    cx.notify();
+                });
+            });
+        })
+        .detach();
+    }
 }
+

@@ -153,6 +153,18 @@ impl AppState {
             quests_filter_type: None,
             quest_creator_modal: None,
             quests_scroll_handle: gpui::UniformListScrollHandle::new(),
+
+            // 2D 任务地图交互与展示状态
+            quest_map_pan: (0.0, 0.0),
+            quest_map_zoom: 0.085, // 适配海拉鲁全景初始缩放
+            quest_map_hovered_coord: None,
+            quest_map_hovered_pin: None,
+            quest_map_selected_pin: None,
+            quest_map_is_dragging: false,
+            quest_map_drag_start: (0.0, 0.0),
+            quest_map_show_grid: true,
+            quest_map_show_all_pins: false,
+            quest_map_is_extracting_tiles: false,
         };
 
         state.clean_invalid_recent_projects();

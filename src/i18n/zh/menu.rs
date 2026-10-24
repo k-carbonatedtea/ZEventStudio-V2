@@ -43,6 +43,7 @@ pub fn get_zh_menu(key: &str) -> Option<&'static str> {
         "menu.view_code_editor" => "代码编辑器",
         "menu.view_actors" => "角色管理器",
         "menu.view_events" => "事件流管理器",
+        "menu.view_quests" => "任务制作与地图",
         "menu.view_json" => "JSON 源码",
         "menu.view_plugins" => "插件中心 (Ctrl+Shift+X)",
         "menu.toggle_sidebar" => "切换预设侧边栏",
@@ -90,6 +91,7 @@ pub fn get_zh_menu(key: &str) -> Option<&'static str> {
         "tab.code_editor" => "代码编辑 (Code Editor)",
         "tab.actors" => "角色管理 (Actors)",
         "tab.events" => "事件列表 (Events)",
+        "tab.quests" => "任务地图 (Quests & Map)",
         "tab.json" => "JSON 源码",
 
         // ---------------- 代码编辑器 (Code Editor) ----------------

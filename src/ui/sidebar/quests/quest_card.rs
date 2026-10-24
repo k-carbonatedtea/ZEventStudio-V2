@@ -44,7 +44,9 @@ pub fn render_quest_card(
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     let name = q_name_click.clone();
                     model_click.update(cx, |st, cx| {
+                        st.current_tab = crate::ui::state_types::AppWorkspaceTab::Quests;
                         st.toggle_quest_selection(&name);
+                        st.focus_selected_quest_on_map();
                         cx.notify();
                     });
                 })
@@ -227,7 +229,7 @@ fn render_quest_details(
                                 ),
                         )
                         .children(has_indicators.then(|| {
-                            render_step_indicators(step, state)
+                            render_step_indicators(step, state, model)
                         }))
                 })),
         )
@@ -284,7 +286,11 @@ fn render_quest_details(
 }
 
 /// 渲染阶段包含的地图标点目标列表
-fn render_step_indicators(step: &crate::model::quest::QuestStep, state: &AppState) -> impl IntoElement {
+fn render_step_indicators(
+    step: &crate::model::quest::QuestStep,
+    state: &AppState,
+    model: &Entity<AppState>,
+) -> impl IntoElement {
     let pal = state.theme();
     div()
         .flex()
@@ -295,12 +301,16 @@ fn render_step_indicators(step: &crate::model::quest::QuestStep, state: &AppStat
         .border_t_1()
         .border_color(pal.panel_border.opacity(0.3))
         .children(step.indicators.iter().map(|ind| {
-            render_single_indicator(ind, state)
+            render_single_indicator(ind, state, model)
         }))
 }
 
 /// 渲染单个地图标点条目 (包含 Actor 标识、三维世界坐标与消隐标志位)
-fn render_single_indicator(ind: &crate::model::quest::QuestIndicator, state: &AppState) -> impl IntoElement {
+fn render_single_indicator(
+    ind: &crate::model::quest::QuestIndicator,
+    state: &AppState,
+    model: &Entity<AppState>,
+) -> impl IntoElement {
     let pal = state.theme();
     let label = if let Some(ref actor) = ind.actor_name {
         if let Some(ref inst) = ind.instance_name {
@@ -313,6 +323,8 @@ fn render_single_indicator(ind: &crate::model::quest::QuestIndicator, state: &Ap
     };
 
     let coords_str = format!("({:.0}, {:.0}, {:.0})", ind.position.0, ind.position.1, ind.position.2);
+    let target_pos = ind.position;
+    let model_click = model.clone();
 
     div()
         .flex()
@@ -322,6 +334,15 @@ fn render_single_indicator(ind: &crate::model::quest::QuestIndicator, state: &Ap
         .p_0p5()
         .rounded_sm()
         .bg(pal.card_hover.opacity(0.5))
+        .cursor_pointer()
+        .hover(|s| s.bg(pal.card_hover))
+        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+            model_click.update(cx, |st, cx| {
+                st.current_tab = crate::ui::state_types::AppWorkspaceTab::Quests;
+                st.focus_pin_on_map(target_pos);
+                cx.notify();
+            });
+        })
         .child(
             div()
                 .flex()
