@@ -15,7 +15,7 @@ pub fn render_region_labels_layer(pan: (f32, f32), zoom: f32, is_zh: bool) -> im
         .inset_0()
         .children(get_hyrule_regions().iter().filter_map(move |reg| {
             let (sx, sy) = world_to_screen(reg.position.0, reg.position.1, (0.0, 0.0), pan, zoom);
-            if !(-150.0..=3200.0).contains(&sx) || !(-100.0..=2200.0).contains(&sy) {
+            if !(-100.0..=2200.0).contains(&sx) || !(-60.0..=1400.0).contains(&sy) {
                 return None;
             }
 
@@ -87,9 +87,9 @@ pub fn render_markers_layer(
                 return None;
             }
 
-            // 视口坐标投影与边界裁剪 (Viewport Culling)
+            // 视口坐标投影与边界裁剪 (Viewport Culling: 超出屏幕可视范围极速跳过)
             let (sx, sy) = world_to_screen(lm.position.0, lm.position.1, (0.0, 0.0), pan, zoom);
-            if !(-80.0..=3000.0).contains(&sx) || !(-80.0..=2000.0).contains(&sy) {
+            if !(-60.0..=2200.0).contains(&sx) || !(-60.0..=1400.0).contains(&sy) {
                 return None;
             }
 

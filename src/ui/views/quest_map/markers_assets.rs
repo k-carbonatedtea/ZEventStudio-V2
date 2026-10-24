@@ -1,5 +1,37 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 use crate::ui::views::quest_map::markers_data::{HyruleMarker, HyruleMarkerKind};
+
+/// 全局地标贴图物理路径静态缓存 (避免高频帧渲染中数百次重复磁盘 stat/exists 检查)
+static ASSET_CACHE: OnceLock<HashMap<&'static str, Option<PathBuf>>> = OnceLock::new();
+
+/// 从缓存中高速读取贴图路径 (首次调用一次性解析后零 I/O 开销)
+fn get_cached_asset(filename: &'static str) -> Option<PathBuf> {
+    let cache = ASSET_CACHE.get_or_init(|| {
+        let asset_files = [
+            "shrine_blue.png",
+            "shrine_active.png",
+            "tower_blue.png",
+            "stable.png",
+            "beast_medoh.png",
+            "beast_naboris.png",
+            "beast_rudania.png",
+            "beast_ruta.png",
+            "castle.png",
+            "village.png",
+            "labo.png",
+            "resurrection.png",
+        ];
+        let mut map = HashMap::with_capacity(asset_files.len());
+        for &name in &asset_files {
+            map.insert(name, resolve_map_asset(name));
+        }
+        map
+    });
+
+    cache.get(filename).and_then(|opt| opt.clone())
+}
 
 /// 解析海拉鲁地图官方游戏贴图文件的绝对或相对路径
 fn resolve_map_asset(filename: &str) -> Option<PathBuf> {
@@ -28,20 +60,20 @@ fn resolve_map_asset(filename: &str) -> Option<PathBuf> {
 /// 获取试炼神庙官方贴图路径 (支持常规态与激活高亮态)
 pub fn get_shrine_icon_path(is_active: bool) -> Option<PathBuf> {
     if is_active {
-        resolve_map_asset("shrine_active.png").or_else(|| resolve_map_asset("shrine_blue.png"))
+        get_cached_asset("shrine_active.png").or_else(|| get_cached_asset("shrine_blue.png"))
     } else {
-        resolve_map_asset("shrine_blue.png")
+        get_cached_asset("shrine_blue.png")
     }
 }
 
 /// 获取希卡之塔官方贴图路径
 pub fn get_tower_icon_path() -> Option<PathBuf> {
-    resolve_map_asset("tower_blue.png")
+    get_cached_asset("tower_blue.png")
 }
 
 /// 获取海拉鲁马头驿站官方贴图路径
 pub fn get_stable_icon_path() -> Option<PathBuf> {
-    resolve_map_asset("stable.png")
+    get_cached_asset("stable.png")
 }
 
 /// 获取四大神兽官方发光贴图路径
@@ -53,20 +85,20 @@ pub fn get_beast_icon_path(marker_id: &str) -> Option<PathBuf> {
         "RemainsWater" => "beast_ruta.png",
         _ => return None,
     };
-    resolve_map_asset(filename)
+    get_cached_asset(filename)
 }
 
 /// 获取城镇、要地、研究所及城堡官方贴图路径
 pub fn get_settlement_icon_path(marker_id: &str, kind: HyruleMarkerKind) -> Option<PathBuf> {
     match marker_id {
-        "HyruleCastle" => resolve_map_asset("castle.png"),
-        "HatenoLabo" | "AncientLabo" => resolve_map_asset("labo.png"),
-        "StartPoint" => resolve_map_asset("resurrection.png"),
+        "HyruleCastle" => get_cached_asset("castle.png"),
+        "HatenoLabo" | "AncientLabo" => get_cached_asset("labo.png"),
+        "StartPoint" => get_cached_asset("resurrection.png"),
         _ => {
             if kind == HyruleMarkerKind::Village {
-                resolve_map_asset("village.png")
+                get_cached_asset("village.png")
             } else {
-                resolve_map_asset("castle.png")
+                get_cached_asset("castle.png")
             }
         }
     }

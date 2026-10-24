@@ -281,8 +281,36 @@ pub fn col_to_world_x(col: char) -> Option<f32> {
     }
 }
 
-/// 获取统一拼接的海拉鲁全景整图路径 (项目专有优先，全局缓存回退)
+static UNIFIED_MAP_CACHE: std::sync::Mutex<Option<(Option<String>, Option<PathBuf>)>> =
+    std::sync::Mutex::new(None);
+
+/// 失效全景整图路径缓存 (提取新瓦片后调用)
+#[allow(dead_code)]
+pub fn invalidate_unified_world_map_cache() {
+    if let Ok(mut guard) = UNIFIED_MAP_CACHE.lock() {
+        *guard = None;
+    }
+}
+
+/// 获取统一拼接的海拉鲁全景整图路径 (带内存缓存，项目专有优先，全局缓存回退)
 pub fn get_unified_world_map_path(project_path: Option<&str>) -> Option<PathBuf> {
+    let proj_key = project_path.map(|s| s.to_string());
+    if let Ok(guard) = UNIFIED_MAP_CACHE.lock() {
+        if let Some((ref cached_proj, ref path)) = *guard {
+            if *cached_proj == proj_key {
+                return path.clone();
+            }
+        }
+    }
+
+    let calculated = get_unified_world_map_path_uncached(project_path);
+    if let Ok(mut guard) = UNIFIED_MAP_CACHE.lock() {
+        *guard = Some((proj_key, calculated.clone()));
+    }
+    calculated
+}
+
+fn get_unified_world_map_path_uncached(project_path: Option<&str>) -> Option<PathBuf> {
     if let Some(proj) = project_path {
         let p_map = get_project_tiles_cache_dir(proj).join("world_map_full.png");
         if p_map.exists() {

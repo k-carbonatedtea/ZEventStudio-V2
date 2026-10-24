@@ -129,8 +129,8 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                 cx.notify();
             });
         })
-        // 1. 底层降级底图与地形轮廓 (当瓦片未覆盖或加载时作为后备底图)
-        .child(
+        // 1. 底层降级底图与地形轮廓 (仅当高精卫星瓦片不存在时作为后备底图绘制，零冗余开销)
+        .children((!crate::ui::views::quest_map::tiles_layer::get_unified_world_map_path(state.project_path.as_deref()).is_some()).then(|| {
             div()
                 .absolute()
                 .inset_0()
@@ -147,8 +147,8 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                         },
                     )
                     .size_full(),
-                ),
-        )
+                )
+        }))
         // 2. 真实海拉鲁高精卫星地图瓦片图层 (无缝微重叠消除接缝)
         .child(crate::ui::views::quest_map::tiles_layer::render_tiles_layer(pan, zoom, state.project_path.as_deref()))
         // 3. 顶层分区网格与任务推进轨迹连线 (覆盖在瓦片之上，开启时清晰呈现，关闭时不遮挡)

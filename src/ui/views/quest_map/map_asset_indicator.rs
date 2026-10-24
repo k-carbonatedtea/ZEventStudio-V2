@@ -17,6 +17,7 @@ pub enum AssetOrigin {
 }
 
 /// 素材来源与平台判定结果
+#[derive(Clone)]
 pub struct AssetSourceInfo {
     pub platform: PlatformType,
     pub origin: AssetOrigin,
@@ -24,8 +25,35 @@ pub struct AssetSourceInfo {
     pub display_path: String,
 }
 
-/// 解析当前海拉鲁地图素材的来源路径与目标平台
+type AssetCacheEntry = (Option<String>, PlatformType, String, AssetSourceInfo);
+static ASSET_INFO_CACHE: std::sync::Mutex<Option<AssetCacheEntry>> = std::sync::Mutex::new(None);
+
+/// 解析当前海拉鲁地图素材的来源路径与目标平台 (带内存缓存，避免每帧重复磁盘 I/O)
 pub fn resolve_asset_source_info(state: &AppState) -> AssetSourceInfo {
+    let gp = &state.game_paths;
+    let selected_plat = gp.current_platform;
+    let plat_dir = match selected_plat {
+        PlatformType::Switch => gp.switch.game_dir.clone(),
+        PlatformType::WiiU => gp.wiiu.game_dir.clone(),
+    };
+
+    if let Ok(guard) = ASSET_INFO_CACHE.lock() {
+        if let Some((ref cached_proj, cached_plat, ref cached_dir, ref info)) = *guard {
+            if *cached_proj == state.project_path && cached_plat == selected_plat && *cached_dir == plat_dir {
+                return info.clone();
+            }
+        }
+    }
+
+    let calculated = resolve_asset_source_info_uncached(state);
+    if let Ok(mut guard) = ASSET_INFO_CACHE.lock() {
+        *guard = Some((state.project_path.clone(), selected_plat, plat_dir, calculated.clone()));
+    }
+    calculated
+}
+
+/// 实际计算当前海拉鲁地图素材的来源路径与目标平台
+fn resolve_asset_source_info_uncached(state: &AppState) -> AssetSourceInfo {
     let gp = &state.game_paths;
     let selected_plat = gp.current_platform;
 
