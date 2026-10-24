@@ -16,7 +16,7 @@ use pins_layer::collect_rendered_pins;
 /// 渲染 2D 海拉鲁任务制作与标点追踪全景地图工作区视图
 pub fn render_quest_map_view(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
     let pal = state.theme();
-    let pins = collect_rendered_pins(state, (600.0, 400.0), state.quest_map_pan, state.quest_map_zoom);
+    let pins = collect_rendered_pins(state, (0.0, 0.0), state.quest_map_pan, state.quest_map_zoom);
 
     div()
         .id("quest_map_view_root")

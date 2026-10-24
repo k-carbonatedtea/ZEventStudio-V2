@@ -154,8 +154,8 @@ impl AppState {
             quest_creator_modal: None,
             quests_scroll_handle: gpui::UniformListScrollHandle::new(),
 
-            // 2D 任务地图交互与展示状态
-            quest_map_pan: (0.0, 0.0),
+            // 2D 任务地图交互与展示状态 (初始居中置于画布中心)
+            quest_map_pan: (600.0, 400.0),
             quest_map_zoom: 0.085, // 适配海拉鲁全景初始缩放
             quest_map_hovered_coord: None,
             quest_map_hovered_pin: None,

@@ -41,27 +41,29 @@ pub fn screen_to_world(
     )
 }
 
-/// 根据世界坐标推断所属的标准 BotW 地图分区名称 (如 E-4, D-7)
+/// 根据世界坐标推断所属的标准 BotW 地图分区名称 (如 E-4, D-7, G-2)
 pub fn get_section_for_coord(wx: f32, wz: f32) -> String {
-    let col_idx = ((wx + 5000.0) / 1000.0).floor() as i32;
-    let row_idx = ((wz + 4000.0) / 1000.0).floor() as i32 + 1;
+    let col_idx = ((wx + 6000.0) / 1000.0).floor() as i32;
+    let row_idx = ((wz + 5000.0) / 1000.0).floor() as i32;
 
     let col_char = match col_idx {
-        0 => 'A',
-        1 => 'B',
-        2 => 'C',
-        3 => 'D',
-        4 => 'E',
-        5 => 'F',
-        6 => 'G',
-        7 => 'H',
-        8 => 'I',
-        9 => 'J',
-        _ => return "Out-of-Bounds".to_string(),
+        0 => 'Z',
+        1 => 'A',
+        2 => 'B',
+        3 => 'C',
+        4 => 'D',
+        5 => 'E',
+        6 => 'F',
+        7 => 'G',
+        8 => 'H',
+        9 => 'I',
+        10 => 'J',
+        11 => 'K',
+        _ => return "Out of Bounds".to_string(),
     };
 
-    if !(1..=8).contains(&row_idx) {
-        return "Out-of-Bounds".to_string();
+    if !(0..=9).contains(&row_idx) {
+        return "Out of Bounds".to_string();
     }
 
     format!("{}-{}", col_char, row_idx)

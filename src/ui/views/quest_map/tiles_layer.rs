@@ -227,28 +227,47 @@ pub fn execute_tile_extraction(src_dir: &Path, out_dir: &Path) -> Result<usize, 
     Ok(count)
 }
 
+/// 将分区列名转为海拉鲁世界 X 坐标起点
+pub fn col_to_world_x(col: char) -> Option<f32> {
+    match col {
+        'Z' => Some(-6000.0),
+        'A' => Some(-5000.0),
+        'B' => Some(-4000.0),
+        'C' => Some(-3000.0),
+        'D' => Some(-2000.0),
+        'E' => Some(-1000.0),
+        'F' => Some(0.0),
+        'G' => Some(1000.0),
+        'H' => Some(2000.0),
+        'I' => Some(3000.0),
+        'J' => Some(4000.0),
+        'K' => Some(5000.0),
+        _ => None,
+    }
+}
+
 /// 渲染官方真实海拉鲁卫星地图瓦片图层 (支持项目专有瓦片与视口裁剪 Viewport Culling)
 pub fn render_tiles_layer(pan: (f32, f32), zoom: f32, project_path: Option<&str>) -> impl IntoElement {
     let proj_owned = project_path.map(|s| s.to_string());
-    let cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+    let cols = ['Z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
 
     div()
         .absolute()
-        .size_full()
-        .children(cols.iter().enumerate().flat_map(move |(c_idx, &c_char)| {
+        .inset_0()
+        .children(cols.iter().filter_map(move |&c_char| {
+            let world_x = col_to_world_x(c_char)?;
             let proj_ref = proj_owned.clone();
-            (1..=8).filter_map(move |r_num| {
+            Some((0..=9).filter_map(move |r_num| {
                 // 计算当前分区在世界坐标系中的左上角点 (Section 尺寸为 1000x1000)
-                let world_x = -5000.0 + (c_idx as f32) * 1000.0;
-                let world_z = -4000.0 + ((r_num - 1) as f32) * 1000.0;
+                let world_z = -5000.0 + (r_num as f32) * 1000.0;
 
-                // 投影至屏幕相对像素坐标
+                // 投影至画布相对像素坐标
                 let sx = pan.0 + world_x * zoom;
                 let sy = pan.1 + world_z * zoom;
                 let tile_size = 1000.0 * zoom;
 
                 // 视口边界快速裁剪 (剔除可视区域外瓦片，保障 60+ FPS)
-                if sx + tile_size < -50.0 || sx > 2600.0 || sy + tile_size < -50.0 || sy > 1600.0 {
+                if sx + tile_size < -50.0 || sx > 3000.0 || sy + tile_size < -50.0 || sy > 2000.0 {
                     return None;
                 }
 
@@ -264,6 +283,6 @@ pub fn render_tiles_layer(pan: (f32, f32), zoom: f32, project_path: Option<&str>
                         .overflow_hidden()
                         .child(img(tile_path).size_full()),
                 )
-            })
-        }))
+            }))
+        }).flatten())
 }

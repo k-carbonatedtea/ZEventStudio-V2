@@ -138,7 +138,7 @@ impl AppState {
                 let center_x = sum_x / (count as f32);
                 let center_z = sum_z / (count as f32);
                 self.quest_map_zoom = 0.18;
-                self.quest_map_pan = (-center_x * self.quest_map_zoom, -center_z * self.quest_map_zoom);
+                self.quest_map_pan = (600.0 - center_x * self.quest_map_zoom, 400.0 - center_z * self.quest_map_zoom);
             }
         }
     }
@@ -146,12 +146,12 @@ impl AppState {
     /// 将 2D 地图精确定位聚焦至指定标点世界坐标 (X, Y, Z)
     pub fn focus_pin_on_map(&mut self, pos: (f32, f32, f32)) {
         self.quest_map_zoom = 0.25;
-        self.quest_map_pan = (-pos.0 * self.quest_map_zoom, -pos.2 * self.quest_map_zoom);
+        self.quest_map_pan = (600.0 - pos.0 * self.quest_map_zoom, 400.0 - pos.2 * self.quest_map_zoom);
     }
 
-    /// 重置 2D 地图至海拉鲁全景
+    /// 重置 2D 地图至海拉鲁全景居中
     pub fn reset_quest_map_view(&mut self) {
-        self.quest_map_pan = (0.0, 0.0);
+        self.quest_map_pan = (600.0, 400.0);
         self.quest_map_zoom = 0.085;
         self.quest_map_selected_pin = None;
     }

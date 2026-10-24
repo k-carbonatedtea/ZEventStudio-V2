@@ -146,7 +146,7 @@ pub fn render_pins_elements(
 
     div()
         .absolute()
-        .size_full()
+        .inset_0()
         .children(pins.iter().map(|pin| {
             let (sx, sy) = pin.screen_pos;
             let q_name = pin.quest_name.clone();

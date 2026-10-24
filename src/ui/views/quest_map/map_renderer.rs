@@ -122,7 +122,7 @@ fn draw_geographic_features(center: (f32, f32), pan: (f32, f32), zoom: f32, wind
     }
 }
 
-/// 绘制 BotW 10x8 分区网格 (A-1 至 J-8)
+/// 绘制 BotW 12x10 分区网格 (Z-0 至 K-9)
 fn draw_section_grid(
     center: (f32, f32),
     pan: (f32, f32),
@@ -132,9 +132,9 @@ fn draw_section_grid(
 ) {
     // 悬停分区高亮计算
     let hovered_tile = hovered_coord.and_then(|(wx, wz)| {
-        let c = ((wx + 5000.0) / 1000.0).floor() as i32;
-        let r = ((wz + 4000.0) / 1000.0).floor() as i32;
-        if (0..10).contains(&c) && (0..8).contains(&r) {
+        let c = ((wx + 6000.0) / 1000.0).floor() as i32;
+        let r = ((wz + 5000.0) / 1000.0).floor() as i32;
+        if (0..12).contains(&c) && (0..10).contains(&r) {
             Some((c, r))
         } else {
             None
@@ -143,8 +143,8 @@ fn draw_section_grid(
 
     // 绘制高亮选中的分区瓦片
     if let Some((hc, hr)) = hovered_tile {
-        let wx0 = -5000.0 + (hc as f32) * 1000.0;
-        let wz0 = -4000.0 + (hr as f32) * 1000.0;
+        let wx0 = -6000.0 + (hc as f32) * 1000.0;
+        let wz0 = -5000.0 + (hr as f32) * 1000.0;
         let (s_x0, s_y0) = world_to_screen(wx0, wz0, center, pan, zoom);
         let (s_x1, s_y1) = world_to_screen(wx0 + 1000.0, wz0 + 1000.0, center, pan, zoom);
 
@@ -159,14 +159,14 @@ fn draw_section_grid(
         }
     }
 
-    // 绘制网格竖线
+    // 绘制网格竖线 (12 列：col 0..=12 对应世界 X -6000 到 +6000)
     let mut grid_lines = PathBuilder::fill();
-    for col in 0..=10 {
-        let wx = -5000.0 + (col as f32) * 1000.0;
-        let (x_top, y_top) = world_to_screen(wx, -4000.0, center, pan, zoom);
-        let (x_bot, y_bot) = world_to_screen(wx, 4000.0, center, pan, zoom);
+    for col in 0..=12 {
+        let wx = -6000.0 + (col as f32) * 1000.0;
+        let (x_top, y_top) = world_to_screen(wx, -5000.0, center, pan, zoom);
+        let (x_bot, y_bot) = world_to_screen(wx, 5000.0, center, pan, zoom);
 
-        let th = if col == 0 || col == 10 { 1.5 } else { 0.75 };
+        let th = if col == 0 || col == 12 { 1.5 } else { 0.75 };
         grid_lines.move_to(point(px(x_top - th), px(y_top)));
         grid_lines.line_to(point(px(x_top + th), px(y_top)));
         grid_lines.line_to(point(px(x_bot + th), px(y_bot)));
@@ -174,13 +174,13 @@ fn draw_section_grid(
         grid_lines.close();
     }
 
-    // 绘制网格横线
-    for row in 0..=8 {
-        let wz = -4000.0 + (row as f32) * 1000.0;
-        let (x_left, y_left) = world_to_screen(-5000.0, wz, center, pan, zoom);
-        let (x_right, y_right) = world_to_screen(5000.0, wz, center, pan, zoom);
+    // 绘制网格横线 (10 行：row 0..=10 对应世界 Z -5000 到 +5000)
+    for row in 0..=10 {
+        let wz = -5000.0 + (row as f32) * 1000.0;
+        let (x_left, y_left) = world_to_screen(-6000.0, wz, center, pan, zoom);
+        let (x_right, y_right) = world_to_screen(6000.0, wz, center, pan, zoom);
 
-        let th = if row == 0 || row == 8 { 1.5 } else { 0.75 };
+        let th = if row == 0 || row == 10 { 1.5 } else { 0.75 };
         grid_lines.move_to(point(px(x_left), px(y_left - th)));
         grid_lines.line_to(point(px(x_right), px(y_right - th)));
         grid_lines.line_to(point(px(x_right), px(y_right + th)));

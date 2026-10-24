@@ -65,9 +65,10 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                     st.quest_map_drag_start = (mx, my);
                 }
 
-                // 侧边栏宽度约为 368px，顶部栏约为 44px
-                let local_mx = mx - 368.0;
-                let local_my = my - 44.0;
+                let sidebar_w = if st.sidebar_open { 48.0 + st.sidebar_width + 4.0 } else { 48.0 };
+                let top_bar_h = 156.0;
+                let local_mx = mx - sidebar_w;
+                let local_my = my - top_bar_h;
                 let (wx, wz) = screen_to_world(local_mx, local_my, (0.0, 0.0), st.quest_map_pan, st.quest_map_zoom);
                 st.quest_map_hovered_coord = Some((wx, wz));
 
@@ -88,8 +89,10 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
 
                 let mx: f32 = e.position.x.into();
                 let my: f32 = e.position.y.into();
-                let local_mx = mx - 368.0;
-                let local_my = my - 44.0;
+                let sidebar_w = if st.sidebar_open { 48.0 + st.sidebar_width + 4.0 } else { 48.0 };
+                let top_bar_h = 156.0;
+                let local_mx = mx - sidebar_w;
+                let local_my = my - top_bar_h;
 
                 // 保持鼠标指向的世界坐标在缩放前后不变
                 st.quest_map_pan.0 = local_mx - (local_mx - st.quest_map_pan.0) * (new_zoom / old_zoom);
@@ -99,23 +102,28 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                 cx.notify();
             });
         })
-        // 1. 底层底图、地形轮廓与分区网格
+        // 1. 底层底图、地形轮廓与分区网格 (绝对定位填充)
         .child(
-            canvas(
-                |_bounds, _window, _cx| {},
-                move |bounds, _, window, _cx| {
-                    let orig_x: f32 = bounds.origin.x.into();
-                    let orig_y: f32 = bounds.origin.y.into();
-                    let center = (orig_x, orig_y);
+            div()
+                .absolute()
+                .inset_0()
+                .child(
+                    canvas(
+                        |_bounds, _window, _cx| {},
+                        move |bounds, _, window, _cx| {
+                            let orig_x: f32 = bounds.origin.x.into();
+                            let orig_y: f32 = bounds.origin.y.into();
+                            let center = (orig_x, orig_y);
 
-                    // 绘制海拉鲁底图、特征与网格
-                    draw_hyrule_base_map(bounds, center, pan, zoom, show_grid, hovered_coord, window);
+                            // 绘制海拉鲁底图、特征与网格
+                            draw_hyrule_base_map(bounds, center, pan, zoom, show_grid, hovered_coord, window);
 
-                    // 绘制任务标点间推进连线轨迹
-                    draw_quest_trajectories_coords(&trajectories, center, pan, zoom, window);
-                },
-            )
-            .size_full(),
+                            // 绘制任务标点间推进连线轨迹
+                            draw_quest_trajectories_coords(&trajectories, center, pan, zoom, window);
+                        },
+                    )
+                    .size_full(),
+                ),
         )
         // 1.5. 真实海拉鲁卫星地图瓦片图层 (来自已打开项目或游戏 Dump)
         .child(crate::ui::views::quest_map::tiles_layer::render_tiles_layer(pan, zoom, state.project_path.as_deref()))
@@ -129,7 +137,7 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
 fn render_landmarks_overlay(pan: (f32, f32), zoom: f32, is_zh: bool) -> impl IntoElement {
     div()
         .absolute()
-        .size_full()
+        .inset_0()
         .children(HYRULE_LANDMARKS.iter().map(move |lm| {
             let (sx, sy) = world_to_screen(lm.position.0, lm.position.1, (0.0, 0.0), pan, zoom);
             let name = if is_zh { lm.name_zh } else { lm.name_en };
