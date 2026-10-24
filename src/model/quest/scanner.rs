@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use roead::byml::Byml;
 use roead::sarc::Sarc;
-use crate::model::quest::types::{find_sarc_file, QuestDefinition, QuestStep, QuestType};
+use crate::model::quest::types::{find_sarc_file, QuestDefinition, QuestIndicator, QuestStep, QuestType};
 
 /// 在项目根目录下查找 TitleBG.pack 的可能路径
 pub fn find_titlebg_path(project_path: &Path) -> Option<PathBuf> {
@@ -94,6 +94,7 @@ fn parse_quest_byml(byml: &Byml) -> Option<QuestDefinition> {
                 let next_flag = sm.get("NextFlag").and_then(|v| v.as_string().ok()).map(|s| s.as_str()).unwrap_or("").to_string();
                 let update_step = sm.get("UpdateStep").and_then(|v| v.as_bool().ok()).unwrap_or(true);
                 let attention_off = sm.get("AttentionOff").and_then(|v| v.as_bool().ok()).unwrap_or(false);
+                let indicators = parse_step_indicators(sm);
 
                 steps.push(QuestStep {
                     name: s_name,
@@ -101,6 +102,7 @@ fn parse_quest_byml(byml: &Byml) -> Option<QuestDefinition> {
                     next_flag,
                     update_step,
                     attention_off,
+                    indicators,
                 });
             }
         }
@@ -222,4 +224,74 @@ fn find_file_recursive(dir: &Path, target_filename: &str, depth: usize) -> Optio
         }
     }
     None
+}
+
+/// 解析任务单阶段中的地图指示标点 (IndicatorActors 与 IndicatorLocations)
+fn parse_step_indicators(sm: &roead::byml::Map) -> Vec<QuestIndicator> {
+    let mut list = Vec::new();
+
+    // 1. 解析指定 Actor 指示器 (IndicatorActors)
+    if let Some(Byml::Array(arr)) = sm.get("IndicatorActors") {
+        for item in arr {
+            if let Byml::Map(m) = item {
+                let name = m.get("Name").and_then(|v| v.as_string().ok()).map(|s| s.as_str()).filter(|s| !s.is_empty()).map(|s| s.to_string());
+                let instance_name = m.get("InstanceName").and_then(|v| v.as_string().ok()).map(|s| s.as_str()).filter(|s| !s.is_empty()).map(|s| s.to_string());
+                let pos = parse_byml_location(m.get("Location"));
+                let off_flag = m.get("OffFlag").and_then(|v| v.as_string().ok()).map(|s| s.as_str()).filter(|s| !s.is_empty()).map(|s| s.to_string());
+                let has_far = m.get("HasFar").and_then(|v| v.as_bool().ok()).unwrap_or(false);
+
+                list.push(QuestIndicator {
+                    actor_name: name,
+                    instance_name,
+                    position: pos,
+                    off_flag,
+                    has_far,
+                });
+            }
+        }
+    }
+
+    // 2. 解析纯世界坐标指示器 (IndicatorLocations)
+    if let Some(Byml::Array(arr)) = sm.get("IndicatorLocations") {
+        for item in arr {
+            if let Byml::Map(m) = item {
+                let pos = parse_byml_location(m.get("Location"));
+                let off_flag = m.get("OffFlag").and_then(|v| v.as_string().ok()).map(|s| s.as_str()).filter(|s| !s.is_empty()).map(|s| s.to_string());
+
+                list.push(QuestIndicator {
+                    actor_name: None,
+                    instance_name: None,
+                    position: pos,
+                    off_flag,
+                    has_far: false,
+                });
+            }
+        }
+    }
+
+    list
+}
+
+/// 从 Byml Map 中提取 (X, Y, Z) 三维坐标
+fn parse_byml_location(loc_val: Option<&Byml>) -> (f32, f32, f32) {
+    match loc_val {
+        Some(Byml::Map(m)) => {
+            let x = byml_to_f32(m.get("X"));
+            let y = byml_to_f32(m.get("Y"));
+            let z = byml_to_f32(m.get("Z"));
+            (x, y, z)
+        }
+        _ => (0.0, 0.0, 0.0),
+    }
+}
+
+/// 辅助函数：安全将 Byml 数值转化为 f32
+fn byml_to_f32(val: Option<&Byml>) -> f32 {
+    match val {
+        Some(Byml::Float(f)) => *f,
+        Some(Byml::Double(d)) => *d as f32,
+        Some(Byml::I32(i)) => *i as f32,
+        Some(Byml::U32(u)) => *u as f32,
+        _ => 0.0,
+    }
 }

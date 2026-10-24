@@ -69,6 +69,16 @@ pub fn render_quest_card(
                                         .text_color(badge_fg)
                                         .child(type_label),
                                 )
+                                .children((quest.total_indicators_count() > 0).then(|| {
+                                    div()
+                                        .text_size(px(10.0))
+                                        .px_1p5()
+                                        .py_0p5()
+                                        .rounded_sm()
+                                        .bg(pal.secondary_accent.opacity(0.18))
+                                        .text_color(pal.secondary_accent)
+                                        .child(format!("{} {}", state.t("quests.badge_indicator"), quest.total_indicators_count()))
+                                }))
                                 .child(
                                     div()
                                         .text_size(px(12.5))
@@ -166,10 +176,11 @@ fn render_quest_details(
                         .child(format!("{} ({})", state.t("quests.steps_header"), quest.steps.len())),
                 )
                 .children(quest.steps.iter().enumerate().map(|(idx, step)| {
+                    let has_indicators = !step.indicators.is_empty();
                     div()
                         .flex()
-                        .items_center()
-                        .justify_between()
+                        .flex_col()
+                        .gap_1()
                         .p_1()
                         .rounded_sm()
                         .bg(pal.panel_surface)
@@ -178,27 +189,46 @@ fn render_quest_details(
                             div()
                                 .flex()
                                 .items_center()
-                                .gap_1p5()
+                                .justify_between()
+                                .w_full()
                                 .child(
                                     div()
-                                        .size(px(14.0))
-                                        .rounded_full()
-                                        .bg(pal.primary_accent.opacity(0.15))
-                                        .text_color(pal.primary_accent)
-                                        .text_size(px(9.0))
                                         .flex()
                                         .items_center()
-                                        .justify_center()
-                                        .child(format!("{}", idx + 1)),
+                                        .gap_1p5()
+                                        .child(
+                                            div()
+                                                .size(px(14.0))
+                                                .rounded_full()
+                                                .bg(pal.primary_accent.opacity(0.15))
+                                                .text_color(pal.primary_accent)
+                                                .text_size(px(9.0))
+                                                .flex()
+                                                .items_center()
+                                                .justify_center()
+                                                .child(format!("{}", idx + 1)),
+                                        )
+                                        .child(div().text_color(pal.text_primary).child(step.name.clone()))
+                                        .children(has_indicators.then(|| {
+                                            div()
+                                                .text_size(px(9.5))
+                                                .px_1()
+                                                .rounded_sm()
+                                                .bg(pal.secondary_accent.opacity(0.15))
+                                                .text_color(pal.secondary_accent)
+                                                .child(format!("📍 {}", step.indicators.len()))
+                                        })),
                                 )
-                                .child(div().text_color(pal.text_primary).child(step.name.clone())),
+                                .child(
+                                    div()
+                                        .text_size(px(10.0))
+                                        .text_color(pal.text_secondary)
+                                        .child(step.next_flag.clone()),
+                                ),
                         )
-                        .child(
-                            div()
-                                .text_size(px(10.0))
-                                .text_color(pal.text_secondary)
-                                .child(step.next_flag.clone()),
-                        )
+                        .children(has_indicators.then(|| {
+                            render_step_indicators(step, state)
+                        }))
                 })),
         )
         // 底部动作按钮：在当前流程图中生成脚手架拓扑
@@ -251,4 +281,71 @@ fn render_quest_details(
                         .child(state.t("quests.insert_to_canvas")),
                 ),
         )
+}
+
+/// 渲染阶段包含的地图标点目标列表
+fn render_step_indicators(step: &crate::model::quest::QuestStep, state: &AppState) -> impl IntoElement {
+    let pal = state.theme();
+    div()
+        .flex()
+        .flex_col()
+        .gap_1()
+        .pt_1()
+        .pl_2()
+        .border_t_1()
+        .border_color(pal.panel_border.opacity(0.3))
+        .children(step.indicators.iter().map(|ind| {
+            render_single_indicator(ind, state)
+        }))
+}
+
+/// 渲染单个地图标点条目 (包含 Actor 标识、三维世界坐标与消隐标志位)
+fn render_single_indicator(ind: &crate::model::quest::QuestIndicator, state: &AppState) -> impl IntoElement {
+    let pal = state.theme();
+    let label = if let Some(ref actor) = ind.actor_name {
+        if let Some(ref inst) = ind.instance_name {
+            format!("📍 {} [{}]", actor, inst)
+        } else {
+            format!("📍 {}", actor)
+        }
+    } else {
+        format!("📍 {}", state.t("quests.target_coords"))
+    };
+
+    let coords_str = format!("({:.0}, {:.0}, {:.0})", ind.position.0, ind.position.1, ind.position.2);
+
+    div()
+        .flex()
+        .items_center()
+        .justify_between()
+        .text_size(px(10.0))
+        .p_0p5()
+        .rounded_sm()
+        .bg(pal.card_hover.opacity(0.5))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap_1p5()
+                .child(
+                    div()
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(pal.secondary_accent)
+                        .child(label),
+                )
+                .child(
+                    div()
+                        .text_color(pal.text_secondary)
+                        .child(coords_str),
+                ),
+        )
+        .children(ind.off_flag.as_ref().map(|flag| {
+            div()
+                .text_size(px(9.0))
+                .px_1()
+                .rounded_sm()
+                .bg(pal.panel_border.opacity(0.3))
+                .text_color(pal.text_secondary)
+                .child(format!("{}: {}", state.t("quests.off_flag_label"), flag))
+        }))
 }

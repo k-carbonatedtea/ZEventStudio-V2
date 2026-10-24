@@ -7,4 +7,4 @@ pub mod types;
 pub use builder::execute_full_quest_creation;
 pub use graph_scaffold::scaffold_quest_graph_nodes;
 pub use scanner::scan_project_quests;
-pub use types::{QuestDefinition, QuestScaffoldConfig, QuestType};
+pub use types::{QuestDefinition, QuestIndicator, QuestScaffoldConfig, QuestStep, QuestType};

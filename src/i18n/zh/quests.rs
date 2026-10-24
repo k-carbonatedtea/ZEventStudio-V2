@@ -33,6 +33,11 @@ pub fn get_zh_quests(key: &str) -> Option<&'static str> {
         "quests.opt_scaffold_graph" => "在当前流程图自动生成标准 4 步接取与完成节点拓扑",
         "quests.btn_cancel" => "取消",
         "quests.btn_create_quest" => "一键全自动生成",
+        "quests.badge_indicator" => "📍 标点",
+        "quests.step_indicators" => "地图指示目标",
+        "quests.coords_label" => "坐标",
+        "quests.off_flag_label" => "消隐",
+        "quests.target_coords" => "目标世界坐标",
         _ => return None,
     };
     Some(text)

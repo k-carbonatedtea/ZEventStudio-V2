@@ -33,6 +33,11 @@ pub fn get_en_quests(key: &str) -> Option<&'static str> {
         "quests.opt_scaffold_graph" => "Generate standard 4-step accept & finish nodes in canvas",
         "quests.btn_cancel" => "Cancel",
         "quests.btn_create_quest" => "Generate All Automatically",
+        "quests.badge_indicator" => "📍 Pins",
+        "quests.step_indicators" => "Map Target Pins",
+        "quests.coords_label" => "Coords",
+        "quests.off_flag_label" => "Off Flag",
+        "quests.target_coords" => "Target World Coords",
         _ => return None,
     };
     Some(text)

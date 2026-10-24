@@ -35,14 +35,25 @@ impl QuestType {
     }
 }
 
+/// 地图标点指示器模型 (Map Indicator / Target Pin)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct QuestIndicator {
+    pub actor_name: Option<String>,
+    pub instance_name: Option<String>,
+    pub position: (f32, f32, f32), // (X, Y, Z) 海拉鲁世界坐标
+    pub off_flag: Option<String>,
+    pub has_far: bool,
+}
+
 /// 任务单阶段定义
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct QuestStep {
     pub name: String,
     pub message_name: String,
     pub next_flag: String,
     pub update_step: bool,
     pub attention_off: bool,
+    pub indicators: Vec<QuestIndicator>,
 }
 
 impl Default for QuestStep {
@@ -53,12 +64,13 @@ impl Default for QuestStep {
             next_flag: String::new(),
             update_step: true,
             attention_off: false,
+            indicators: Vec::new(),
         }
     }
 }
 
 /// 任务完整定义模型
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct QuestDefinition {
     pub name: String,
     pub quest_type: QuestType,
@@ -70,6 +82,13 @@ pub struct QuestDefinition {
     pub display_title: Option<String>,
     pub desc_text: Option<String>,
     pub finish_text: Option<String>,
+}
+
+impl QuestDefinition {
+    /// 计算该任务所有阶段中包含的地图指示标点总数
+    pub fn total_indicators_count(&self) -> usize {
+        self.steps.iter().map(|s| s.indicators.len()).sum()
+    }
 }
 
 impl Default for QuestDefinition {
