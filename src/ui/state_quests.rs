@@ -250,5 +250,70 @@ impl AppState {
         })
         .detach();
     }
+
+    /// 异步触发海拉鲁标点提取（后台多线程执行，主 UI 保持 60+ FPS，并实时汇报提取进度）
+    pub fn trigger_async_extract_hyrule_markers(
+        &mut self,
+        model: &gpui::Entity<AppState>,
+        cx: &mut gpui::App,
+    ) {
+        if self.quest_map_is_extracting_markers || self.quest_map_markers_cache.is_some() {
+            return;
+        }
+
+        self.quest_map_is_extracting_markers = true;
+        self.quest_map_extracting_file_label = self.t("quests.loading_init_status").to_string();
+
+        let proj_path = self.project_path.clone();
+        let game_paths = self.game_paths.clone();
+        let model = model.clone();
+
+        cx.spawn(async move |cx| {
+            let (tx, rx) = smol::channel::unbounded::<String>();
+
+            // 1. 实时监听进度消息并通知主 UI 刷新
+            let rx_model = model.clone();
+            let progress_task = cx.spawn(async move |cx| {
+                while let Ok(label) = rx.recv().await {
+                    cx.update(|cx| {
+                        rx_model.update(cx, |st, cx| {
+                            st.quest_map_extracting_file_label = label;
+                            cx.notify();
+                        });
+                    });
+                }
+            });
+
+            // 2. 在后台工作线程池执行 CPU 密集型解压与 I/O 扫描
+            let markers = cx
+                .background_executor()
+                .spawn(async move {
+                    let tx_progress = tx.clone();
+                    let res = crate::ui::views::quest_map::markers_extractor::extract_hyrule_markers_with_progress(
+                        proj_path.as_deref(),
+                        Some(&game_paths),
+                        move |status| {
+                            let _ = tx_progress.try_send(status.to_string());
+                        },
+                    );
+                    drop(tx); // 显式释放 tx，使 rx 能够感知结束
+                    res
+                })
+                .await;
+
+            let _ = progress_task.await;
+
+            // 3. 回到主线程提交标点缓存并关闭 loading
+            cx.update(|cx| {
+                model.update(cx, |st, cx| {
+                    st.quest_map_markers_cache = Some(markers);
+                    st.quest_map_is_extracting_markers = false;
+                    st.quest_map_extracting_file_label.clear();
+                    cx.notify();
+                });
+            });
+        })
+        .detach();
+    }
 }
 

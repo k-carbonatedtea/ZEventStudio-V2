@@ -1,6 +1,7 @@
 pub mod map_asset_indicator;
 pub mod map_canvas;
 pub mod map_layer_filters;
+pub mod map_loading_overlay;
 pub mod map_renderer;
 pub mod map_toolbar;
 pub mod markers_assets;
@@ -17,6 +18,7 @@ pub mod types;
 use gpui::*;
 use crate::ui::state::AppState;
 use map_canvas::render_map_canvas;
+use map_loading_overlay::render_map_loading_overlay;
 use map_toolbar::{render_map_bottom_hud, render_map_header_hud};
 use pin_tooltip::render_pin_tooltip_layer;
 use pins_layer::collect_rendered_pins;
@@ -43,7 +45,10 @@ pub fn render_quest_map_view(state: &AppState, model: &Entity<AppState>) -> impl
                 .relative()
                 .overflow_hidden()
                 .child(render_map_canvas(state, model))
-                .child(render_pin_tooltip_layer(&pins, state, model)),
+                .child(render_pin_tooltip_layer(&pins, state, model))
+                .children(state.quest_map_is_extracting_markers.then(|| {
+                    render_map_loading_overlay(state)
+                })),
         )
         // 3. 底部世界坐标与图例 HUD 状态栏
         .child(render_map_bottom_hud(state))

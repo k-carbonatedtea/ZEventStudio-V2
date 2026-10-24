@@ -84,6 +84,10 @@ pub fn get_zh_quests(key: &str) -> Option<&'static str> {
         "quests.source_opened_toast" => "已在资源管理器中打开素材目录",
         "quests.source_click_settings" => "点击打开游戏路径设置",
         "quests.source_click_open_explorer" => "💡 点击在资源管理器中打开目录",
+        "quests.loading_markers_title" => "正在同步海拉鲁官方素材与地标数据...",
+        "quests.loading_init_status" => "正在准备扫描地图标点与配置...",
+        "quests.loading_extracting_label" => "正在提取",
+        "quests.loading_complete" => "海拉鲁地标数据提取完成",
         _ => return None,
     };
     Some(text)

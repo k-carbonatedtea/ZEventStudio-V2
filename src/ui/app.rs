@@ -145,20 +145,23 @@ impl Render for AppView {
             self.last_fps_update = now;
         }
 
-        // 默认极速性能模式调度：活跃窗口高刷新流畅渲染，或文本框处于激活状态（用于闪烁光标动画）
+        // 默认极速性能模式调度：活跃窗口高刷新流畅渲染，或文本框激活（光标动画），或正在提取地图标点（旋转动画）
         let has_active_field = self.model.read(cx).has_active_text_input();
-        if is_active || has_active_field {
+        let is_extracting_markers = self.model.read(cx).quest_map_is_extracting_markers;
+        if is_active || has_active_field || is_extracting_markers {
             cx.on_next_frame(window, |_, _, cx| {
                 cx.notify();
             });
         }
 
         let current_tab = self.model.read(cx).current_tab;
-        if current_tab == AppWorkspaceTab::Quests
+        let needs_markers = current_tab == AppWorkspaceTab::Quests
             && self.model.read(cx).quest_map_markers_cache.is_none()
-        {
-            self.model.update(cx, |st, _| {
-                st.ensure_hyrule_markers_cached();
+            && !self.model.read(cx).quest_map_is_extracting_markers;
+        if needs_markers {
+            let model = self.model.clone();
+            self.model.update(cx, |st, cx| {
+                st.trigger_async_extract_hyrule_markers(&model, cx);
             });
         }
 

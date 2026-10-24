@@ -191,6 +191,10 @@ pub struct AppState {
     pub quest_map_selected_marker: Option<String>,
     /// 内存中的一次性海拉鲁地标数据缓存 (从项目与游戏路径自动提取)
     pub quest_map_markers_cache: Option<Vec<crate::ui::views::quest_map::markers_data::HyruleMarker>>,
+    /// 是否正在异步提取海拉鲁地标数据
+    pub quest_map_is_extracting_markers: bool,
+    /// 实时提取中当前正在解压/读取的文件名或阶段提示
+    pub quest_map_extracting_file_label: String,
 }
 
 #[allow(dead_code)]
@@ -219,6 +223,8 @@ impl AppState {
     /// 清空并失效地标缓存（当工作区切换项目或保存游戏路径时触发）
     pub fn invalidate_hyrule_markers_cache(&mut self) {
         self.quest_map_markers_cache = None;
+        self.quest_map_is_extracting_markers = false;
+        self.quest_map_extracting_file_label.clear();
     }
 
     pub fn set_sidebar_width(&mut self, width: f32) {

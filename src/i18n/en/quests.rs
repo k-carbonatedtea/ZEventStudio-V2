@@ -84,6 +84,10 @@ pub fn get_en_quests(key: &str) -> Option<&'static str> {
         "quests.source_opened_toast" => "Opened asset directory in File Explorer",
         "quests.source_click_settings" => "Click to configure game paths",
         "quests.source_click_open_explorer" => "💡 Click to reveal in File Explorer",
+        "quests.loading_markers_title" => "Syncing Hyrule Official Assets & Markers...",
+        "quests.loading_init_status" => "Preparing to scan map markers & config...",
+        "quests.loading_extracting_label" => "Extracting",
+        "quests.loading_complete" => "Hyrule markers sync completed",
         _ => return None,
     };
     Some(text)

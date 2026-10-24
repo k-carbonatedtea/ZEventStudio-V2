@@ -173,6 +173,8 @@ impl AppState {
             quest_map_hovered_marker: None,
             quest_map_selected_marker: None,
             quest_map_markers_cache: None,
+            quest_map_is_extracting_markers: false,
+            quest_map_extracting_file_label: String::new(),
         };
 
         state.clean_invalid_recent_projects();

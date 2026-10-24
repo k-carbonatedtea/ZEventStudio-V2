@@ -17,6 +17,19 @@ pub fn extract_hyrule_markers(
     project_path: Option<&str>,
     game_paths: Option<&GamePathSettings>,
 ) -> Vec<HyruleMarker> {
+    extract_hyrule_markers_with_progress(project_path, game_paths, |_| {})
+}
+
+/// 支持实时汇报当前扫描与解压文件进度的海拉鲁标点提取器
+pub fn extract_hyrule_markers_with_progress<F>(
+    project_path: Option<&str>,
+    game_paths: Option<&GamePathSettings>,
+    mut on_progress: F,
+) -> Vec<HyruleMarker>
+where
+    F: FnMut(&str),
+{
+    on_progress("正在加载基准地标字典...");
     // 1. 初始化基准表（内置 136 座官方神庙与地标）
     let mut markers_map: HashMap<String, HyruleMarker> = HashMap::new();
     for marker in get_default_hyrule_markers() {
@@ -66,7 +79,7 @@ pub fn extract_hyrule_markers(
         for dir in primary_dirs {
             if dir.exists() {
                 scanned_any = true;
-                for marker in scan_static_markers_in_dir(&dir, false, 3) {
+                for marker in scan_static_markers_in_dir(&dir, false, 3, &mut on_progress) {
                     merge_marker_into_map(&mut markers_map, marker);
                 }
             }
@@ -76,7 +89,7 @@ pub fn extract_hyrule_markers(
         if !scanned_any {
             for dir in fallback_dirs {
                 if dir.exists() {
-                    for marker in scan_static_markers_in_dir(&dir, false, 3) {
+                    for marker in scan_static_markers_in_dir(&dir, false, 3, &mut on_progress) {
                         merge_marker_into_map(&mut markers_map, marker);
                     }
                 }
@@ -88,12 +101,16 @@ pub fn extract_hyrule_markers(
     if let Some(proj) = project_path {
         let proj_buf = PathBuf::from(proj);
         if proj_buf.exists() {
-            for marker in scan_static_markers_in_dir(&proj_buf, true, 4) {
+            let proj_name = proj_buf.file_name().and_then(|n| n.to_str()).unwrap_or("Project");
+            on_progress(&format!("扫描项目自定义标点: {}", proj_name));
+            for marker in scan_static_markers_in_dir(&proj_buf, true, 4, &mut on_progress) {
                 // 项目中的标点直接覆盖并标记 is_custom
                 merge_marker_into_map(&mut markers_map, marker);
             }
         }
     }
+
+    on_progress(&format!("标点同步完成 (共 {} 个有效标点)", markers_map.len()));
 
     // 转为向量并保持稳定顺序
     let mut result: Vec<HyruleMarker> = markers_map.into_values().collect();
@@ -127,7 +144,15 @@ fn merge_marker_into_map(map: &mut HashMap<String, HyruleMarker>, new_marker: Hy
 }
 
 /// 扫描指定目录下的 Static.smubin 或 Bootup.pack
-fn scan_static_markers_in_dir(root: &Path, is_custom: bool, max_depth: usize) -> Vec<HyruleMarker> {
+fn scan_static_markers_in_dir<F>(
+    root: &Path,
+    is_custom: bool,
+    max_depth: usize,
+    on_progress: &mut F,
+) -> Vec<HyruleMarker>
+where
+    F: FnMut(&str),
+{
     let mut markers = Vec::new();
     let mut dirs_to_visit = vec![(root.to_path_buf(), 0)];
 
@@ -148,12 +173,18 @@ fn scan_static_markers_in_dir(root: &Path, is_custom: bool, max_depth: usize) ->
                 }
             } else if path.is_file() {
                 if name.eq_ignore_ascii_case("Static.smubin") {
+                    let display_path = path.strip_prefix(root).unwrap_or(&path).display().to_string();
+                    on_progress(&format!("读取文件 {}", display_path));
                     if let Ok(bytes) = fs::read(&path) {
+                        on_progress(&format!("解析地标数据 {}", display_path));
                         markers.extend(parse_location_markers_from_smubin(&bytes, is_custom));
                     }
                 } else if name.eq_ignore_ascii_case("Bootup.pack") {
+                    let display_path = path.strip_prefix(root).unwrap_or(&path).display().to_string();
+                    on_progress(&format!("读取文件 {}", display_path));
                     if let Ok(bytes) = fs::read(&path) {
-                        markers.extend(parse_markers_from_bootup_pack(&bytes, is_custom));
+                        on_progress(&format!("解压 Yaz0: {}", display_path));
+                        markers.extend(parse_markers_from_bootup_pack(&bytes, is_custom, on_progress));
                     }
                 }
             }
@@ -164,13 +195,22 @@ fn scan_static_markers_in_dir(root: &Path, is_custom: bool, max_depth: usize) ->
 }
 
 /// 从 Bootup.pack 封包中提取 Static.smubin 并解析
-fn parse_markers_from_bootup_pack(pack_bytes: &[u8], is_custom: bool) -> Vec<HyruleMarker> {
+fn parse_markers_from_bootup_pack<F>(
+    pack_bytes: &[u8],
+    is_custom: bool,
+    on_progress: &mut F,
+) -> Vec<HyruleMarker>
+where
+    F: FnMut(&str),
+{
     let decomp = yaz0::decompress(pack_bytes).unwrap_or_else(|_| pack_bytes.to_vec());
+    on_progress("解析 SARC 封包结构...");
     let Ok(sarc) = Sarc::new(&decomp) else { return Vec::new() };
 
     for file in sarc.files() {
         if let Some(name) = file.name() {
             if name.ends_with("Map/MainField/Static.smubin") || name.eq_ignore_ascii_case("Static.smubin") {
+                on_progress(&format!("提取并解析 {}", name));
                 return parse_location_markers_from_smubin(file.data(), is_custom);
             }
         }
