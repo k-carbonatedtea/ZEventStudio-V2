@@ -1,7 +1,9 @@
-use crate::ui::views::quest_map::markers_data::{HyruleMarker, HyruleMarkerKind};
+use crate::ui::views::quest_map::markers_data::{
+    HyruleMarkerKind, HyruleMarkerTemplate, HyruleMarkerTemplate as HyruleMarker,
+};
 
 /// 海拉鲁 136 座官方试炼神庙常量数据表 (含本体120座与DLC16座)
-pub const HYRULE_SHRINE_MARKERS: &[HyruleMarker] = &[
+pub const HYRULE_SHRINE_MARKERS: &[HyruleMarkerTemplate] = &[
     HyruleMarker { id: "Dungeon118", kind: HyruleMarkerKind::Shrine, name_zh: "托·库摩神庙", name_en: "To Quomo Shrine", sub_name_zh: Some("托·库摩的祝福"), sub_name_en: Some("To Quomo's Blessing"), position: (-4022.1, -3711.7), altitude: 301.1, icon_char: "⛩️" },
     HyruleMarker { id: "Dungeon088", kind: HyruleMarkerKind::Shrine, name_zh: "席亚·米乌神庙", name_en: "Hia Miu Shrine", sub_name_zh: Some("力之试练 终阶"), sub_name_en: Some("A Major Test of Strength"), position: (-4446.0, -3802.4), altitude: 342.9, icon_char: "⛩️" },
     HyruleMarker { id: "Dungeon051", kind: HyruleMarkerKind::Shrine, name_zh: "卡玛·拉席神庙", name_en: "Maka Rah Shrine", sub_name_zh: Some("心理准备"), sub_name_en: Some("Steady Thy Heart"), position: (-4058.8, -2508.3), altitude: 107.9, icon_char: "⛩️" },

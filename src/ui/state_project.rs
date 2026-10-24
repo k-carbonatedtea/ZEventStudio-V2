@@ -24,6 +24,7 @@ impl AppState {
                 self.project_path = Some(path.to_string());
                 self.project_name = Some(name.clone());
                 self.file_tree = nodes;
+                self.invalidate_hyrule_markers_cache();
                 self.update_global_search_results();
 
                 // 默认展开顶层前几个容器，避免深层递归展开导致的卡顿

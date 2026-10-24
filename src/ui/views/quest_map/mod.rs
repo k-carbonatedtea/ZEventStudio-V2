@@ -4,6 +4,7 @@ pub mod map_renderer;
 pub mod map_toolbar;
 pub mod markers_assets;
 pub mod markers_data;
+pub mod markers_extractor;
 pub mod markers_landmarks;
 pub mod markers_layer;
 pub mod markers_shrines;

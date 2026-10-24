@@ -154,6 +154,13 @@ impl Render for AppView {
         }
 
         let current_tab = self.model.read(cx).current_tab;
+        if current_tab == AppWorkspaceTab::Quests
+            && self.model.read(cx).quest_map_markers_cache.is_none()
+        {
+            self.model.update(cx, |st, _| {
+                st.ensure_hyrule_markers_cached();
+            });
+        }
 
         // 焦点调度：
         // 1. 如果存在活跃的输入框（如全局搜索、Git提交、设置弹窗），确保应用主 FocusHandle 处于聚焦状态以接收输入

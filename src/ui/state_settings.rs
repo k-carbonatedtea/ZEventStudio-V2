@@ -58,6 +58,7 @@ impl AppState {
     pub fn save_and_apply_settings(&mut self) {
         self.game_paths = self.settings_draft.clone();
         self.game_lang = self.game_paths.language;
+        self.invalidate_hyrule_markers_cache();
         if self.game_paths.current_platform == PlatformType::WiiU {
             self.target_engine = TargetEngine::BotW;
         }

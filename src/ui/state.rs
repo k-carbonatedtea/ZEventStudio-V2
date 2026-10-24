@@ -189,10 +189,37 @@ pub struct AppState {
     pub quest_map_show_settlements: bool,
     pub quest_map_hovered_marker: Option<String>,
     pub quest_map_selected_marker: Option<String>,
+    /// 内存中的一次性海拉鲁地标数据缓存 (从项目与游戏路径自动提取)
+    pub quest_map_markers_cache: Option<Vec<crate::ui::views::quest_map::markers_data::HyruleMarker>>,
 }
 
 #[allow(dead_code)]
 impl AppState {
+    /// 确保海拉鲁地图标点已加载到内存缓存中（一次性提取）
+    pub fn ensure_hyrule_markers_cached(&mut self) {
+        if self.quest_map_markers_cache.is_none() {
+            let proj_path = self.project_path.clone();
+            let markers = crate::ui::views::quest_map::markers_extractor::extract_hyrule_markers(
+                proj_path.as_deref(),
+                Some(&self.game_paths),
+            );
+            self.quest_map_markers_cache = Some(markers);
+        }
+    }
+
+    /// 获取内存中缓存的海拉鲁地标数据切片
+    pub fn get_hyrule_markers(&self) -> &[crate::ui::views::quest_map::markers_data::HyruleMarker] {
+        if let Some(cached) = &self.quest_map_markers_cache {
+            cached.as_slice()
+        } else {
+            &[]
+        }
+    }
+
+    /// 清空并失效地标缓存（当工作区切换项目或保存游戏路径时触发）
+    pub fn invalidate_hyrule_markers_cache(&mut self) {
+        self.quest_map_markers_cache = None;
+    }
 
     pub fn set_sidebar_width(&mut self, width: f32) {
         self.sidebar_width = width.clamp(180.0, 750.0);
@@ -286,6 +313,7 @@ impl AppState {
         self.git_commit_focus = GitCommitFocus::None;
         self.update_global_search_results();
         self.refresh_git_status();
+        self.invalidate_hyrule_markers_cache();
         self.toast = Some(Toast::info(self.t("toast.project_closed")));
     }
 

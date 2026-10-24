@@ -172,6 +172,7 @@ impl AppState {
             quest_map_show_settlements: true,
             quest_map_hovered_marker: None,
             quest_map_selected_marker: None,
+            quest_map_markers_cache: None,
         };
 
         state.clean_invalid_recent_projects();

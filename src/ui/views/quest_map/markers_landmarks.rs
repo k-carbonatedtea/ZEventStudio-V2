@@ -1,4 +1,7 @@
-use crate::ui::views::quest_map::markers_data::{HyruleMarker, HyruleMarkerKind, HyruleRegionLabel};
+use crate::ui::views::quest_map::markers_data::{
+    HyruleMarkerKind, HyruleMarkerTemplate, HyruleMarkerTemplate as HyruleMarker,
+    HyruleRegionLabel,
+};
 
 /// 海拉鲁主要区域大字标识常量表
 pub const HYRULE_REGIONS: &[HyruleRegionLabel] = &[
@@ -15,7 +18,7 @@ pub const HYRULE_REGIONS: &[HyruleRegionLabel] = &[
 ];
 
 /// 海拉鲁非神庙常驻核心地标列表 (包含希卡塔、驿站、四神兽、城镇与设施)
-pub const HYRULE_LANDMARK_MARKERS: &[HyruleMarker] = &[
+pub const HYRULE_LANDMARK_MARKERS: &[HyruleMarkerTemplate] = &[
     // --- 四神兽 (Divine Beasts) ---
     HyruleMarker { id: "RemainsWind", kind: HyruleMarkerKind::DivineBeast, name_zh: "神兽瓦·梅德", name_en: "Divine Beast Vah Medoh", sub_name_zh: Some("风之神兽"), sub_name_en: Some("Vah Medoh"), position: (-3614.1, -1862.1), altitude: 656.5, icon_char: "🦅" },
     HyruleMarker { id: "RemainsElectric", kind: HyruleMarkerKind::DivineBeast, name_zh: "神兽瓦·娜波力斯", name_en: "Divine Beast Vah Naboris", sub_name_zh: Some("雷之神兽"), sub_name_en: Some("Vah Naboris"), position: (-2111.1, 2627.2), altitude: 603.4, icon_char: "🐪" },

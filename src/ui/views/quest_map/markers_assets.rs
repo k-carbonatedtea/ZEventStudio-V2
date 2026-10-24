@@ -78,9 +78,9 @@ pub fn get_marker_game_icon_path(marker: &HyruleMarker, is_active: bool) -> Opti
         HyruleMarkerKind::Shrine => get_shrine_icon_path(is_active),
         HyruleMarkerKind::Tower => get_tower_icon_path(),
         HyruleMarkerKind::Stable => get_stable_icon_path(),
-        HyruleMarkerKind::DivineBeast => get_beast_icon_path(marker.id),
+        HyruleMarkerKind::DivineBeast => get_beast_icon_path(&marker.id),
         HyruleMarkerKind::Village | HyruleMarkerKind::Facility => {
-            get_settlement_icon_path(marker.id, marker.kind)
+            get_settlement_icon_path(&marker.id, marker.kind)
         }
     }
 }

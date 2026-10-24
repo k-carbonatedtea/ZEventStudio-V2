@@ -2,7 +2,7 @@ use gpui::*;
 use crate::ui::state::AppState;
 use crate::ui::views::quest_map::markers_assets::get_marker_game_icon_path;
 use crate::ui::views::quest_map::markers_data::{
-    get_all_hyrule_markers, get_hyrule_regions, HyruleMarker, HyruleMarkerKind,
+    get_default_hyrule_markers, get_hyrule_regions, HyruleMarker, HyruleMarkerKind,
 };
 use crate::ui::views::quest_map::types::world_to_screen;
 
@@ -41,7 +41,7 @@ pub fn render_region_labels_layer(pan: (f32, f32), zoom: f32, is_zh: bool) -> im
         }))
 }
 
-/// 渲染海拉鲁全境地标标注浮层 (神庙、驿站、四神兽、希卡塔、城镇与要地)
+/// 渲染海拉鲁全境地标标注浮层 (优先使用从项目与游戏路径动态提取并缓存的标点)
 pub fn render_markers_layer(
     state: &AppState,
     model: &Entity<AppState>,
@@ -58,13 +58,23 @@ pub fn render_markers_layer(
     let hovered_id = state.quest_map_hovered_marker.as_deref();
     let selected_id = state.quest_map_selected_marker.as_deref();
 
+    // 优先读取内存中的一次性提取地标缓存，若无则使用默认模板
+    let cached_markers = state.get_hyrule_markers();
+    let fallback_markers;
+    let markers: &[HyruleMarker] = if cached_markers.is_empty() {
+        fallback_markers = get_default_hyrule_markers();
+        &fallback_markers
+    } else {
+        cached_markers
+    };
+
     div()
         .absolute()
         .inset_0()
         // 1. 大区域水印文字
         .child(render_region_labels_layer(pan, zoom, is_zh))
         // 2. 全部地标标点元素 (带 LOD 与视口裁剪)
-        .children(get_all_hyrule_markers().filter_map(move |lm| {
+        .children(markers.iter().filter_map(move |lm| {
             // 类别可见性过滤
             let visible = match lm.kind {
                 HyruleMarkerKind::Shrine => show_shrines,
@@ -83,8 +93,8 @@ pub fn render_markers_layer(
                 return None;
             }
 
-            let is_hovered = hovered_id == Some(lm.id);
-            let is_selected = selected_id == Some(lm.id);
+            let is_hovered = hovered_id == Some(lm.id.as_ref());
+            let is_selected = selected_id == Some(lm.id.as_ref());
 
             Some(render_single_marker_card(
                 lm,
@@ -98,9 +108,9 @@ pub fn render_markers_layer(
         }))
 }
 
-/// 渲染单个地标标点卡片 (全面接入官方游戏素材贴图)
+/// 渲染单个地标标点卡片 (全面接入官方游戏素材贴图与自定义 Mod 标识)
 fn render_single_marker_card(
-    lm: &'static HyruleMarker,
+    lm: &HyruleMarker,
     screen_pos: (f32, f32),
     zoom: f32,
     is_zh: bool,
@@ -111,7 +121,7 @@ fn render_single_marker_card(
     let (sx, sy) = screen_pos;
     let m_click = model.clone();
     let m_hover = model.clone();
-    let marker_id = lm.id;
+    let marker_id = lm.id.clone();
     let marker_pos = lm.position;
 
     // 主题边框与文字高亮色
@@ -143,8 +153,8 @@ fn render_single_marker_card(
     };
 
     // 缩放 LOD 策略：缩放较大或高亮时显示详细名称胶囊
-    let show_full_label = zoom >= 0.10 || is_hovered || is_selected || lm.kind == HyruleMarkerKind::DivineBeast;
-    let is_compact = lm.kind == HyruleMarkerKind::Shrine && zoom < 0.06 && !is_hovered && !is_selected;
+    let show_full_label = zoom >= 0.10 || is_hovered || is_selected || lm.kind == HyruleMarkerKind::DivineBeast || lm.is_custom;
+    let is_compact = lm.kind == HyruleMarkerKind::Shrine && zoom < 0.06 && !is_hovered && !is_selected && !lm.is_custom;
 
     // 获取官方游戏贴图路径 (全品类覆盖)
     let icon_path_opt = get_marker_game_icon_path(lm, is_hovered || is_selected);
@@ -171,6 +181,10 @@ fn render_single_marker_card(
 
     let half_size = icon_px / 2.0;
 
+    let mid_click = marker_id.to_string();
+    let mid_hover = marker_id.to_string();
+    let icon_char = lm.icon_char.clone();
+
     div()
         .id(SharedString::from(format!("map_marker_{}", marker_id)))
         .absolute()
@@ -182,7 +196,7 @@ fn render_single_marker_card(
         .items_center()
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             cx.stop_propagation();
-            let mid = marker_id.to_string();
+            let mid = mid_click.clone();
             let pos = marker_pos;
             m_click.update(cx, |st, cx| {
                 st.quest_map_selected_marker = Some(mid);
@@ -191,7 +205,7 @@ fn render_single_marker_card(
             });
         })
         .on_hover(move |hovered, _, cx| {
-            let mid = marker_id.to_string();
+            let mid = mid_hover.clone();
             m_hover.update(cx, |st, cx| {
                 st.quest_map_hovered_marker = if *hovered { Some(mid) } else { None };
                 cx.notify();
@@ -206,7 +220,6 @@ fn render_single_marker_card(
                     .items_center()
                     .justify_center()
                     .children((is_selected || is_hovered).then(|| {
-                        // 选中或悬浮时叠加精细发光外光晕
                         div()
                             .absolute()
                             .inset_0()
@@ -232,11 +245,11 @@ fn render_single_marker_card(
                     .justify_center()
                     .text_size(if is_compact { px(0.0) } else { px(12.0) })
                     .text_color(rgb(0xffffff))
-                    .child(if is_compact { "" } else { lm.icon_char })
+                    .child(if is_compact { SharedString::default() } else { icon_char })
                     .into_any_element()
             }
         )
-        // 名称药丸标签 (当放大或悬停时呈现)
+        // 名称药丸标签 (当放大、悬停或属于自定义 Mod 标点时呈现)
         .children(show_full_label.then(|| {
             div()
                 .mt_0p5()
@@ -245,24 +258,40 @@ fn render_single_marker_card(
                 .rounded_sm()
                 .bg(rgba(0x0f172aee))
                 .border_1()
-                .border_color(border_color.opacity(0.8))
+                .border_color(if lm.is_custom { rgb(0xeab308) } else { border_color.opacity(0.8) })
                 .shadow_sm()
                 .flex()
                 .flex_col()
                 .items_center()
                 .child(
                     div()
-                        .text_size(px(10.0))
-                        .font_weight(FontWeight::BOLD)
-                        .text_color(text_color)
-                        .whitespace_nowrap()
-                        .child(lm.display_name(is_zh)),
+                        .flex()
+                        .items_center()
+                        .gap_1()
+                        .child(
+                            div()
+                                .text_size(px(10.0))
+                                .font_weight(FontWeight::BOLD)
+                                .text_color(if lm.is_custom { rgb(0xfde047) } else { text_color })
+                                .whitespace_nowrap()
+                                .child(lm.display_name(is_zh).to_string()),
+                        )
+                        .children(lm.is_custom.then(|| {
+                            div()
+                                .px_1()
+                                .rounded_xs()
+                                .bg(rgb(0xeab308))
+                                .text_color(rgb(0x0f172a))
+                                .text_size(px(8.0))
+                                .font_weight(FontWeight::BOLD)
+                                .child("MOD")
+                        }))
                 )
-                // 副标题 (如神庙试炼名 / 神兽全称)
+                // 副标题 (如神庙试炼名 / 神兽全称 / 自定义标点说明)
                 .children(lm.display_sub(is_zh).map(|sub| {
                     div()
                         .text_size(px(8.5))
-                        .text_color(rgb(0x94a3b8))
+                        .text_color(if lm.is_custom { rgb(0xfef08a) } else { rgb(0x94a3b8) })
                         .whitespace_nowrap()
                         .child(format!("- {} -", sub))
                 }))
