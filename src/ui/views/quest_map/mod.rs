@@ -1,3 +1,4 @@
+pub mod map_asset_indicator;
 pub mod map_canvas;
 pub mod map_layer_filters;
 pub mod map_renderer;

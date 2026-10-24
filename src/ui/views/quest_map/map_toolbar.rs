@@ -1,5 +1,6 @@
 use gpui::*;
 use crate::ui::state::AppState;
+use crate::ui::views::quest_map::map_asset_indicator::render_asset_source_indicator;
 use crate::ui::views::quest_map::map_layer_filters::render_map_layer_filters;
 use crate::ui::views::quest_map::types::{get_region_name_for_coord, get_section_for_coord};
 
@@ -7,16 +8,9 @@ use crate::ui::views::quest_map::types::{get_region_name_for_coord, get_section_
 pub fn render_map_header_hud(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
     let pal = state.theme();
     let selected_quest = state.get_selected_quest();
-
-    let model_grid = model.clone();
-    let model_all_pins = model.clone();
-    let model_center = model.clone();
-    let model_zoom_in = model.clone();
-    let model_zoom_out = model.clone();
-    let model_reset = model.clone();
-
-    let show_grid = state.quest_map_show_grid;
-    let show_all = state.quest_map_show_all_pins;
+    let (model_grid, model_all_pins, model_center) = (model.clone(), model.clone(), model.clone());
+    let (model_zoom_in, model_zoom_out, model_reset) = (model.clone(), model.clone(), model.clone());
+    let (show_grid, show_all) = (state.quest_map_show_grid, state.quest_map_show_all_pins);
     let is_extracting = state.quest_map_is_extracting_tiles;
     let tiles_count = crate::ui::views::quest_map::tiles_layer::count_cached_map_tiles(state.project_path.as_deref());
     let model_extract = model.clone();
@@ -103,7 +97,9 @@ pub fn render_map_header_hud(state: &AppState, model: &Entity<AppState>) -> impl
                         .text_color(pal.text_secondary)
                         .child("🗺️")
                         .child(state.t("quests.map_title"))
-                })),
+                }))
+                // 素材来源路径与平台 (Switch / Wii U) 指示器
+                .child(render_asset_source_indicator(state, model)),
         )
         // 右侧：视口工具与图层开关
         .child(
