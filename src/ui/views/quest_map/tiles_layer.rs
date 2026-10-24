@@ -94,6 +94,41 @@ fn find_maptex_recursive(dir: &Path, current_depth: usize, max_depth: usize) -> 
     None
 }
 
+/// 收集指定平台在偏好设置与衍生环境下的候选查找目录
+fn collect_platform_maptex_candidates(
+    plat: crate::model::PlatformType,
+    gp: &crate::model::GamePathSettings,
+) -> Vec<PathBuf> {
+    let mut list = Vec::new();
+    match plat {
+        crate::model::PlatformType::Switch => {
+            if !gp.switch.game_dir.trim().is_empty() {
+                list.push(PathBuf::from(gp.switch.game_dir.trim()));
+            }
+            if !gp.switch.dlc_dir.trim().is_empty() {
+                let dlc = gp.switch.dlc_dir.trim();
+                list.push(PathBuf::from(dlc));
+                if dlc.contains("01007EF00011F001") {
+                    list.push(PathBuf::from(dlc.replace("01007EF00011F001", "01007EF00011E000")));
+                }
+            }
+            list.push(PathBuf::from(r"C:\Game\BOTW\01007EF00011E000\romfs"));
+            list.push(PathBuf::from(r"C:\Game\BOTW\01007EF00011E000\romfs\UI\MapTex\MainField"));
+        }
+        crate::model::PlatformType::WiiU => {
+            if !gp.wiiu.update_dir.trim().is_empty() {
+                list.push(PathBuf::from(gp.wiiu.update_dir.trim()));
+            }
+            if !gp.wiiu.game_dir.trim().is_empty() {
+                list.push(PathBuf::from(gp.wiiu.game_dir.trim()));
+            }
+            list.push(PathBuf::from(r"E:\CEMU2.6\Games\The Legend of Zelda-Breath of the Wild\content\UI\MapTex\MainField"));
+            list.push(PathBuf::from(r"E:\Wiiu emu\Botw_Dump\Games\The Legend of Zelda-Breath of the Wild\content\UI\MapTex\MainField"));
+        }
+    }
+    list
+}
+
 /// 解析地图瓦片源文件目录
 /// 返回值：Some((源路径, 是否来自已打开项目))
 pub fn resolve_maptex_source(
@@ -108,31 +143,31 @@ pub fn resolve_maptex_source(
         }
     }
 
-    // 2. 若项目中未包含，回退检查设置中的游戏 Dump 路径
+    // 2. 若项目中未包含，回退检查设置中的游戏 Dump 路径 (严格优先匹配当前选择的平台)
     if let Some(gp) = game_paths {
-        let settings_candidates = [
-            PathBuf::from(&gp.wiiu.game_dir),
-            PathBuf::from(&gp.wiiu.update_dir),
-            PathBuf::from(&gp.switch.game_dir),
-        ];
-        for cand in &settings_candidates {
-            if !cand.as_os_str().is_empty() {
-                if let Some(src) = find_maptex_in_directory(cand, 3) {
-                    return Some((src, false));
-                }
+        let (primary_plat, fallback_plat) = match gp.current_platform {
+            crate::model::PlatformType::Switch => (crate::model::PlatformType::Switch, crate::model::PlatformType::WiiU),
+            crate::model::PlatformType::WiiU => (crate::model::PlatformType::WiiU, crate::model::PlatformType::Switch),
+        };
+
+        // 优先在用户当前所选平台中查找
+        for cand in collect_platform_maptex_candidates(primary_plat, gp) {
+            if is_valid_mainfield_dir(&cand) {
+                return Some((cand, false));
+            }
+            if let Some(src) = find_maptex_in_directory(&cand, 3) {
+                return Some((src, false));
             }
         }
-    }
 
-    // 3. 最终回退：系统已知典型 Dump 路径
-    let known_paths = [
-        PathBuf::from(r"E:\CEMU2.6\Games\The Legend of Zelda-Breath of the Wild\content\UI\MapTex\MainField"),
-        PathBuf::from(r"E:\Wiiu emu\Botw_Dump\Games\The Legend of Zelda-Breath of the Wild\content\UI\MapTex\MainField"),
-        PathBuf::from(r"C:\Game\BOTW\01007EF00011E000\romfs\UI\MapTex\MainField"),
-    ];
-    for p in &known_paths {
-        if is_valid_mainfield_dir(p) {
-            return Some((p.clone(), false));
+        // 当前平台未找到时，才检查备选平台
+        for cand in collect_platform_maptex_candidates(fallback_plat, gp) {
+            if is_valid_mainfield_dir(&cand) {
+                return Some((cand, false));
+            }
+            if let Some(src) = find_maptex_in_directory(&cand, 3) {
+                return Some((src, false));
+            }
         }
     }
 

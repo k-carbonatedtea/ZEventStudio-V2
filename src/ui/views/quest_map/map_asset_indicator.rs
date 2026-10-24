@@ -26,10 +26,13 @@ pub struct AssetSourceInfo {
 
 /// 解析当前海拉鲁地图素材的来源路径与目标平台
 pub fn resolve_asset_source_info(state: &AppState) -> AssetSourceInfo {
-    // 1. 优先尝试解析瓦片纹理物理目录
-    if let Some((maptex_dir, is_proj)) = resolve_maptex_source(state.project_path.as_deref(), Some(&state.game_paths)) {
+    let gp = &state.game_paths;
+    let selected_plat = gp.current_platform;
+
+    // 1. 优先尝试解析瓦片纹理物理目录 (resolve_maptex_source 已经遵循 current_platform 优先)
+    if let Some((maptex_dir, is_proj)) = resolve_maptex_source(state.project_path.as_deref(), Some(gp)) {
         let full = maptex_dir.to_string_lossy().to_string();
-        let detected = detect_platform_from_path(&full).unwrap_or(state.game_paths.current_platform);
+        let detected = detect_platform_from_path(&full).unwrap_or(selected_plat);
         let origin = if is_proj { AssetOrigin::Project } else { AssetOrigin::GameDump };
         let short = compact_display_path(&full, if is_proj { 22 } else { 26 });
         return AssetSourceInfo {
@@ -42,7 +45,7 @@ pub fn resolve_asset_source_info(state: &AppState) -> AssetSourceInfo {
 
     // 2. 若瓦片未解压但当前打开了 Mod 项目，优先归属于项目
     if let Some(ref proj) = state.project_path {
-        let detected = detect_platform_from_path(proj).unwrap_or(state.game_paths.current_platform);
+        let detected = detect_platform_from_path(proj).unwrap_or(selected_plat);
         let short = compact_display_path(proj, 22);
         return AssetSourceInfo {
             platform: detected,
@@ -52,49 +55,56 @@ pub fn resolve_asset_source_info(state: &AppState) -> AssetSourceInfo {
         };
     }
 
-    // 3. 检查全局配置的游戏路径 (根据当前平台优先匹配)
-    let gp = &state.game_paths;
-    let (chosen_path, chosen_plat) = match gp.current_platform {
+    // 3. 检查全局配置的游戏路径 (严格遵循用户选中的平台，绝不跨平台错乱)
+    let candidate_dirs = match selected_plat {
         PlatformType::Switch => {
+            let mut list = Vec::new();
             if !gp.switch.game_dir.trim().is_empty() {
-                (gp.switch.game_dir.clone(), PlatformType::Switch)
-            } else if !gp.wiiu.game_dir.trim().is_empty() {
-                (gp.wiiu.game_dir.clone(), PlatformType::WiiU)
-            } else if !gp.wiiu.update_dir.trim().is_empty() {
-                (gp.wiiu.update_dir.clone(), PlatformType::WiiU)
-            } else {
-                (String::new(), PlatformType::Switch)
+                list.push(gp.switch.game_dir.clone());
             }
+            if !gp.switch.dlc_dir.trim().is_empty() {
+                let dlc = gp.switch.dlc_dir.trim();
+                list.push(dlc.to_string());
+                if dlc.contains("01007EF00011F001") {
+                    list.push(dlc.replace("01007EF00011F001", "01007EF00011E000"));
+                }
+            }
+            list.push(r"C:\Game\BOTW\01007EF00011E000\romfs".to_string());
+            list
         }
         PlatformType::WiiU => {
+            let mut list = Vec::new();
             if !gp.wiiu.update_dir.trim().is_empty() {
-                (gp.wiiu.update_dir.clone(), PlatformType::WiiU)
-            } else if !gp.wiiu.game_dir.trim().is_empty() {
-                (gp.wiiu.game_dir.clone(), PlatformType::WiiU)
-            } else if !gp.switch.game_dir.trim().is_empty() {
-                (gp.switch.game_dir.clone(), PlatformType::Switch)
-            } else {
-                (String::new(), PlatformType::WiiU)
+                list.push(gp.wiiu.update_dir.clone());
             }
+            if !gp.wiiu.game_dir.trim().is_empty() {
+                list.push(gp.wiiu.game_dir.clone());
+            }
+            list.push(r"E:\CEMU2.6\Games\The Legend of Zelda-Breath of the Wild\content".to_string());
+            list.push(r"E:\Wiiu emu\Botw_Dump\Games\The Legend of Zelda-Breath of the Wild\content".to_string());
+            list
         }
     };
 
-    if !chosen_path.is_empty() {
-        let short = compact_display_path(&chosen_path, 26);
-        return AssetSourceInfo {
-            platform: chosen_plat,
-            origin: AssetOrigin::GameDump,
-            full_path: chosen_path,
-            display_path: short,
-        };
+    for cand in candidate_dirs {
+        let p = Path::new(&cand);
+        if p.exists() {
+            let short = compact_display_path(&cand, 26);
+            return AssetSourceInfo {
+                platform: selected_plat,
+                origin: AssetOrigin::GameDump,
+                full_path: cand,
+                display_path: short,
+            };
+        }
     }
 
-    // 4. 回退至应用内建全局瓦片缓存
+    // 4. 用户所选平台未找到有效配置，检查应用内建全局瓦片缓存
     let cache_dir = get_global_map_tiles_cache_dir();
     let full = cache_dir.to_string_lossy().to_string();
     let short = compact_display_path(&full, 24);
     AssetSourceInfo {
-        platform: gp.current_platform,
+        platform: selected_plat,
         origin: if cache_dir.exists() { AssetOrigin::BuiltinCache } else { AssetOrigin::NotConfigured },
         full_path: full,
         display_path: short,

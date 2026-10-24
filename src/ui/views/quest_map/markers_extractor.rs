@@ -23,30 +23,63 @@ pub fn extract_hyrule_markers(
         markers_map.insert(marker.id.to_string(), marker);
     }
 
-    // 2. 从已配置的游戏 Dump 路径中提取（官方或已安装全局 Mod 标点）
+    // 2. 从已配置的游戏 Dump 路径中提取（严格优先使用当前所选平台）
     if let Some(gp) = game_paths {
-        let mut game_dirs = Vec::new();
-        // 优先检查活跃与配置的路径
-        for p in [
-            &gp.switch.game_dir,
-            &gp.switch.dlc_dir,
-            &gp.switch.export_dir,
-            &gp.wiiu.update_dir,
-            &gp.wiiu.game_dir,
-            &gp.wiiu.dlc_dir,
-        ] {
-            if !p.trim().is_empty() {
-                game_dirs.push(PathBuf::from(p.trim()));
+        let mut primary_dirs = Vec::new();
+        let mut fallback_dirs = Vec::new();
+
+        match gp.current_platform {
+            crate::model::settings::PlatformType::Switch => {
+                if !gp.switch.game_dir.trim().is_empty() {
+                    primary_dirs.push(PathBuf::from(gp.switch.game_dir.trim()));
+                }
+                if !gp.switch.dlc_dir.trim().is_empty() {
+                    let dlc = gp.switch.dlc_dir.trim();
+                    primary_dirs.push(PathBuf::from(dlc));
+                    if dlc.contains("01007EF00011F001") {
+                        primary_dirs.push(PathBuf::from(dlc.replace("01007EF00011F001", "01007EF00011E000")));
+                    }
+                }
+                primary_dirs.push(PathBuf::from(r"C:\Game\BOTW\01007EF00011E000\romfs"));
+                if !gp.wiiu.update_dir.trim().is_empty() {
+                    fallback_dirs.push(PathBuf::from(gp.wiiu.update_dir.trim()));
+                }
+                if !gp.wiiu.game_dir.trim().is_empty() {
+                    fallback_dirs.push(PathBuf::from(gp.wiiu.game_dir.trim()));
+                }
+            }
+            crate::model::settings::PlatformType::WiiU => {
+                if !gp.wiiu.update_dir.trim().is_empty() {
+                    primary_dirs.push(PathBuf::from(gp.wiiu.update_dir.trim()));
+                }
+                if !gp.wiiu.game_dir.trim().is_empty() {
+                    primary_dirs.push(PathBuf::from(gp.wiiu.game_dir.trim()));
+                }
+                if !gp.switch.game_dir.trim().is_empty() {
+                    fallback_dirs.push(PathBuf::from(gp.switch.game_dir.trim()));
+                }
             }
         }
 
-        for dir in game_dirs {
-            if !dir.exists() {
-                continue;
+        // 先扫描当前平台有效目录
+        let mut scanned_any = false;
+        for dir in primary_dirs {
+            if dir.exists() {
+                scanned_any = true;
+                for marker in scan_static_markers_in_dir(&dir, false, 3) {
+                    merge_marker_into_map(&mut markers_map, marker);
+                }
             }
-            // 扫描 Static.smubin 或 Bootup.pack
-            for marker in scan_static_markers_in_dir(&dir, false, 3) {
-                merge_marker_into_map(&mut markers_map, marker);
+        }
+
+        // 仅当当前平台未能扫描到任何有效目录时，才使用备选平台
+        if !scanned_any {
+            for dir in fallback_dirs {
+                if dir.exists() {
+                    for marker in scan_static_markers_in_dir(&dir, false, 3) {
+                        merge_marker_into_map(&mut markers_map, marker);
+                    }
+                }
             }
         }
     }
