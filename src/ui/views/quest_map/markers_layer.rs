@@ -180,6 +180,8 @@ fn render_single_marker_card(
     };
 
     let half_size = icon_px / 2.0;
+    // 使用对称的固定定位盒 (260px)，确保当药丸标签展开或收起时，图标中心永远绝对锁定在 (sx, sy) 零漂移
+    let anchor_w = 260.0;
 
     let mid_click = marker_id.to_string();
     let mid_hover = marker_id.to_string();
@@ -188,8 +190,9 @@ fn render_single_marker_card(
     div()
         .id(SharedString::from(format!("map_marker_{}", marker_id)))
         .absolute()
-        .left(px(sx - half_size))
+        .left(px(sx - anchor_w / 2.0))
         .top(px(sy - half_size))
+        .w(px(anchor_w))
         .cursor_pointer()
         .flex()
         .flex_col()

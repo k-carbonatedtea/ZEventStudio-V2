@@ -92,7 +92,8 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                 }
 
                 let sidebar_w = if st.sidebar_open { 48.0 + st.sidebar_width + 4.0 } else { 48.0 };
-                let top_bar_h = 156.0;
+                // 顶部累计高度: TitleBar (36px) + DocumentTabBar (32px) + MapHeaderHUD (42px) = 110px
+                let top_bar_h = 110.0;
                 let local_mx = mx - sidebar_w;
                 let local_my = my - top_bar_h;
                 let (wx, wz) = screen_to_world(local_mx, local_my, (0.0, 0.0), st.quest_map_pan, st.quest_map_zoom);
@@ -116,7 +117,7 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                 let mx: f32 = e.position.x.into();
                 let my: f32 = e.position.y.into();
                 let sidebar_w = if st.sidebar_open { 48.0 + st.sidebar_width + 4.0 } else { 48.0 };
-                let top_bar_h = 156.0;
+                let top_bar_h = 110.0;
                 let local_mx = mx - sidebar_w;
                 let local_my = my - top_bar_h;
 

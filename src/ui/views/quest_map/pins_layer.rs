@@ -180,11 +180,14 @@ pub fn render_pins_elements(
                 format!("Step {}", pin.step_index + 1)
             };
 
+            let anchor_w = 200.0;
+
             div()
                 .id(SharedString::from(format!("map_pin_{}_{}_{}", q_name, s_idx, i_idx)))
                 .absolute()
-                .left(px(sx - 14.0))
+                .left(px(sx - anchor_w / 2.0))
                 .top(px(sy - 28.0))
+                .w(px(anchor_w))
                 .cursor_pointer()
                 .flex()
                 .flex_col()
