@@ -22,6 +22,7 @@ pub mod plugin_ops;
 pub mod state_plugin_bridge;
 pub mod state_plugins;
 pub mod state_project;
+pub mod state_quests;
 pub mod state_recent;
 pub mod state_reveal;
 pub mod state_save;

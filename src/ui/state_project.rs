@@ -40,6 +40,7 @@ impl AppState {
                 self.active_sidebar_tab = SidebarTab::Files;
                 self.refresh_git_status();
                 self.refresh_git_history();
+                self.refresh_quests_list();
                 self.toast = Some(Toast::success(format!("{} {}", self.t("toast.project_loaded"), name)));
             }
             Err(e) => {

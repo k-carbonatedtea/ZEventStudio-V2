@@ -224,3 +224,56 @@ pub fn render_plugins_icon(color: Rgba, _pal: &crate::ui::theme::ThemePalette) -
         )
         .into_any_element()
 }
+
+/// 渲染任务管理器/冒险笔记图标 (任务卷轴 / 列表与勾选标记)
+pub fn render_quests_icon(color: Rgba, _pal: &crate::ui::theme::ThemePalette) -> AnyElement {
+    div()
+        .size(px(22.0))
+        .relative()
+        // 卷轴主体边框
+        .child(
+            div()
+                .absolute()
+                .top(px(2.5))
+                .left(px(4.0))
+                .w(px(14.0))
+                .h(px(17.0))
+                .rounded(px(2.0))
+                .border_1()
+                .border_color(color),
+        )
+        // 第一条任务文字线
+        .child(
+            div()
+                .absolute()
+                .top(px(6.0))
+                .left(px(7.0))
+                .w(px(8.0))
+                .h(px(1.5))
+                .rounded(px(0.5))
+                .bg(color),
+        )
+        // 第二条任务文字线
+        .child(
+            div()
+                .absolute()
+                .top(px(9.5))
+                .left(px(7.0))
+                .w(px(8.0))
+                .h(px(1.5))
+                .rounded(px(0.5))
+                .bg(color),
+        )
+        // 第三条任务文字线 (短线)
+        .child(
+            div()
+                .absolute()
+                .top(px(13.0))
+                .left(px(7.0))
+                .w(px(5.0))
+                .h(px(1.5))
+                .rounded(px(0.5))
+                .bg(color),
+        )
+        .into_any_element()
+}

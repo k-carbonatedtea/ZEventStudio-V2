@@ -1,0 +1,179 @@
+use serde::{Deserialize, Serialize};
+
+/// 任务类型分类
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum QuestType {
+    #[default]
+    Mini, // 迷你挑战 (Mini)
+    Sub,  // 普通挑战/神庙挑战 (Sub)
+    Main, // 主线剧情挑战 (Main)
+}
+
+impl QuestType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Mini => "Mini",
+            Self::Sub => "Sub",
+            Self::Main => "Main",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "Main" => Self::Main,
+            "Sub" => Self::Sub,
+            _ => Self::Mini,
+        }
+    }
+
+    pub fn label_key(&self) -> &'static str {
+        match self {
+            Self::Mini => "quests.type_mini",
+            Self::Sub => "quests.type_sub",
+            Self::Main => "quests.type_main",
+        }
+    }
+}
+
+/// 任务单阶段定义
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct QuestStep {
+    pub name: String,
+    pub message_name: String,
+    pub next_flag: String,
+    pub update_step: bool,
+    pub attention_off: bool,
+}
+
+impl Default for QuestStep {
+    fn default() -> Self {
+        Self {
+            name: "Ready".to_string(),
+            message_name: "Desc".to_string(),
+            next_flag: String::new(),
+            update_step: true,
+            attention_off: false,
+        }
+    }
+}
+
+/// 任务完整定义模型
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct QuestDefinition {
+    pub name: String,
+    pub quest_type: QuestType,
+    pub orderer: String,
+    pub location: String,
+    pub not_post_note: bool,
+    pub steps: Vec<QuestStep>,
+    // 关联的本地化文本预览 (来自 QL_<Quest>.msbt)
+    pub display_title: Option<String>,
+    pub desc_text: Option<String>,
+    pub finish_text: Option<String>,
+}
+
+impl Default for QuestDefinition {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            quest_type: QuestType::Mini,
+            orderer: String::new(),
+            location: "Unknown".to_string(),
+            not_post_note: false,
+            steps: Vec::new(),
+            display_title: None,
+            desc_text: None,
+            finish_text: None,
+        }
+    }
+}
+
+/// 新建任务脚手架向导配置
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QuestScaffoldConfig {
+    pub name: String,
+    pub quest_type: QuestType,
+    pub orderer: String,
+    pub location: String,
+    pub display_title: String,
+    pub desc_text: String,
+    pub finish_text: String,
+    // 自动化模块勾选项
+    pub inject_titlebg: bool,
+    pub inject_bootup_flags: bool,
+    pub inject_ql_msbt: bool,
+    pub scaffold_graph_nodes: bool,
+    pub inject_npc_choice: bool,
+}
+
+impl Default for QuestScaffoldConfig {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            quest_type: QuestType::Mini,
+            orderer: String::new(),
+            location: "Unknown".to_string(),
+            display_title: String::new(),
+            desc_text: String::new(),
+            finish_text: String::new(),
+            inject_titlebg: true,
+            inject_bootup_flags: true,
+            inject_ql_msbt: true,
+            scaffold_graph_nodes: true,
+            inject_npc_choice: true,
+        }
+    }
+}
+
+/// 计算 BotW 标准 32 位带符号 CRC32 哈希值
+pub fn compute_botw_hash(name: &str) -> i32 {
+    let mut crc = 0xFFFF_FFFFu32;
+    for byte in name.as_bytes() {
+        crc ^= *byte as u32;
+        for _ in 0..8 {
+            crc = if crc & 1 != 0 {
+                (crc >> 1) ^ 0xEDB8_8320
+            } else {
+                crc >> 1
+            };
+        }
+    }
+    (!crc) as i32
+}
+
+/// 在 SARC 封包中查找匹配指定相对路径的文件
+pub fn find_sarc_file<'a>(sarc: &'a roead::sarc::Sarc, path: &str) -> Option<roead::sarc::File<'a>> {
+    let clean = path.replace('\\', "/");
+    let clean_trim = clean.trim_start_matches('/');
+    sarc.files().find(|f| {
+        if let Some(name) = f.name() {
+            let n_clean = name.replace('\\', "/");
+            let n_trim = n_clean.trim_start_matches('/');
+            n_clean == clean || n_trim == clean_trim || n_clean.ends_with(&clean)
+        } else {
+            false
+        }
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_botw_crc32_hash() {
+        assert_eq!(compute_botw_hash("Test_Ready"), -1378414736);
+        assert_eq!(compute_botw_hash("Test_Activated"), -122606554);
+        assert_eq!(compute_botw_hash("Test_Finish"), 1795383569);
+    }
+
+    #[test]
+    fn test_quest_type_mapping() {
+        assert_eq!(QuestType::from_str("Main"), QuestType::Main);
+        assert_eq!(QuestType::from_str("Sub"), QuestType::Sub);
+        assert_eq!(QuestType::from_str("Mini"), QuestType::Mini);
+        assert_eq!(QuestType::Mini.as_str(), "Mini");
+        assert_eq!(QuestType::Main.label_key(), "quests.type_main");
+    }
+}
+

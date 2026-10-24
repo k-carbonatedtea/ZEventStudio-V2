@@ -144,6 +144,15 @@ impl AppState {
             selected_plugin_id: None,
             api_server_running: false,
             api_server_port: 31415,
+
+            // 任务管理器与向导状态
+            quests_list: Vec::new(),
+            quests_search_query: String::new(),
+            quests_search_focused: false,
+            quests_selected_id: None,
+            quests_filter_type: None,
+            quest_creator_modal: None,
+            quests_scroll_handle: gpui::UniformListScrollHandle::new(),
         };
 
         state.clean_invalid_recent_projects();

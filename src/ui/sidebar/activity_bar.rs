@@ -81,6 +81,17 @@ pub fn render_activity_bar(
                     sidebar_open,
                     plugins_badge,
                     render_plugins_icon,
+                ))
+
+                // 5. 任务管理器 (Quests)
+                .child(render_activity_item(
+                    state,
+                    model,
+                    ActivityBarTab::Quests,
+                    current_tab == ActivityBarTab::Quests,
+                    sidebar_open,
+                    state.quests_list.len(),
+                    render_quests_icon,
                 )),
         )
 
@@ -195,6 +206,15 @@ where
                         } else {
                             st.active_activity_tab = ActivityBarTab::Plugins;
                             st.sidebar_open = true;
+                        }
+                    }
+                    ActivityBarTab::Quests => {
+                        if st.active_activity_tab == ActivityBarTab::Quests && st.sidebar_open {
+                            st.sidebar_open = false;
+                        } else {
+                            st.active_activity_tab = ActivityBarTab::Quests;
+                            st.sidebar_open = true;
+                            st.refresh_quests_list();
                         }
                     }
                 }

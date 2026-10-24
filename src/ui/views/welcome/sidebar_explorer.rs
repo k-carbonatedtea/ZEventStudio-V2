@@ -41,6 +41,9 @@ pub fn render_welcome_sidebar(
                     ActivityBarTab::Plugins => {
                         render_plugins_panel(state, model).into_any_element()
                     }
+                    ActivityBarTab::Quests => {
+                        crate::ui::sidebar::render_quests_panel(state, model).into_any_element()
+                    }
                 })
         }))
 }

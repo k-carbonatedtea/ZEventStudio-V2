@@ -21,6 +21,7 @@ pub mod git_diff_align;
 pub mod git;
 pub mod git_actions;
 pub mod plugin;
+pub mod quest;
 pub mod search;
 pub mod subgraph;
 

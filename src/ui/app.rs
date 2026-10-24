@@ -343,6 +343,10 @@ impl Render for AppView {
             .children((state.active_diff_modal.is_some()).then(|| {
                 crate::ui::sidebar::render_git_diff_modal(state, &self.model)
             }))
+            // 新建任务向导模态框
+            .children(state.quest_creator_modal.as_ref().map(|modal| {
+                crate::ui::sidebar::render_quest_creator_modal(modal, state, &self.model)
+            }))
     }
 }
 

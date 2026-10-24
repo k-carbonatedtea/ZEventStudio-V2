@@ -155,5 +155,44 @@ pub fn handle_modal_key_event(event: &KeyDownEvent, state: &mut AppState, clipbo
         return Some(should_notify);
     }
 
+    // 11. 任务创建向导模态框键盘输入拦截 (Esc 关闭, Tab 切换字段, 文本键入)
+    if let Some(ref mut modal) = state.quest_creator_modal {
+        use crate::ui::state_types::QuestCreatorFocusField;
+        if event.keystroke.key == "escape" {
+            if modal.focused_field != QuestCreatorFocusField::None {
+                modal.focused_field = QuestCreatorFocusField::None;
+            } else {
+                state.quest_creator_modal = None;
+            }
+            return Some(true);
+        }
+
+        if event.keystroke.key == "tab" {
+            modal.focused_field = match modal.focused_field {
+                QuestCreatorFocusField::None => QuestCreatorFocusField::Name,
+                QuestCreatorFocusField::Name => QuestCreatorFocusField::DisplayTitle,
+                QuestCreatorFocusField::DisplayTitle => QuestCreatorFocusField::Orderer,
+                QuestCreatorFocusField::Orderer => QuestCreatorFocusField::Location,
+                QuestCreatorFocusField::Location => QuestCreatorFocusField::DescText,
+                QuestCreatorFocusField::DescText => QuestCreatorFocusField::FinishText,
+                QuestCreatorFocusField::FinishText => QuestCreatorFocusField::Name,
+            };
+            return Some(true);
+        }
+
+        let target = match modal.focused_field {
+            QuestCreatorFocusField::Name => &mut modal.name,
+            QuestCreatorFocusField::DisplayTitle => &mut modal.display_title,
+            QuestCreatorFocusField::Orderer => &mut modal.orderer,
+            QuestCreatorFocusField::Location => &mut modal.location,
+            QuestCreatorFocusField::DescText => &mut modal.desc_text,
+            QuestCreatorFocusField::FinishText => &mut modal.finish_text,
+            QuestCreatorFocusField::None => return Some(false),
+        };
+
+        let (changed, _, _) = handle_text_key_event(target, event, clipboard);
+        return Some(changed);
+    }
+
     None
 }

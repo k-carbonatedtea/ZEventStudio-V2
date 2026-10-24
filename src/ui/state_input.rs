@@ -1,4 +1,4 @@
-use crate::ui::state::{ActiveSettingsField, AppState, GitCommitFocus};
+use crate::ui::state::{ActiveSettingsField, AppState, GitCommitFocus, QuestCreatorFocusField};
 
 /// 文本输入框焦点调度与 IME 输入法支持状态扩展
 impl AppState {
@@ -11,7 +11,10 @@ impl AppState {
                 return true;
             }
         }
-        if self.global_search_focused || self.file_search_focused || self.git_history_search_focused || self.plugin_search_focused {
+        if self.global_search_focused || self.file_search_focused || self.git_history_search_focused || self.plugin_search_focused || self.quests_search_focused {
+            return true;
+        }
+        if self.quest_creator_modal.as_ref().is_some_and(|m| m.focused_field != QuestCreatorFocusField::None) {
             return true;
         }
         if self.git_commit_focus != GitCommitFocus::None {
@@ -32,6 +35,10 @@ impl AppState {
         self.file_search_focused = false;
         self.git_history_search_focused = false;
         self.plugin_search_focused = false;
+        self.quests_search_focused = false;
+        if let Some(ref mut m) = self.quest_creator_modal {
+            m.focused_field = QuestCreatorFocusField::None;
+        }
         self.git_commit_focus = GitCommitFocus::None;
         self.is_adding_action = false;
         self.is_adding_query = false;
@@ -94,6 +101,20 @@ impl AppState {
         }
         if self.is_adding_param {
             return Some(&self.new_param_key);
+        }
+        if self.quests_search_focused {
+            return Some(&self.quests_search_query);
+        }
+        if let Some(ref modal) = self.quest_creator_modal {
+            match modal.focused_field {
+                QuestCreatorFocusField::Name => return Some(&modal.name),
+                QuestCreatorFocusField::DisplayTitle => return Some(&modal.display_title),
+                QuestCreatorFocusField::Orderer => return Some(&modal.orderer),
+                QuestCreatorFocusField::Location => return Some(&modal.location),
+                QuestCreatorFocusField::DescText => return Some(&modal.desc_text),
+                QuestCreatorFocusField::FinishText => return Some(&modal.finish_text),
+                QuestCreatorFocusField::None => {}
+            }
         }
         if let Some(ref m) = self.rename_modal {
             if m.focused {
@@ -239,7 +260,42 @@ impl AppState {
             return true;
         }
 
-        // 6. 重命名模态框输入
+        // 6. 任务管理器搜索与新建向导输入
+        if self.quests_search_focused {
+            self.quests_search_query.push_str(&clean);
+            return true;
+        }
+        if let Some(ref mut modal) = self.quest_creator_modal {
+            match modal.focused_field {
+                QuestCreatorFocusField::Name => {
+                    modal.name.push_str(&clean);
+                    return true;
+                }
+                QuestCreatorFocusField::DisplayTitle => {
+                    modal.display_title.push_str(&clean);
+                    return true;
+                }
+                QuestCreatorFocusField::Orderer => {
+                    modal.orderer.push_str(&clean);
+                    return true;
+                }
+                QuestCreatorFocusField::Location => {
+                    modal.location.push_str(&clean);
+                    return true;
+                }
+                QuestCreatorFocusField::DescText => {
+                    modal.desc_text.push_str(&clean);
+                    return true;
+                }
+                QuestCreatorFocusField::FinishText => {
+                    modal.finish_text.push_str(&clean);
+                    return true;
+                }
+                QuestCreatorFocusField::None => {}
+            }
+        }
+
+        // 7. 重命名模态框输入
         if let Some(ref mut m) = self.rename_modal {
             if m.focused {
                 m.new_name.push_str(&clean);

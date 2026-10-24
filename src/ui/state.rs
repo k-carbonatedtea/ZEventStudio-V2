@@ -158,6 +158,16 @@ pub struct AppState {
     pub selected_plugin_id: Option<String>,
     pub api_server_running: bool,
     pub api_server_port: u16,
+
+    // 任务管理器与向导状态
+    pub quests_list: Vec<crate::model::quest::QuestDefinition>,
+    pub quests_search_query: String,
+    pub quests_search_focused: bool,
+    pub quests_selected_id: Option<String>,
+    pub quests_filter_type: Option<crate::model::quest::QuestType>,
+    pub quest_creator_modal: Option<QuestCreatorModalState>,
+    #[allow(dead_code)]
+    pub quests_scroll_handle: gpui::UniformListScrollHandle,
 }
 
 #[allow(dead_code)]

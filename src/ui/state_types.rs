@@ -164,6 +164,58 @@ pub enum ActivityBarTab {
     Search,        // 全局搜索
     SourceControl, // 源文件管理
     Plugins,       // 插件中心
+    Quests,        // 任务管理器
+}
+
+/// 任务创建向导当前激活的输入框焦点
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum QuestCreatorFocusField {
+    #[default]
+    None,
+    Name,         // 任务内部标识名，如 Quest_MyMiniQuest
+    DisplayTitle, // 界面显示标题，如 "我的自定义任务"
+    Orderer,      // 委托人 / NPC，如 Npc_AncientDoctor_Robbie
+    Location,     // 区域 / 地点，如 Akkala
+    DescText,     // 冒险笔记初始描述
+    FinishText,   // 冒险笔记完成描述
+}
+
+/// 新建任务向导模态框状态
+#[derive(Debug, Clone, PartialEq)]
+pub struct QuestCreatorModalState {
+    pub name: String,
+    pub quest_type: crate::model::quest::QuestType,
+    pub orderer: String,
+    pub location: String,
+    pub display_title: String,
+    pub desc_text: String,
+    pub finish_text: String,
+    // 自动化勾选项
+    pub inject_titlebg: bool,
+    pub inject_bootup_flags: bool,
+    pub inject_ql_msbt: bool,
+    pub scaffold_graph_nodes: bool,
+    // 聚焦字段
+    pub focused_field: QuestCreatorFocusField,
+}
+
+impl Default for QuestCreatorModalState {
+    fn default() -> Self {
+        Self {
+            name: "Quest_CustomMiniQuest".into(),
+            quest_type: crate::model::quest::QuestType::Mini,
+            orderer: "Npc_AncientDoctor_Robbie".into(),
+            location: "Akkala".into(),
+            display_title: "自定义挑战任务".into(),
+            desc_text: "接受了小樱桃的委托，需要前往古代研究所完成测试。".into(),
+            finish_text: "成功完成了委托，向小樱桃汇报了成果！".into(),
+            inject_titlebg: true,
+            inject_bootup_flags: true,
+            inject_ql_msbt: true,
+            scaffold_graph_nodes: true,
+            focused_field: QuestCreatorFocusField::None,
+        }
+    }
 }
 
 /// Git 提交输入框焦点

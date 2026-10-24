@@ -92,6 +92,11 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipb
                 state.sidebar_open = true;
                 return true;
             }
+            crate::ui::state::ActivityBarTab::Quests => {
+                state.quests_search_focused = true;
+                state.sidebar_open = true;
+                return true;
+            }
         }
     }
 
