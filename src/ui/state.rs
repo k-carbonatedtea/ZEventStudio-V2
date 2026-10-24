@@ -177,9 +177,18 @@ pub struct AppState {
     pub quest_map_selected_pin: Option<(String, usize, usize)>,
     pub quest_map_is_dragging: bool,
     pub quest_map_drag_start: (f32, f32),
-        pub quest_map_show_grid: bool,
+    pub quest_map_show_grid: bool,
     pub quest_map_show_all_pins: bool,
     pub quest_map_is_extracting_tiles: bool,
+
+    // 海拉鲁游戏地标图层过滤与高亮
+    pub quest_map_show_shrines: bool,
+    pub quest_map_show_stables: bool,
+    pub quest_map_show_beasts: bool,
+    pub quest_map_show_towers: bool,
+    pub quest_map_show_settlements: bool,
+    pub quest_map_hovered_marker: Option<String>,
+    pub quest_map_selected_marker: Option<String>,
 }
 
 #[allow(dead_code)]

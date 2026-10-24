@@ -6,7 +6,7 @@ use crate::ui::views::quest_map::pins_layer::{
     render_pins_elements,
 };
 use crate::ui::views::quest_map::types::{
-    screen_to_world, world_to_screen, HYRULE_LANDMARKS,
+    screen_to_world,
 };
 
 /// 渲染 2D 地图核心交互画布容器 (支持鼠标平移拖拽、滚轮缩放、标点交互)
@@ -175,43 +175,8 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                     .size_full(),
                 ),
         )
-        // 4. 地理地标与塔微标识浮层
-        .child(render_landmarks_overlay(pan, zoom, is_zh))
+        // 4. 海拉鲁全境地标浮层 (包含神庙、驿站、四神兽、希卡塔、主要城镇与大区域水印)
+        .child(crate::ui::views::quest_map::markers_layer::render_markers_layer(state, model, pan, zoom, is_zh))
         // 5. 任务标点浮层 (可点击交互)
         .child(render_pins_elements(&pins, model))
-}
-
-/// 渲染主要城镇与希卡之塔常驻浮层微标签
-fn render_landmarks_overlay(pan: (f32, f32), zoom: f32, is_zh: bool) -> impl IntoElement {
-    div()
-        .absolute()
-        .inset_0()
-        .children(HYRULE_LANDMARKS.iter().map(move |lm| {
-            let (sx, sy) = world_to_screen(lm.position.0, lm.position.1, (0.0, 0.0), pan, zoom);
-            let name = if is_zh { lm.name_zh } else { lm.name_en };
-            let (bg, border) = if lm.is_tower {
-                (rgba(0x06b6d430), rgba(0x06b6d480))
-            } else {
-                (rgba(0x0f172acc), rgba(0x38bdf840))
-            };
-
-            div()
-                .absolute()
-                .left(px(sx - 20.0))
-                .top(px(sy - 12.0))
-                .flex()
-                .items_center()
-                .gap_1()
-                .px_1p5()
-                .py_0p5()
-                .rounded_sm()
-                .bg(bg)
-                .border_1()
-                .border_color(border)
-                .text_size(px(10.0))
-                .text_color(if lm.is_tower { rgb(0x38bdf8) } else { rgb(0xe2e8f0) })
-                .whitespace_nowrap()
-                .child(lm.icon)
-                .child(name)
-        }))
 }

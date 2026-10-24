@@ -63,6 +63,14 @@ pub fn get_en_quests(key: &str) -> Option<&'static str> {
         "quests.extract_game_success" => "Successfully extracted map tiles from game dump!",
         "quests.extract_failed" => "Failed to extract map tiles",
         "quests.maptex_not_found" => "Could not find UI/MapTex/MainField in current project or configured game paths",
+        "quests.map_filter_shrines" => "⛩️ Shrines",
+        "quests.map_filter_stables" => "🐎 Stables",
+        "quests.map_filter_beasts" => "🦅 Beasts",
+        "quests.map_filter_towers" => "🗼 Towers",
+        "quests.map_filter_settlements" => "🏡 Towns",
+        "quests.map_shrine_trial" => "Trial",
+        "quests.map_landmark_details" => "Landmark Info",
+        "quests.map_altitude" => "Altitude",
         _ => return None,
     };
     Some(text)

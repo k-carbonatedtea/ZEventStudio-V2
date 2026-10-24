@@ -1,6 +1,12 @@
 pub mod map_canvas;
+pub mod map_layer_filters;
 pub mod map_renderer;
 pub mod map_toolbar;
+pub mod markers_assets;
+pub mod markers_data;
+pub mod markers_landmarks;
+pub mod markers_layer;
+pub mod markers_shrines;
 pub mod pin_tooltip;
 pub mod pins_layer;
 pub mod tiles_layer;

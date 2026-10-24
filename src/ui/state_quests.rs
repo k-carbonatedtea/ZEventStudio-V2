@@ -149,6 +149,12 @@ impl AppState {
         self.quest_map_pan = (600.0 - pos.0 * self.quest_map_zoom, 400.0 - pos.2 * self.quest_map_zoom);
     }
 
+    /// 将 2D 地图聚焦至指定地理地标世界坐标 (X, Z)
+    pub fn focus_landmark_on_map(&mut self, pos: (f32, f32)) {
+        self.quest_map_zoom = 0.22;
+        self.quest_map_pan = (600.0 - pos.0 * self.quest_map_zoom, 400.0 - pos.1 * self.quest_map_zoom);
+    }
+
     /// 重置 2D 地图至海拉鲁全景居中
     pub fn reset_quest_map_view(&mut self) {
         self.quest_map_pan = (600.0, 400.0);

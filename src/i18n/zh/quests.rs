@@ -63,6 +63,14 @@ pub fn get_zh_quests(key: &str) -> Option<&'static str> {
         "quests.extract_game_success" => "成功从游戏本体提取地图瓦片！",
         "quests.extract_failed" => "提取地图瓦片失败",
         "quests.maptex_not_found" => "未在当前项目或配置的游戏路径中找到 UI/MapTex/MainField 地图文件",
+        "quests.map_filter_shrines" => "⛩️ 神庙",
+        "quests.map_filter_stables" => "🐎 驿站",
+        "quests.map_filter_beasts" => "🦅 神兽",
+        "quests.map_filter_towers" => "🗼 希卡塔",
+        "quests.map_filter_settlements" => "🏡 城镇",
+        "quests.map_shrine_trial" => "试炼",
+        "quests.map_landmark_details" => "地标详情",
+        "quests.map_altitude" => "海拔高度",
         _ => return None,
     };
     Some(text)
