@@ -88,6 +88,9 @@ pub fn get_en_quests(key: &str) -> Option<&'static str> {
         "quests.loading_init_status" => "Preparing to scan map markers & config...",
         "quests.loading_extracting_label" => "Extracting",
         "quests.loading_complete" => "Hyrule markers sync completed",
+        "quests.map_mode_vector" => "🎨 Vector",
+        "quests.map_mode_satellite" => "🛰️ Satellite",
+        "quests.map_mode_tooltip" => "Toggle Map Mode: Pure Vector (60+ FPS) / Game Satellite Tiles",
         _ => return None,
     };
     Some(text)

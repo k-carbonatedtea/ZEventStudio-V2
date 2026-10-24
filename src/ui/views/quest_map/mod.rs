@@ -1,4 +1,5 @@
 pub mod map_asset_indicator;
+pub mod map_bottom_hud;
 pub mod map_canvas;
 pub mod map_layer_filters;
 pub mod map_loading_overlay;
@@ -17,9 +18,10 @@ pub mod types;
 
 use gpui::*;
 use crate::ui::state::AppState;
+use map_bottom_hud::render_map_bottom_hud;
 use map_canvas::render_map_canvas;
 use map_loading_overlay::render_map_loading_overlay;
-use map_toolbar::{render_map_bottom_hud, render_map_header_hud};
+use map_toolbar::render_map_header_hud;
 use pin_tooltip::render_pin_tooltip_layer;
 use pins_layer::collect_rendered_pins;
 

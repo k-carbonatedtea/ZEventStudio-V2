@@ -165,6 +165,7 @@ impl AppState {
             quest_map_show_grid: false,
             quest_map_show_all_pins: false,
             quest_map_is_extracting_tiles: false,
+            quest_map_use_vector_mode: true, // 默认开启纯代码矢量极速底图 (极致流畅 60+ FPS)
             quest_map_show_shrines: true,
             quest_map_show_stables: true,
             quest_map_show_beasts: true,

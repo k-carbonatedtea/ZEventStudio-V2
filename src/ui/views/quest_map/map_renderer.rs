@@ -113,6 +113,48 @@ fn draw_geographic_features(center: (f32, f32), pan: (f32, f32), zoom: f32, wind
             window.paint_path(p, rgba(0xc2410c55));
         }
     }
+
+    // 4. 海布拉大雪山极寒雪原 (Hebra Mountains)
+    let hebra_pts = [
+        (-3800.0, -3200.0),
+        (-2200.0, -3400.0),
+        (-1800.0, -2000.0),
+        (-3200.0, -1800.0),
+    ];
+    let mut hebra = PathBuilder::fill();
+    for (idx, (wx, wz)) in hebra_pts.iter().enumerate() {
+        let (sx, sy) = world_to_screen(*wx, *wz, center, pan, zoom);
+        if idx == 0 {
+            hebra.move_to(point(px(sx), px(sy)));
+        } else {
+            hebra.line_to(point(px(sx), px(sy)));
+        }
+    }
+    hebra.close();
+    if let Ok(p) = hebra.build() {
+        window.paint_path(p, rgba(0x38bdf826));
+    }
+
+    // 5. 格鲁德大沙漠广袤沙海 (Gerudo Desert)
+    let gerudo_pts = [
+        (-4600.0, 1400.0),
+        (-2600.0, 1800.0),
+        (-1800.0, 3600.0),
+        (-4400.0, 3500.0),
+    ];
+    let mut gerudo = PathBuilder::fill();
+    for (idx, (wx, wz)) in gerudo_pts.iter().enumerate() {
+        let (sx, sy) = world_to_screen(*wx, *wz, center, pan, zoom);
+        if idx == 0 {
+            gerudo.move_to(point(px(sx), px(sy)));
+        } else {
+            gerudo.line_to(point(px(sx), px(sy)));
+        }
+    }
+    gerudo.close();
+    if let Ok(p) = gerudo.build() {
+        window.paint_path(p, rgba(0xf59e0b1f));
+    }
 }
 
 /// 绘制 BotW 12x10 分区网格 (Z-0 至 K-9)

@@ -88,6 +88,9 @@ pub fn get_zh_quests(key: &str) -> Option<&'static str> {
         "quests.loading_init_status" => "正在准备扫描地图标点与配置...",
         "quests.loading_extracting_label" => "正在提取",
         "quests.loading_complete" => "海拉鲁地标数据提取完成",
+        "quests.map_mode_vector" => "🎨 矢量极速",
+        "quests.map_mode_satellite" => "🛰️ 卫星实景",
+        "quests.map_mode_tooltip" => "切换底图模式：纯代码矢量极速 (60+ FPS) / 游戏卫星瓦片",
         _ => return None,
     };
     Some(text)

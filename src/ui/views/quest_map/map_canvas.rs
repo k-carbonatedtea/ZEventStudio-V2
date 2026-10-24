@@ -129,8 +129,8 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                 cx.notify();
             });
         })
-        // 1. 底层降级底图与地形轮廓 (仅当高精卫星瓦片不存在时作为后备底图绘制，零冗余开销)
-        .children((!crate::ui::views::quest_map::tiles_layer::get_unified_world_map_path(state.project_path.as_deref()).is_some()).then(|| {
+        // 1. 纯代码绘制海拉鲁矢量极速底图 (当开启矢量极速模式，或卫星瓦片不存在时呈现，毫秒级满帧渲染)
+        .children((state.quest_map_use_vector_mode || !crate::ui::views::quest_map::tiles_layer::get_unified_world_map_path(state.project_path.as_deref()).is_some()).then(|| {
             div()
                 .absolute()
                 .inset_0()
@@ -142,15 +142,17 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                             let orig_y: f32 = bounds.origin.y.into();
                             let center = (orig_x, orig_y);
 
-                            // 绘制海拉鲁主体轮廓与特征水体 (作为后备底图)
+                            // 绘制经典纯代码海拉鲁主体轮廓与特征水体
                             draw_hyrule_base_map(bounds, center, pan, zoom, window);
                         },
                     )
                     .size_full(),
                 )
         }))
-        // 2. 真实海拉鲁高精卫星地图瓦片图层 (无缝微重叠消除接缝)
-        .child(crate::ui::views::quest_map::tiles_layer::render_tiles_layer(pan, zoom, state.project_path.as_deref()))
+        // 2. 真实海拉鲁高精卫星地图瓦片图层 (仅在卫星实景模式下挂载)
+        .children((!state.quest_map_use_vector_mode).then(|| {
+            crate::ui::views::quest_map::tiles_layer::render_tiles_layer(pan, zoom, state.project_path.as_deref())
+        }))
         // 3. 顶层分区网格与任务推进轨迹连线 (覆盖在瓦片之上，开启时清晰呈现，关闭时不遮挡)
         .child(
             div()

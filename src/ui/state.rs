@@ -180,6 +180,8 @@ pub struct AppState {
     pub quest_map_show_grid: bool,
     pub quest_map_show_all_pins: bool,
     pub quest_map_is_extracting_tiles: bool,
+    /// 地图底图渲染模式：true 为纯代码矢量极速底图 (Vector Canvas)，false 为真实游戏卫星大图 (Satellite Tiles)
+    pub quest_map_use_vector_mode: bool,
 
     // 海拉鲁游戏地标图层过滤与高亮
     pub quest_map_show_shrines: bool,
@@ -199,6 +201,11 @@ pub struct AppState {
 
 #[allow(dead_code)]
 impl AppState {
+    /// 切换地图底图渲染模式 (代码矢量极速 / 卫星实景瓦片)
+    pub fn toggle_quest_map_vector_mode(&mut self) {
+        self.quest_map_use_vector_mode = !self.quest_map_use_vector_mode;
+    }
+
     /// 确保海拉鲁地图标点已加载到内存缓存中（一次性提取）
     pub fn ensure_hyrule_markers_cached(&mut self) {
         if self.quest_map_markers_cache.is_none() {
