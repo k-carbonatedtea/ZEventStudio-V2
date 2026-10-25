@@ -177,6 +177,9 @@ where
                         } else {
                             st.active_activity_tab = ActivityBarTab::Explorer;
                             st.sidebar_open = true;
+                            if st.current_tab == crate::ui::state_types::AppWorkspaceTab::Quests {
+                                st.restore_workspace_from_quests();
+                            }
                         }
                     }
                     ActivityBarTab::Search => {
@@ -185,6 +188,9 @@ where
                         } else {
                             st.active_activity_tab = ActivityBarTab::Search;
                             st.sidebar_open = true;
+                            if st.current_tab == crate::ui::state_types::AppWorkspaceTab::Quests {
+                                st.restore_workspace_from_quests();
+                            }
                             st.global_search_focused = true;
                             st.update_global_search_results();
                         }
@@ -195,6 +201,9 @@ where
                         } else {
                             st.active_activity_tab = ActivityBarTab::SourceControl;
                             st.sidebar_open = true;
+                            if st.current_tab == crate::ui::state_types::AppWorkspaceTab::Quests {
+                                st.restore_workspace_from_quests();
+                            }
                             st.refresh_git_status();
                             st.refresh_git_history();
                             st.sync_active_tab_modified();
@@ -206,11 +215,15 @@ where
                         } else {
                             st.active_activity_tab = ActivityBarTab::Plugins;
                             st.sidebar_open = true;
+                            if st.current_tab == crate::ui::state_types::AppWorkspaceTab::Quests {
+                                st.restore_workspace_from_quests();
+                            }
                         }
                     }
                     ActivityBarTab::Quests => {
                         if st.active_activity_tab == ActivityBarTab::Quests && st.sidebar_open && st.current_tab == crate::ui::state_types::AppWorkspaceTab::Quests {
                             st.sidebar_open = false;
+                            st.restore_workspace_from_quests();
                         } else {
                             st.active_activity_tab = ActivityBarTab::Quests;
                             st.sidebar_open = true;

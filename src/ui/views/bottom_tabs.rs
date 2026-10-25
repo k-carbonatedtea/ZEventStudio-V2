@@ -46,13 +46,6 @@ pub fn render_bottom_tabs(
             state,
             model,
         ))
-        .child(render_bottom_tab_item(
-            state.t("tab.quests"),
-            current_tab == AppWorkspaceTab::Quests,
-            AppWorkspaceTab::Quests,
-            state,
-            model,
-        ))
 }
 
 fn render_bottom_tab_item(

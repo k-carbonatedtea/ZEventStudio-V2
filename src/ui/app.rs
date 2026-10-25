@@ -287,20 +287,32 @@ impl Render for AppView {
                     .overflow_hidden()
                     .child(match current_tab {
                         AppWorkspaceTab::Welcome => render_welcome_view(state, &self.model).into_any_element(),
-                        AppWorkspaceTab::Flowchart => wrap_sidebar_workspace(
-                            state,
-                            &self.model,
-                            render_flow_canvas(state, &self.model),
-                            Some(render_inspector(state, &self.model).into_any_element()),
-                        )
-                        .into_any_element(),
-                        AppWorkspaceTab::CodeEditor => wrap_sidebar_workspace(
-                            state,
-                            &self.model,
-                            render_code_editor_view(state, &self.model, self.code_editor.as_ref()),
-                            None,
-                        )
-                        .into_any_element(),
+                        AppWorkspaceTab::Flowchart => {
+                            if state.open_tabs.is_empty() {
+                                render_welcome_view(state, &self.model).into_any_element()
+                            } else {
+                                wrap_sidebar_workspace(
+                                    state,
+                                    &self.model,
+                                    render_flow_canvas(state, &self.model),
+                                    Some(render_inspector(state, &self.model).into_any_element()),
+                                )
+                                .into_any_element()
+                            }
+                        }
+                        AppWorkspaceTab::CodeEditor => {
+                            if state.open_tabs.is_empty() {
+                                render_welcome_view(state, &self.model).into_any_element()
+                            } else {
+                                wrap_sidebar_workspace(
+                                    state,
+                                    &self.model,
+                                    render_code_editor_view(state, &self.model, self.code_editor.as_ref()),
+                                    None,
+                                )
+                                .into_any_element()
+                            }
+                        }
                         AppWorkspaceTab::DiffViewer => wrap_sidebar_workspace(
                             state,
                             &self.model,

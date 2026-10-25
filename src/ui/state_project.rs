@@ -192,6 +192,22 @@ impl AppState {
         }
     }
 
+    /// 从任务制作管理视图 (Quests) 退出或切回常规工作区时，智能恢复对应的视图模式
+    pub fn restore_workspace_from_quests(&mut self) {
+        if let Some(active_id) = self.active_tab_id.as_deref() {
+            if let Some(tab) = self.open_tabs.iter().find(|t| t.id == active_id) {
+                match tab.tab_kind {
+                    DocumentTabKind::Flowchart => self.current_tab = AppWorkspaceTab::Flowchart,
+                    DocumentTabKind::CodeEditor => self.current_tab = AppWorkspaceTab::CodeEditor,
+                    DocumentTabKind::DiffViewer => self.current_tab = AppWorkspaceTab::DiffViewer,
+                }
+                return;
+            }
+        }
+        // 若当前未打开任何文档标签，智能恢复为欢迎/工程概览主页，避免错误展示空白事件编辑器
+        self.current_tab = AppWorkspaceTab::Welcome;
+    }
+
     /// 根据虚拟路径或物理路径加载事件流或数据文件至编辑器
     pub fn load_file_by_path(&mut self, path: &str) {
         self.clear_active_text_inputs();
