@@ -8,7 +8,7 @@ impl AppState {
     pub fn update_node_sizes(&mut self) {
         for node in &mut self.graph.nodes {
             if node.kind == NodeKind::EntryPoint {
-                node.size = (180.0, 42.0);
+                node.size = (crate::model::node::calculate_entry_point_width(&node.title), 42.0);
                 continue;
             }
             if self.expand_all_params && !node.properties.is_empty() {
@@ -27,7 +27,7 @@ impl AppState {
                     NodeKind::Fork | NodeKind::Join => (210.0, 95.0),
                     NodeKind::Math => (200.0, 100.0),
                     NodeKind::Comment => (240.0, 120.0),
-                    NodeKind::EntryPoint => (180.0, 42.0),
+                    NodeKind::EntryPoint => (crate::model::node::calculate_entry_point_width(&node.title), 42.0),
                 };
                 node.size = (bw, bh);
             }

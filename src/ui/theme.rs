@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 /// 应用程序支持的内置主题风格枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum AppTheme {
-    /// 遗迹青蓝 (默认深石墨黑与古老青绿)
+    /// 遗迹青蓝 (默认纯黑/碳黑与古老青绿)
     #[default]
     RelicCyan,
     /// 旷野黄昏 (暮光琥珀金与暖棕黑沉浸风格)
@@ -48,17 +48,17 @@ impl AppTheme {
             AppTheme::RelicCyan => ThemePalette {
                 name: "Relic Cyan",
                 is_dark: true,
-                app_bg: rgb(0x0F1117),
-                panel_surface: rgb(0x161922),
-                card_surface: rgb(0x1E2330),
-                card_hover: rgb(0x252C3D),
+                app_bg: rgb(0x0A0B0E),
+                panel_surface: rgb(0x121316),
+                card_surface: rgb(0x18191E),
+                card_hover: rgb(0x22242B),
                 primary_accent: rgb(0x00E5BA),
                 primary_accent_hover: rgb(0x33EBCA),
                 secondary_accent: rgb(0xF59E0B),
-                text_primary: rgb(0xF1F5F9),
-                text_secondary: rgb(0x94A3B8),
-                panel_border: rgb(0x232838),
-                card_border: rgb(0x2D3548),
+                text_primary: rgb(0xF3F4F6),
+                text_secondary: rgb(0x9094A0),
+                panel_border: rgb(0x1C1E24),
+                card_border: rgb(0x262832),
             },
             AppTheme::TwilightAmber => ThemePalette {
                 name: "Twilight Amber",
@@ -176,7 +176,7 @@ impl ThemePalette {
         gpui_theme.colors.popover_foreground = self.text_primary.into();
         gpui_theme.colors.primary = self.primary_accent.into();
         gpui_theme.colors.primary_foreground = if self.is_dark {
-            rgb(0x0F1117).into()
+            self.app_bg.into()
         } else {
             rgb(0xFFFFFF).into()
         };

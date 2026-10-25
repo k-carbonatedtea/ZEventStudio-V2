@@ -137,6 +137,28 @@ pub struct NodeData {
 }
 
 
+/// 计算 EntryPoint 入口节点基于标题文本的物理宽度 (保障绿色胶囊完全包裹文本且两端半圆留有呼吸空间)
+pub fn calculate_entry_point_width(title: &str) -> f32 {
+    let mut text_width = 0.0f32;
+    for ch in title.chars() {
+        if ch.is_ascii() {
+            if ch.is_ascii_uppercase() || ch == '_' || ch == '@' || ch == '#' || ch.is_ascii_digit() {
+                text_width += 8.6;
+            } else if ch == ':' || ch == ' ' || ch == '.' || ch == ',' || ch == '-' || ch == '(' || ch == ')' {
+                text_width += 5.2;
+            } else {
+                text_width += 7.6;
+            }
+        } else {
+            text_width += 13.5;
+        }
+    }
+    // 胶囊高度为 42px，两端半圆半径为 21px；左右内边距及弧度安全区各留 28px（合计 56px）
+    let total_width = text_width + 56.0;
+    // 最小宽度保障 180.0，保持小入口点饱满美观胶囊感
+    total_width.max(180.0)
+}
+
 #[allow(dead_code)]
 impl NodeData {
     pub fn new(
@@ -146,11 +168,12 @@ impl NodeData {
         pos: (f32, f32),
     ) -> Self {
         let id_str = id.into();
+        let title_str = title.into();
         let (inputs, outputs, size) = match kind {
             NodeKind::EntryPoint => (
                 vec![],
                 vec![Port::new_flow_out(format!("{}_out", id_str), "Start")],
-                (200.0, 88.0),
+                (calculate_entry_point_width(&title_str), 42.0),
             ),
             NodeKind::Action => (
                 vec![Port::new_flow_in(format!("{}_in", id_str), "Exec")],
@@ -211,7 +234,7 @@ impl NodeData {
 
         Self {
             id: id_str,
-            title: title.into(),
+            title: title_str,
             subtitle: None,
             kind,
             pos,

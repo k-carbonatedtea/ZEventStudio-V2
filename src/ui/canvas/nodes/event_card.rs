@@ -34,22 +34,23 @@ pub fn render_event_card(
         (false, false)
     };
 
+    let pal = state.theme();
     let (card_bg, card_border, is_border_thick) = if ctx.is_selected {
         (
-            rgb(0x1E2330), // 选中态：浅层蓝灰 Card / Hover
-            rgb(0x00E5BA), // 选中态：遗迹青蓝 2px 醒目边框 Primary Accent #00E5BA
+            pal.card_surface, // 选中态：卡片底色
+            pal.primary_accent, // 选中态：核心高亮边框 Primary Accent
             true,
         )
     } else if is_on_active_path {
         (
-            rgb(0x161922), // 链路节点：蓝灰表面 Panel Surface
-            rgb(0xF59E0B), // 链路节点：琥珀金 Secondary Accent #F59E0B
+            pal.panel_surface, // 链路节点：面板表面底色
+            pal.secondary_accent, // 链路节点：琥珀金 Secondary Accent
             false,
         )
     } else {
         (
-            rgb(0x161922), // 标准节点底色：蓝灰表面 Panel Surface
-            rgb(0x232838), // 蓝灰边框
+            pal.panel_surface, // 标准节点底色
+            pal.card_border, // 卡片边框
             false,
         )
     };
@@ -185,7 +186,7 @@ pub fn render_event_card(
                                     div()
                                         .font_weight(FontWeight::BOLD)
                                         .text_size(px(font_title))
-                                        .text_color(rgb(0xF1F5F9)) // 亮白灰 Text Primary
+                                        .text_color(pal.text_primary)
                                         .child(node.title.clone()),
                                 ),
                         )
@@ -213,7 +214,7 @@ pub fn render_event_card(
                             .pt(px((3.0 * z).max(1.0)))
                             .font_weight(FontWeight::MEDIUM)
                             .text_size(px(font_sub))
-                            .text_color(rgb(0x94A3B8)) // 蓝灰白 Text Secondary
+                            .text_color(pal.text_secondary)
                             .child(sub.clone())
                     })
                 } else {

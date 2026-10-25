@@ -262,6 +262,7 @@ impl AppState {
             }
 
             self.mark_current_tab_modified();
+            self.update_node_sizes();
             let msg = format!("{} {}", self.t("toast.node_saved"), modal_title);
             self.toast = Some(Toast::success(&msg));
         }

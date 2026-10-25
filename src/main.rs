@@ -18,7 +18,7 @@ fn main() {
         gpui_component::Theme::change(gpui_component::ThemeMode::Dark, None, cx);
 
         // 统一注入全局设计系统调色板规范 (Design System Theme Tokens)
-        ui::theme::AppTheme::RelicCyan.palette().apply_to_gpui_component(cx);
+        ui::theme::AppTheme::default().palette().apply_to_gpui_component(cx);
 
         let window_options = WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(Bounds::centered(

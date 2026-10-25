@@ -66,14 +66,14 @@ pub fn render_groups_layer(state: &AppState) -> impl IntoElement {
                                 div()
                                     .font_weight(FontWeight::BOLD)
                                     .text_size(px(font_size))
-                                    .text_color(hsla(215.0 / 360.0, 0.15, 0.92, 1.0))
-                                    .child(g.title),
+                                    .child(if g.is_entry { "🚩" } else { "📦" }),
                             )
                             .child(
                                 div()
-                                    .text_size(px(font_size * 0.9))
-                                    .text_color(hsla(215.0 / 360.0, 0.25, 0.65, 1.0))
-                                    .child(format!("({} {})", g.node_count, nodes_label)),
+                                    .font_weight(FontWeight::BOLD)
+                                    .text_size(px(font_size))
+                                    .text_color(hsla(215.0 / 360.0, 0.15, 0.92, 1.0))
+                                    .child(format!("{} {}", g.node_count, nodes_label)),
                             ),
                     ),
             )

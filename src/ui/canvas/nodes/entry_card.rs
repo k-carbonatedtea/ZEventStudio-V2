@@ -11,14 +11,16 @@ pub fn render_entry_card(
     ctx: &NodeRenderContext,
 ) -> impl IntoElement {
     let (screen_x, screen_y) = ctx.screen_pos;
-    let (node_w, node_h) = ctx.node_size;
+    let (ctx_w, node_h) = ctx.node_size;
+    let dynamic_min_w = (crate::model::node::calculate_entry_point_width(&node.title) * ctx.zoom).max(1.0);
+    let node_w = ctx_w.max(dynamic_min_w);
     let node_id = node.id.clone();
     let model_header_drag = ctx.model.clone();
 
     let z = ctx.zoom;
     let socket_size = (9.0 * z).clamp(3.0, 12.0);
     let font_title = (12.0 * z).clamp(3.0, 18.0);
-    let pad_x = (14.0 * z).clamp(2.0, 20.0);
+    let pad_x = (18.0 * z).clamp(4.0, 24.0);
     let pad_y = (6.0 * z).clamp(1.0, 12.0);
 
     // 链路追踪 (Flow Tracing) O(1) 快速判定
@@ -137,11 +139,14 @@ pub fn render_entry_card(
                 .justify_center()
                 .px(px(pad_x))
                 .py(px(pad_y))
+                .overflow_hidden()
                 .child(
                     div()
                         .font_weight(FontWeight::BOLD)
                         .text_size(px(font_title))
                         .text_color(rgb(0xffffff))
+                        .whitespace_nowrap()
+                        .text_ellipsis()
                         .child(node.title.clone()),
                 ),
         )

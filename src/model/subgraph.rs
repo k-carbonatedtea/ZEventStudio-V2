@@ -10,6 +10,7 @@ pub struct SubgraphGroup {
     pub bounds: (f32, f32, f32, f32), // (min_x, min_y, max_x, max_y)
     pub node_count: usize,
     pub color: gpui::Hsla,
+    pub is_entry: bool,
 }
 
 /// 提取图谱中的连通分区并计算每个分区的语义包围盒
@@ -116,12 +117,17 @@ pub fn compute_subgraph_groups(graph: &Graph) -> Vec<SubgraphGroup> {
         let top_pad = 42.0;
         let bounds = (min_x - pad, min_y - top_pad, max_x + pad, max_y + pad);
 
+        let has_entry = comp.iter().any(|id| {
+            node_map.get(id).map(|n| n.kind == NodeKind::EntryPoint || n.id.starts_with("ep_")).unwrap_or(false)
+        });
+
         groups.push(SubgraphGroup {
             id: format!("group_{}", comp.first().unwrap_or(&"0".to_string())),
             title: group_title,
             bounds,
             node_count: comp.len(),
             color: group_color,
+            is_entry: has_entry,
         });
     }
 
@@ -176,6 +182,7 @@ pub fn compute_subgraph_groups(graph: &Graph) -> Vec<SubgraphGroup> {
             bounds,
             node_count: comp.len(),
             color: gpui::hsla(215.0 / 360.0, 0.40, 0.50, 1.0),
+            is_entry: false,
         });
     }
 

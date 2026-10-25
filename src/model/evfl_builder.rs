@@ -41,7 +41,7 @@ pub fn revfl_flowchart_to_graph(fc: &Flowchart, file_name: &str) -> Graph {
             NodeKind::EntryPoint,
             (0.0, 0.0),
         );
-        ep_node.size = (180.0, 42.0);
+        ep_node.size = (crate::model::node::calculate_entry_point_width(&ep_node.title), 42.0);
         ep_node.subtitle = None;
 
         if !ep.sub_flow_event_indices.is_empty() {

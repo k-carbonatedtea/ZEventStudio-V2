@@ -52,8 +52,18 @@ impl Graph {
         self.nodes.push(node);
     }
 
-    /// 确保 actors 列表已初始化（若为空则依据 nodes 自动同步生成）
+    /// 确保所有 EntryPoint 入口节点尺寸与标题文本宽度自适应匹配
+    pub fn sync_entry_point_sizes(&mut self) {
+        for node in &mut self.nodes {
+            if node.kind == NodeKind::EntryPoint {
+                node.size = (super::node::calculate_entry_point_width(&node.title), 42.0);
+            }
+        }
+    }
+
+    /// 确保 actors 列表已初始化（若为空则依据 nodes 自动同步生成），并同步入口节点尺寸
     pub fn ensure_actors_populated(&mut self) {
+        self.sync_entry_point_sizes();
         if self.actors.is_empty() {
             let summary = self.get_actors_summary();
             for s in summary {
