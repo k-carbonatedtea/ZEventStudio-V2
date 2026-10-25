@@ -1,6 +1,5 @@
 use gpui::*;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 /// 获取全局基准海拉鲁瓦片缓存目录 (优先使用应用内 .cache/map_tiles)
 pub fn get_global_map_tiles_cache_dir() -> PathBuf {
@@ -226,35 +225,11 @@ pub fn get_tile_path(c_char: char, r_num: i32, project_path: Option<&str>) -> Op
     None
 }
 
-/// 执行瓦片批量提取脚本 (在后台工作线程中同步阻塞运行)
+/// 执行瓦片批量提取 (纯 Rust 原生多线程高速处理)
 pub fn execute_tile_extraction(src_dir: &Path, out_dir: &Path) -> Result<usize, String> {
-    let script_candidates = [
-        PathBuf::from(r"C:\Users\Administrator\Desktop\Zevent\ZEventStudio\scripts\extract_tiles.py"),
-        PathBuf::from("scripts/extract_tiles.py"),
-    ];
+    let count = botw_map::extract_tiles_batch(src_dir, out_dir)
+        .map_err(|e| format!("瓦片提取出错: {}", e))?;
 
-    let script_path = script_candidates
-        .iter()
-        .find(|p| p.exists())
-        .cloned()
-        .ok_or_else(|| "未找到瓦片提取脚本 scripts/extract_tiles.py".to_string())?;
-
-    let src_str = src_dir.to_string_lossy().to_string();
-    let out_str = out_dir.to_string_lossy().to_string();
-
-    let output = Command::new("python")
-        .arg(&script_path)
-        .arg(&src_str)
-        .arg(&out_str)
-        .output()
-        .map_err(|e| format!("启动 Python 进程失败: {}", e))?;
-
-    if !output.status.success() {
-        let err = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("提取脚本执行出错: {}", err));
-    }
-
-    let count = count_pngs_in_dir(out_dir);
     if count == 0 {
         return Err("提取完成但未能输出有效的 PNG 瓦片".to_string());
     }

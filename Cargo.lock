@@ -189,6 +189,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d036a3c4ab069c7b410a2ce876bd74808d2d0888a82667669f8e783a898bf1"
 
 [[package]]
+name = "arbitrary-int"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "825297538d77367557b912770ca3083f778a196054b3ee63b22673c4a3cae0a5"
+
+[[package]]
 name = "arc-swap"
 version = "1.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -530,6 +536,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
+name = "bilge"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc707ed8ebf81de5cd6c7f48f54b4c8621760926cdf35a57000747c512e67b57"
+dependencies = [
+ "arbitrary-int",
+ "bilge-impl",
+]
+
+[[package]]
+name = "bilge-impl"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "feb11e002038ad243af39c2068c8a72bcf147acf05025dcdb916fcc000adb2d8"
+dependencies = [
+ "itertools 0.11.0",
+ "proc-macro-error",
+ "proc-macro2 1.0.107",
+ "quote 1.0.47",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "binrw"
 version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -657,6 +686,17 @@ dependencies = [
  "futures-io",
  "futures-lite",
  "piper",
+]
+
+[[package]]
+name = "botw-map"
+version = "0.1.0"
+dependencies = [
+ "image 0.24.9",
+ "rayon",
+ "roead",
+ "thiserror 1.0.69",
+ "wiiu_swizzle",
 ]
 
 [[package]]
@@ -2094,7 +2134,7 @@ dependencies = [
  "hdrhistogram",
  "heapless",
  "http_client",
- "image",
+ "image 0.25.10",
  "inventory",
  "itertools 0.14.0",
  "libc",
@@ -2314,7 +2354,7 @@ dependencies = [
  "futures",
  "gpui",
  "gpui_util",
- "image",
+ "image 0.25.10",
  "libc",
  "log",
  "mach2",
@@ -2400,7 +2440,7 @@ dependencies = [
  "gpui",
  "gpui_apple",
  "gpui_util",
- "image",
+ "image 0.25.10",
  "itertools 0.14.0",
  "log",
  "objc",
@@ -2525,7 +2565,7 @@ dependencies = [
  "futures",
  "gpui",
  "gpui_util",
- "image",
+ "image 0.25.10",
  "itertools 0.14.0",
  "log",
  "parking_lot",
@@ -2978,6 +3018,19 @@ dependencies = [
  "same-file",
  "walkdir",
  "winapi-util",
+]
+
+[[package]]
+name = "image"
+version = "0.24.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5690139d2f55868e080017335e4b94cb7414274c74f1669c84fb5feba2c9f69d"
+dependencies = [
+ "bytemuck",
+ "byteorder",
+ "color_quant",
+ "num-traits",
+ "png 0.17.16",
 ]
 
 [[package]]
@@ -3824,6 +3877,7 @@ dependencies = [
 name = "nodeflow-editor"
 version = "0.1.0"
 dependencies = [
+ "botw-map",
  "gpui",
  "gpui-component",
  "gpui-kit-assets",
@@ -4745,6 +4799,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e67ba7e9b2b56446f1d419b1d807906278ffa1a658a8a5d8a39dcb1f5a78614f"
 dependencies = [
  "toml_edit 0.25.13+spec-1.1.0",
+]
+
+[[package]]
+name = "proc-macro-error"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
+dependencies = [
+ "proc-macro-error-attr",
+ "proc-macro2 1.0.107",
+ "quote 1.0.47",
+ "version_check",
+]
+
+[[package]]
+name = "proc-macro-error-attr"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
+dependencies = [
+ "proc-macro2 1.0.107",
+ "quote 1.0.47",
+ "version_check",
 ]
 
 [[package]]
@@ -7496,6 +7573,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bae2f2b2b816647a1cab1acc91f5bd20812d53cb344382635ec2181940c8034f"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "wiiu_swizzle"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84bb5ee7b48d707cd2dbb898c04edabbf7f53e75ea7d5af245d9eef308b5fe4c"
+dependencies = [
+ "bilge",
 ]
 
 [[package]]
