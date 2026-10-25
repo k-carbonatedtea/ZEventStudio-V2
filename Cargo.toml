@@ -28,3 +28,19 @@ opt-level = 3
 # codegen-units = 1
 # panic = "abort"
 # strip = true
+
+[profile.dev.package.botw-map]
+opt-level = 3
+
+[profile.dev.package.image]
+opt-level = 3
+
+[profile.dev.package.roead]
+opt-level = 3
+
+[profile.dev.package.wiiu_swizzle]
+opt-level = 3
+
+[profile.dev.package.miniz_oxide]
+opt-level = 3
+
