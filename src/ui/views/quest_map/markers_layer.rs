@@ -131,7 +131,6 @@ fn render_single_marker_card(
     let m_click = model.clone();
     let m_hover = model.clone();
     let marker_id = lm.id.clone();
-    let marker_pos = lm.position;
 
     // 主题边框与文字高亮色
     let (border_color, text_color) = match lm.kind {
@@ -176,13 +175,15 @@ fn render_single_marker_card(
     // 获取官方游戏贴图路径 (全品类覆盖)
     let icon_path_opt = get_marker_game_icon_path(lm, is_hovered || is_selected);
 
-    // 动态像素尺寸计算
+    // 动态像素尺寸计算 (选中的发光素材拥有突出醒目的尺寸与光场)
     let icon_px = match lm.kind {
-        HyruleMarkerKind::DivineBeast => if is_selected || is_hovered { 36.0 } else { 30.0 },
-        HyruleMarkerKind::Tower => if is_selected || is_hovered { 30.0 } else { 24.0 },
-        HyruleMarkerKind::Stable => if is_selected || is_hovered { 28.0 } else { 22.0 },
+        HyruleMarkerKind::DivineBeast => if is_selected { 38.0 } else if is_hovered { 34.0 } else { 30.0 },
+        HyruleMarkerKind::Tower => if is_selected { 32.0 } else if is_hovered { 28.0 } else { 24.0 },
+        HyruleMarkerKind::Stable => if is_selected { 30.0 } else if is_hovered { 26.0 } else { 22.0 },
         HyruleMarkerKind::Shrine => {
-            if is_selected || is_hovered {
+            if is_selected {
+                32.0
+            } else if is_hovered {
                 28.0
             } else if is_compact {
                 14.0
@@ -192,25 +193,26 @@ fn render_single_marker_card(
                 20.0
             }
         }
-        HyruleMarkerKind::Shop => if is_selected || is_hovered { 26.0 } else { 20.0 },
-        HyruleMarkerKind::Facility => if is_selected || is_hovered { 30.0 } else { 24.0 },
-        HyruleMarkerKind::Village => if is_selected || is_hovered { 28.0 } else { 22.0 },
+        HyruleMarkerKind::Shop => if is_selected { 30.0 } else if is_hovered { 25.0 } else { 20.0 },
+        HyruleMarkerKind::Facility => if is_selected { 32.0 } else if is_hovered { 28.0 } else { 24.0 },
+        HyruleMarkerKind::Village => if is_selected { 30.0 } else if is_hovered { 26.0 } else { 22.0 },
     };
 
-    let half_size = icon_px / 2.0;
-    // 使用对称的固定定位盒 (260px)，确保当药丸标签展开或收起时，图标中心永远绝对锁定在 (sx, sy) 零漂移
-    let anchor_w = 260.0;
+    // 命中与交互判定尺寸：严格紧凑贴合图标主体 (~26px - 36px)，杜绝大盒外溢导致隔老远就误触发
+    let hit_size = (icon_px + 6.0_f32).max(24.0_f32);
 
     let mid_click = marker_id.to_string();
     let mid_hover = marker_id.to_string();
     let icon_char = lm.icon_char.clone();
 
+    let is_glowing = is_selected || is_hovered;
+
     div()
         .id(SharedString::from(format!("map_marker_{}", marker_id)))
         .absolute()
-        .left(px(sx - anchor_w / 2.0))
-        .top(px(sy - half_size))
-        .w(px(anchor_w))
+        .left(px(sx - hit_size / 2.0))
+        .top(px(sy - hit_size / 2.0))
+        .w(px(hit_size))
         .cursor_pointer()
         .flex()
         .flex_col()
@@ -218,12 +220,20 @@ fn render_single_marker_card(
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             cx.stop_propagation();
             let mid = mid_click.clone();
-            let pos = marker_pos;
             m_click.update(cx, |st, cx| {
-                st.quest_map_selected_marker = Some(mid);
-                st.focus_landmark_on_map(pos);
+                if st.quest_map_selected_marker.as_deref() == Some(&mid) {
+                    // 点击当前发光的素材时重置清空发光
+                    st.quest_map_selected_marker = None;
+                } else {
+                    // 点击素材则将该素材发光，并清空普通单点标点
+                    st.quest_map_selected_marker = Some(mid);
+                    st.quest_map_user_pin = None;
+                }
                 cx.notify();
             });
+        })
+        .on_mouse_up(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
         })
         .on_hover(move |hovered, _, cx| {
             let mid = mid_hover.clone();
@@ -232,15 +242,42 @@ fn render_single_marker_card(
                 cx.notify();
             });
         })
-        // 图标主体：全品类优先使用官方游戏素材贴图
+        // 图标主体：全品类优先使用官方游戏素材贴图 (鼠标悬停或被点击时呈现强烈发光光芒)
         .child(
             if let Some(path) = icon_path_opt {
                 div()
+                    .relative()
                     .size(px(icon_px))
                     .flex()
                     .items_center()
                     .justify_center()
-                    .children((is_selected || is_hovered).then(|| {
+                    // 1. 素材发光特效：鼠标悬停在上方或被点击时扩散绚丽同心辉光光环
+                    .children(is_glowing.then(|| {
+                        div()
+                            .absolute()
+                            .size(px(icon_px + if is_selected { 24.0 } else { 16.0 }))
+                            .rounded_full()
+                            .bg(border_color.opacity(if is_selected { 0.22 } else { 0.18 }))
+                    }))
+                    .children(is_glowing.then(|| {
+                        div()
+                            .absolute()
+                            .size(px(icon_px + if is_selected { 12.0 } else { 8.0 }))
+                            .rounded_full()
+                            .bg(border_color.opacity(if is_selected { 0.45 } else { 0.35 }))
+                            .border_1()
+                            .border_color(border_color.opacity(0.85))
+                    }))
+                    .children(is_selected.then(|| {
+                        div()
+                            .absolute()
+                            .size(px(icon_px + 4.0))
+                            .rounded_full()
+                            .border_2()
+                            .border_color(rgb(0xffffff))
+                    }))
+                    // 2. 悬停微光
+                    .children((is_hovered && !is_selected).then(|| {
                         div()
                             .absolute()
                             .inset_0()
@@ -248,7 +285,7 @@ fn render_single_marker_card(
                             .bg(border_color.opacity(0.35))
                     }))
                     .children((lm.is_custom && !is_selected && !is_hovered).then(|| {
-                        // 自定义 Mod 标点在全景下附带一层精致金圈，不弹卡片、不挡视线、零排版开销
+                        // 自定义 Mod 标点在全景下附带一层精致金圈
                         div()
                             .absolute()
                             .inset_0()
@@ -264,6 +301,7 @@ fn render_single_marker_card(
             } else {
                 // 兜底拟态徽章
                 div()
+                    .relative()
                     .size(px(icon_px))
                     .rounded_md()
                     .bg(rgba(0x0f172aee))
@@ -275,6 +313,13 @@ fn render_single_marker_card(
                     .justify_center()
                     .text_size(if is_compact { px(0.0) } else { px(12.0) })
                     .text_color(rgb(0xffffff))
+                    .children(is_glowing.then(|| {
+                        div()
+                            .absolute()
+                            .size(px(icon_px + 16.0))
+                            .rounded_md()
+                            .bg(border_color.opacity(0.35))
+                    }))
                     .child(if is_compact { SharedString::default() } else { icon_char })
                     .into_any_element()
             }

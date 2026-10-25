@@ -17,6 +17,7 @@ pub mod pin_tooltip;
 pub mod pins_layer;
 pub mod tiles_layer;
 pub mod types;
+pub mod user_pin_layer;
 
 use gpui::*;
 use crate::ui::state::AppState;

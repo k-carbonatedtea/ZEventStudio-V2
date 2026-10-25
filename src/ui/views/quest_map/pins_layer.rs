@@ -180,7 +180,7 @@ pub fn render_pins_elements(
                 format!("Step {}", pin.step_index + 1)
             };
 
-            let anchor_w = 200.0;
+            let anchor_w = 32.0;
 
             div()
                 .id(SharedString::from(format!("map_pin_{}_{}_{}", q_name, s_idx, i_idx)))
@@ -194,12 +194,16 @@ pub fn render_pins_elements(
                 .items_center()
                 .hover(|s| s.opacity(0.85))
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                    cx.stop_propagation();
                     let qn = qn_click.clone();
                     m_c.update(cx, |st, cx| {
                         st.quests_selected_id = Some(qn.clone());
                         st.quest_map_selected_pin = Some((qn, s_idx, i_idx));
                         cx.notify();
                     });
+                })
+                .on_mouse_up(MouseButton::Left, |_, _, cx| {
+                    cx.stop_propagation();
                 })
                 .on_hover(move |hovered, _, cx| {
                     let qn = qn_hover.clone();

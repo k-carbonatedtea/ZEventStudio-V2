@@ -190,6 +190,12 @@ pub struct AppState {
     pub quest_map_show_settlements: bool,
     pub quest_map_hovered_marker: Option<String>,
     pub quest_map_selected_marker: Option<String>,
+    /// 用户在地图上鼠标左键单点放置的单一自定义交互标点世界坐标 (X, Z)
+    pub quest_map_user_pin: Option<(f32, f32)>,
+    /// 鼠标在画布上拖拽移动的累计距离 (用于区分点击与平移)
+    pub quest_map_drag_dist: f32,
+    /// 地图交互画布在窗口中的实际精准物理像素原点 (ox, oy)，由渲染排版自动回填
+    pub quest_map_canvas_origin: (f32, f32),
     /// 内存中的一次性海拉鲁地标数据缓存 (从项目与游戏路径自动提取)
     pub quest_map_markers_cache: Option<Vec<crate::ui::views::quest_map::markers_data::HyruleMarker>>,
     /// 是否正在异步提取海拉鲁地标数据
@@ -200,6 +206,17 @@ pub struct AppState {
 
 #[allow(dead_code)]
 impl AppState {
+    /// 获取 2D 地图交互画布相对窗口的实际左上角原点 (用于精确消除鼠标偏移)
+    pub fn get_map_canvas_origin(&self) -> (f32, f32) {
+        if self.quest_map_canvas_origin.0 > 0.0 || self.quest_map_canvas_origin.1 > 0.0 {
+            self.quest_map_canvas_origin
+        } else {
+            let sidebar_w = if self.sidebar_open { 48.0 + self.sidebar_width + 4.0 } else { 48.0 };
+            // 真实顶部高度: TitleBar (36px) + Toolbar (40px) + DocumentTabBar (32px) + MapHeaderHUD (42px) = 150px
+            (sidebar_w, 150.0)
+        }
+    }
+
     /// 切换地图底图渲染模式 (代码矢量极速 / 卫星实景瓦片)
     pub fn toggle_quest_map_vector_mode(&mut self) {
         self.quest_map_use_vector_mode = !self.quest_map_use_vector_mode;

@@ -50,13 +50,29 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
             model_down.update(cx, |st, cx| {
                 st.quest_map_is_dragging = true;
                 st.quest_map_drag_start = (mx, my);
+                st.quest_map_drag_dist = 0.0;
                 cx.notify();
             });
         })
-        // 鼠标左键抬起：停止拖拽
-        .on_mouse_up(MouseButton::Left, move |_, _, cx| {
+        // 鼠标左键抬起：停止拖拽；若未产生有效平移，则判定为左键点击地图空白处
+        .on_mouse_up(MouseButton::Left, move |e, _, cx| {
+            let mx: f32 = e.position.x.into();
+            let my: f32 = e.position.y.into();
             model_up.update(cx, |st, cx| {
                 st.quest_map_is_dragging = false;
+                // 位移低于 6 像素判定为左键点击空白处
+                if st.quest_map_drag_dist < 6.0 {
+                    let (ox, oy) = st.get_map_canvas_origin();
+                    let local_mx = mx - ox;
+                    let local_my = my - oy;
+                    let (wx, wz) = screen_to_world(local_mx, local_my, (0.0, 0.0), st.quest_map_pan, st.quest_map_zoom);
+
+                    // 1. 若此前有地图素材处于发光状态，清空发光
+                    st.quest_map_selected_marker = None;
+                    // 2. 将单一标点移动到新点击位置 (保持单一标点)
+                    st.quest_map_user_pin = Some((wx, wz));
+                }
+                st.quest_map_drag_dist = 0.0;
                 cx.notify();
             });
         })
@@ -86,16 +102,15 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                 if st.quest_map_is_dragging {
                     let dx = mx - st.quest_map_drag_start.0;
                     let dy = my - st.quest_map_drag_start.1;
+                    st.quest_map_drag_dist += dx.abs() + dy.abs();
                     st.quest_map_pan.0 += dx;
                     st.quest_map_pan.1 += dy;
                     st.quest_map_drag_start = (mx, my);
                 }
 
-                let sidebar_w = if st.sidebar_open { 48.0 + st.sidebar_width + 4.0 } else { 48.0 };
-                // 顶部累计高度: TitleBar (36px) + DocumentTabBar (32px) + MapHeaderHUD (42px) = 110px
-                let top_bar_h = 110.0;
-                let local_mx = mx - sidebar_w;
-                let local_my = my - top_bar_h;
+                let (ox, oy) = st.get_map_canvas_origin();
+                let local_mx = mx - ox;
+                let local_my = my - oy;
                 let (wx, wz) = screen_to_world(local_mx, local_my, (0.0, 0.0), st.quest_map_pan, st.quest_map_zoom);
                 st.quest_map_hovered_coord = Some((wx, wz));
 
@@ -116,10 +131,9 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
 
                 let mx: f32 = e.position.x.into();
                 let my: f32 = e.position.y.into();
-                let sidebar_w = if st.sidebar_open { 48.0 + st.sidebar_width + 4.0 } else { 48.0 };
-                let top_bar_h = 110.0;
-                let local_mx = mx - sidebar_w;
-                let local_my = my - top_bar_h;
+                let (ox, oy) = st.get_map_canvas_origin();
+                let local_mx = mx - ox;
+                let local_my = my - oy;
 
                 // 保持鼠标指向的世界坐标在缩放前后不变
                 st.quest_map_pan.0 = local_mx - (local_mx - st.quest_map_pan.0) * (new_zoom / old_zoom);
@@ -182,4 +196,6 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
         .child(crate::ui::views::quest_map::markers_layer::render_markers_layer(state, model, pan, zoom, is_zh))
         // 5. 任务标点浮层 (可点击交互)
         .child(render_pins_elements(&pins, model))
+        // 6. 用户单点交互标点图层 (全局单一标点，支持点击自身重置清空)
+        .child(crate::ui::views::quest_map::user_pin_layer::render_user_pin_layer(state, model, pan, zoom))
 }

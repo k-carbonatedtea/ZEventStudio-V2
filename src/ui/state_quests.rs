@@ -150,7 +150,8 @@ impl AppState {
         self.quest_map_pan = (600.0 - pos.0 * self.quest_map_zoom, 400.0 - pos.2 * self.quest_map_zoom);
     }
 
-    /// 将 2D 地图聚焦至指定地理地标世界坐标 (X, Z)
+    /// 将 2D 地图聚焦至指定地理地标世界坐标 (X, Z)（保留用于外部搜索或指令主动导航）
+    #[allow(dead_code)]
     pub fn focus_landmark_on_map(&mut self, pos: (f32, f32)) {
         self.quest_map_zoom = 0.22;
         self.quest_map_pan = (600.0 - pos.0 * self.quest_map_zoom, 400.0 - pos.1 * self.quest_map_zoom);
