@@ -91,6 +91,9 @@ pub fn get_zh_quests(key: &str) -> Option<&'static str> {
         "quests.map_mode_vector" => "🎨 矢量极速",
         "quests.map_mode_satellite" => "🛰️ 卫星实景",
         "quests.map_mode_tooltip" => "切换底图模式：纯代码矢量极速 (60+ FPS) / 游戏卫星瓦片",
+        "quests.detail_title" => "任务详情与阶段配置",
+        "quests.btn_close" => "关闭",
+        "quests.btn_inspect" => "查看阶段详情",
         _ => return None,
     };
     Some(text)

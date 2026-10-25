@@ -118,27 +118,33 @@ where
     result
 }
 
-/// 将提取到的标点合并到映射表中
+/// 将提取到的标点合并到映射表中 (智能辨识原版地标与真正新增的 Mod 地标)
 fn merge_marker_into_map(map: &mut HashMap<String, HyruleMarker>, new_marker: HyruleMarker) {
     let key = new_marker.id.to_string();
     if let Some(existing) = map.get_mut(&key) {
-        // 更新坐标与海拔
-        existing.position = new_marker.position;
-        existing.altitude = new_marker.altitude;
+        // 该标点在官方基准地标中已经存在 (说明是已知官方 136 座地标之一)
+        let dx = existing.position.0 - new_marker.position.0;
+        let dy = existing.position.1 - new_marker.position.1;
+        let dist = (dx * dx + dy * dy).sqrt();
+
         if new_marker.is_custom {
-            existing.is_custom = true;
-            if !new_marker.name_zh.is_empty() {
-                existing.name_zh = new_marker.name_zh;
+            // 来自已打开项目扫描：
+            // 只有当标点世界坐标被 Mod 作者实质性挪移 (偏离原版基准 > 50 米) 时，才视为 Mod 搬迁的地标
+            if dist > 50.0 {
+                existing.position = new_marker.position;
+                existing.altitude = new_marker.altitude;
+                existing.is_custom = true;
+            } else {
+                // 坐标基本一致 (<= 50 米)，说明只是项目 romfs 中携带的官方原版副本
+                // 坚决保持原版优雅中文名与试炼名，绝不标记为 is_custom，避免污染和全景卡片泛滥
             }
-            if !new_marker.name_en.is_empty() {
-                existing.name_en = new_marker.name_en;
-            }
-            if new_marker.sub_name_zh.is_some() {
-                existing.sub_name_zh = new_marker.sub_name_zh;
-            }
+        } else {
+            // 来自官方 Dump 的同步更新
+            existing.position = new_marker.position;
+            existing.altitude = new_marker.altitude;
         }
     } else {
-        // 全新自定义标点（如新增的 Dungeon137）
+        // 全新自定义标点 (基准表中不存在的新 ID，如自创神庙 Dungeon137、自定义营地等)
         map.insert(key, new_marker);
     }
 }

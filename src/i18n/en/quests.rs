@@ -91,6 +91,9 @@ pub fn get_en_quests(key: &str) -> Option<&'static str> {
         "quests.map_mode_vector" => "🎨 Vector",
         "quests.map_mode_satellite" => "🛰️ Satellite",
         "quests.map_mode_tooltip" => "Toggle Map Mode: Pure Vector (60+ FPS) / Game Satellite Tiles",
+        "quests.detail_title" => "Quest Details & Steps",
+        "quests.btn_close" => "Close",
+        "quests.btn_inspect" => "Inspect Steps",
         _ => return None,
     };
     Some(text)

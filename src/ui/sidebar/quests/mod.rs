@@ -4,10 +4,10 @@ pub mod quest_card;
 use gpui::*;
 use crate::model::quest::QuestType;
 use crate::ui::components::render_blinking_cursor;
-use crate::ui::sidebar::quests::quest_card::render_quest_card;
+use crate::ui::sidebar::quests::quest_card::render_expandable_quest_card;
 use crate::ui::state::AppState;
 
-/// 渲染侧边栏任务制作与管理面板
+/// 渲染侧边栏任务制作与管理面板 (采用高性能虚拟列表 uniform_list 架构)
 pub fn render_quests_panel(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
     let pal = state.theme();
     let model_refresh = model.clone();
@@ -112,24 +112,45 @@ pub fn render_quests_panel(state: &AppState, model: &Entity<AppState>) -> impl I
         .child(render_quest_search_box(state, model))
         // 3. 任务类型过滤 Chips
         .child(render_type_filter_chips(state, model))
-        // 4. 任务列表内容区
+        // 4. 任务列表内容区 (采用 gpui::list 虚拟列表渲染，仅绘制视口可见项，未滚动区域零开销，支持卡片就地折叠展开)
         .child(
             div()
                 .id("quests_list_scroll_body")
                 .flex_1()
-                .overflow_y_scroll()
-                .p_2()
+                .overflow_hidden()
+                .p_1()
                 .children(if filtered_quests.is_empty() {
                     vec![render_empty_quests_guide(state, model).into_any_element()]
                 } else {
+                    let total_count = filtered_quests.len();
+                    if state.quests_list_state.item_count() != total_count {
+                        state.quests_list_state.reset(total_count);
+                    }
+
+                    let quests_arc = std::sync::Arc::new(
+                        filtered_quests.into_iter().cloned().collect::<Vec<_>>()
+                    );
+                    let m_clone = model.clone();
+                    let lang = state.lang;
+                    let pal_theme = pal;
                     let sel_id = state.quests_selected_id.clone();
-                    filtered_quests
-                        .into_iter()
-                        .map(|q| {
-                            let is_sel = sel_id.as_deref() == Some(&q.name);
-                            render_quest_card(q, is_sel, state, model).into_any_element()
-                        })
-                        .collect()
+
+                    vec![
+                        list(
+                            state.quests_list_state.clone(),
+                            move |index, _window, _cx| {
+                                if let Some(quest) = quests_arc.get(index) {
+                                    let is_sel = sel_id.as_deref() == Some(&quest.name);
+                                    render_expandable_quest_card(quest, is_sel, lang, pal_theme, &m_clone)
+                                        .into_any_element()
+                                } else {
+                                    div().into_any_element()
+                                }
+                            },
+                        )
+                        .size_full()
+                        .into_any_element()
+                    ]
                 }),
         )
 }

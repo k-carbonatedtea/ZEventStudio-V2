@@ -152,9 +152,9 @@ fn render_single_marker_card(
         ),
     };
 
-    // 缩放 LOD 策略：缩放较大或高亮时显示详细名称胶囊
-    let show_full_label = zoom >= 0.10 || is_hovered || is_selected || lm.kind == HyruleMarkerKind::DivineBeast || lm.is_custom;
-    let is_compact = lm.kind == HyruleMarkerKind::Shrine && zoom < 0.06 && !is_hovered && !is_selected && !lm.is_custom;
+    // 缩放 LOD 策略：仅当鼠标悬停、选中、神兽（全境宏观参照物）、或局部区域深入放大 (zoom >= 0.12) 时才展开详细名称卡片
+    let show_full_label = is_hovered || is_selected || lm.kind == HyruleMarkerKind::DivineBeast || zoom >= 0.12;
+    let is_compact = lm.kind == HyruleMarkerKind::Shrine && zoom < 0.06 && !is_hovered && !is_selected;
 
     // 获取官方游戏贴图路径 (全品类覆盖)
     let icon_path_opt = get_marker_game_icon_path(lm, is_hovered || is_selected);
@@ -229,6 +229,15 @@ fn render_single_marker_card(
                             .rounded_full()
                             .bg(border_color.opacity(0.35))
                     }))
+                    .children((lm.is_custom && !is_selected && !is_hovered).then(|| {
+                        // 自定义 Mod 标点在全景下附带一层精致金圈，不弹卡片、不挡视线、零排版开销
+                        div()
+                            .absolute()
+                            .inset_0()
+                            .rounded_full()
+                            .border_1()
+                            .border_color(rgb(0xeab308).opacity(0.85))
+                    }))
                     .child(
                         img(path)
                             .size(px(icon_px))
@@ -241,7 +250,7 @@ fn render_single_marker_card(
                     .rounded_md()
                     .bg(rgba(0x0f172aee))
                     .border_2()
-                    .border_color(border_color)
+                    .border_color(if lm.is_custom { rgb(0xeab308) } else { border_color })
                     .shadow_md()
                     .flex()
                     .items_center()

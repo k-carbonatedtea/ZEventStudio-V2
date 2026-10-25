@@ -110,6 +110,7 @@ impl AppState {
         } else {
             self.quests_selected_id = Some(quest_name.to_string());
         }
+        self.quests_list_state.remeasure();
     }
 
     /// 获取当前选中的任务定义

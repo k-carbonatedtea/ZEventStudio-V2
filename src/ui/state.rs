@@ -166,8 +166,7 @@ pub struct AppState {
     pub quests_selected_id: Option<String>,
     pub quests_filter_type: Option<crate::model::quest::QuestType>,
     pub quest_creator_modal: Option<QuestCreatorModalState>,
-    #[allow(dead_code)]
-    pub quests_scroll_handle: gpui::UniformListScrollHandle,
+    pub quests_list_state: gpui::ListState,
 
     // 2D 任务地图交互与展示状态
     pub quest_map_pan: (f32, f32),
