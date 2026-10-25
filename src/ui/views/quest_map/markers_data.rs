@@ -15,6 +15,8 @@ pub enum HyruleMarkerKind {
     DivineBeast,
     /// 城镇与村落 (Village)
     Village,
+    /// 商业店铺 (Shop: 防具店、杂货店、旅店、宝石店、染坊)
+    Shop,
     /// 研究所、城堡等核心设施 (Facility)
     Facility,
 }
@@ -29,6 +31,7 @@ impl HyruleMarkerKind {
             Self::Stable => "stable",
             Self::DivineBeast => "beast",
             Self::Village => "village",
+            Self::Shop => "shop",
             Self::Facility => "facility",
         }
     }

@@ -22,6 +22,11 @@ fn get_cached_asset(filename: &'static str) -> Option<PathBuf> {
             "village.png",
             "labo.png",
             "resurrection.png",
+            "shop_bougu.png",
+            "shop_yorozu.png",
+            "shop_yadoya.png",
+            "shop_jewel.png",
+            "shop_color.png",
         ];
         let mut map = HashMap::with_capacity(asset_files.len());
         for &name in &asset_files {
@@ -104,6 +109,21 @@ pub fn get_settlement_icon_path(marker_id: &str, kind: HyruleMarkerKind) -> Opti
     }
 }
 
+/// 获取各聚落店铺与商业设施专属贴图路径
+pub fn get_shop_icon_path(marker_id: &str, icon_char: &str) -> Option<PathBuf> {
+    if marker_id.contains("Bougu") || icon_char == "🛡️" {
+        get_cached_asset("shop_bougu.png")
+    } else if marker_id.contains("Yadoya") || icon_char == "🛏️" {
+        get_cached_asset("shop_yadoya.png")
+    } else if marker_id.contains("Jewel") || icon_char == "💎" {
+        get_cached_asset("shop_jewel.png")
+    } else if marker_id.contains("Color") || icon_char == "🎨" {
+        get_cached_asset("shop_color.png")
+    } else {
+        get_cached_asset("shop_yorozu.png")
+    }
+}
+
 /// 统一获取任意海拉鲁地标的官方游戏图标贴图路径
 pub fn get_marker_game_icon_path(marker: &HyruleMarker, is_active: bool) -> Option<PathBuf> {
     match marker.kind {
@@ -111,6 +131,7 @@ pub fn get_marker_game_icon_path(marker: &HyruleMarker, is_active: bool) -> Opti
         HyruleMarkerKind::Tower => get_tower_icon_path(),
         HyruleMarkerKind::Stable => get_stable_icon_path(),
         HyruleMarkerKind::DivineBeast => get_beast_icon_path(&marker.id),
+        HyruleMarkerKind::Shop => get_shop_icon_path(&marker.id, &marker.icon_char),
         HyruleMarkerKind::Village | HyruleMarkerKind::Facility => {
             get_settlement_icon_path(&marker.id, marker.kind)
         }

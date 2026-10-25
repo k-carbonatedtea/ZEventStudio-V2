@@ -11,6 +11,10 @@ use crate::model::settings::GamePathSettings;
 use crate::ui::views::quest_map::markers_data::{
     get_default_hyrule_markers, HyruleMarker, HyruleMarkerKind,
 };
+use crate::ui::views::quest_map::markers_msbt::{
+    extract_location_msbt_from_pack, parse_location_msbt,
+};
+use crate::ui::views::quest_map::markers_shops::resolve_shop_marker;
 
 /// 从已配置的游戏路径与当前项目目录中自动提取海拉鲁地图标点（神庙、塔、驿站、城镇及自定义 Mod 标点）
 pub fn extract_hyrule_markers(
@@ -35,6 +39,9 @@ where
     for marker in get_default_hyrule_markers() {
         markers_map.insert(marker.id.to_string(), marker);
     }
+
+    let mut dict_zh: HashMap<String, String> = HashMap::new();
+    let mut dict_en: HashMap<String, String> = HashMap::new();
 
     // 2. 从已配置的游戏 Dump 路径中提取（严格优先使用当前所选平台）
     if let Some(gp) = game_paths {
@@ -79,7 +86,7 @@ where
         for dir in primary_dirs {
             if dir.exists() {
                 scanned_any = true;
-                for marker in scan_static_markers_in_dir(&dir, false, 3, &mut on_progress) {
+                for marker in scan_static_markers_in_dir(&dir, false, 3, &mut dict_zh, &mut dict_en, &mut on_progress) {
                     merge_marker_into_map(&mut markers_map, marker);
                 }
             }
@@ -89,7 +96,7 @@ where
         if !scanned_any {
             for dir in fallback_dirs {
                 if dir.exists() {
-                    for marker in scan_static_markers_in_dir(&dir, false, 3, &mut on_progress) {
+                    for marker in scan_static_markers_in_dir(&dir, false, 3, &mut dict_zh, &mut dict_en, &mut on_progress) {
                         merge_marker_into_map(&mut markers_map, marker);
                     }
                 }
@@ -103,10 +110,23 @@ where
         if proj_buf.exists() {
             let proj_name = proj_buf.file_name().and_then(|n| n.to_str()).unwrap_or("Project");
             on_progress(&format!("扫描项目自定义标点: {}", proj_name));
-            for marker in scan_static_markers_in_dir(&proj_buf, true, 4, &mut on_progress) {
-                // 项目中的标点直接覆盖并标记 is_custom
+            for marker in scan_static_markers_in_dir(&proj_buf, true, 4, &mut dict_zh, &mut dict_en, &mut on_progress) {
                 merge_marker_into_map(&mut markers_map, marker);
             }
+        }
+    }
+
+    // 4. 多语言地名全量注入与润色 (使用官方 LocationMarker.msbt 注入官方中文名与英文名)
+    for marker in markers_map.values_mut() {
+        if marker.kind == HyruleMarkerKind::Shop || marker.is_custom {
+            continue;
+        }
+        let id_str = marker.id.as_ref();
+        if let Some(zh) = dict_zh.get(id_str) {
+            marker.name_zh = SharedString::from(zh.clone());
+        }
+        if let Some(en) = dict_en.get(id_str) {
+            marker.name_en = SharedString::from(en.clone());
         }
     }
 
@@ -149,11 +169,13 @@ fn merge_marker_into_map(map: &mut HashMap<String, HyruleMarker>, new_marker: Hy
     }
 }
 
-/// 扫描指定目录下的 Static.smubin 或 Bootup.pack
+/// 扫描指定目录下的 Static.smubin、Bootup.pack 及语言包
 fn scan_static_markers_in_dir<F>(
     root: &Path,
     is_custom: bool,
     max_depth: usize,
+    dict_zh: &mut HashMap<String, String>,
+    dict_en: &mut HashMap<String, String>,
     on_progress: &mut F,
 ) -> Vec<HyruleMarker>
 where
@@ -191,6 +213,20 @@ where
                     if let Ok(bytes) = fs::read(&path) {
                         on_progress(&format!("解压 Yaz0: {}", display_path));
                         markers.extend(parse_markers_from_bootup_pack(&bytes, is_custom, on_progress));
+                    }
+                } else if name.eq_ignore_ascii_case("Bootup_CNzh.pack") || name.eq_ignore_ascii_case("Bootup_TWzh.pack") {
+                    if let Ok(bytes) = fs::read(&path) {
+                        on_progress(&format!("提取地名语言包: {}", name));
+                        dict_zh.extend(extract_location_msbt_from_pack(&bytes));
+                    }
+                } else if name.eq_ignore_ascii_case("Bootup_USen.pack") || name.eq_ignore_ascii_case("Bootup_EUen.pack") {
+                    if let Ok(bytes) = fs::read(&path) {
+                        on_progress(&format!("提取英文地名包: {}", name));
+                        dict_en.extend(extract_location_msbt_from_pack(&bytes));
+                    }
+                } else if name.eq_ignore_ascii_case("LocationMarker.msbt") {
+                    if let Ok(bytes) = fs::read(&path) {
+                        dict_zh.extend(parse_location_msbt(&bytes));
                     }
                 }
             }
@@ -250,6 +286,27 @@ fn parse_location_markers_from_smubin(data: &[u8], is_custom: bool) -> Vec<Hyrul
             _ => None,
         }).unwrap_or_default();
 
+        let icon_str = entry.get("Icon").and_then(|v| match v {
+            Byml::String(s) => Some(s.as_str()),
+            _ => None,
+        }).unwrap_or_default();
+
+        // 提取世界坐标 (X, Z, Y)
+        let (pos_x, pos_z, altitude) = if let Some(Byml::Map(t)) = entry.get("Translate") {
+            let x = extract_float(t.get("X")).unwrap_or(0.0);
+            let y = extract_float(t.get("Y")).unwrap_or(0.0);
+            let z = extract_float(t.get("Z")).unwrap_or(0.0);
+            (x, z, y)
+        } else {
+            (0.0, 0.0, 0.0)
+        };
+
+        // 1. 优先作为聚落商业店铺解析 (一始村及各大村落 37 家商铺独立命名与图标)
+        if let Some(shop_marker) = resolve_shop_marker(save_flag, icon_str, (pos_x, pos_z), altitude, is_custom) {
+            markers.push(shop_marker);
+            continue;
+        }
+
         let marker_id = if !mid.is_empty() {
             mid
         } else if !save_flag.is_empty() {
@@ -258,12 +315,7 @@ fn parse_location_markers_from_smubin(data: &[u8], is_custom: bool) -> Vec<Hyrul
             continue;
         };
 
-        // 2. 提取类别与图标
-        let icon_str = entry.get("Icon").and_then(|v| match v {
-            Byml::String(s) => Some(s.as_str()),
-            _ => None,
-        }).unwrap_or_default();
-
+        // 2. 提取常规地标类别与图标
         let (kind, icon_char) = match icon_str {
             "Dungeon" => (HyruleMarkerKind::Shrine, "⛩️"),
             "Tower" => (HyruleMarkerKind::Tower, "🗼"),
@@ -274,16 +326,6 @@ fn parse_location_markers_from_smubin(data: &[u8], is_custom: bool) -> Vec<Hyrul
             "StartPoint" => (HyruleMarkerKind::Facility, "✨"),
             s if s.starts_with("Remains") => (HyruleMarkerKind::DivineBeast, "🦅"),
             _ => (HyruleMarkerKind::Facility, "📍"),
-        };
-
-        // 3. 提取世界坐标 (X, Z, Y)
-        let (pos_x, pos_z, altitude) = if let Some(Byml::Map(t)) = entry.get("Translate") {
-            let x = extract_float(t.get("X")).unwrap_or(0.0);
-            let y = extract_float(t.get("Y")).unwrap_or(0.0);
-            let z = extract_float(t.get("Z")).unwrap_or(0.0);
-            (x, z, y)
-        } else {
-            (0.0, 0.0, 0.0)
         };
 
         let name_zh = if is_custom {

@@ -73,39 +73,48 @@ pub fn render_markers_layer(
         .inset_0()
         // 1. 大区域水印文字
         .child(render_region_labels_layer(pan, zoom, is_zh))
-        // 2. 全部地标标点元素 (带 LOD 与视口裁剪)
-        .children(markers.iter().filter_map(move |lm| {
-            // 类别可见性过滤
-            let visible = match lm.kind {
-                HyruleMarkerKind::Shrine => show_shrines,
-                HyruleMarkerKind::Stable => show_stables,
-                HyruleMarkerKind::DivineBeast => show_beasts,
-                HyruleMarkerKind::Tower => show_towers,
-                HyruleMarkerKind::Village | HyruleMarkerKind::Facility => show_settlements,
-            };
-            if !visible {
-                return None;
-            }
+        // 2. 全部地标标点元素 (带 LOD 与视口裁剪，激活/悬停标点置顶渲染)
+        .children({
+            let mut list: Vec<_> = markers.iter().filter_map(move |lm| {
+                // 类别可见性过滤
+                let visible = match lm.kind {
+                    HyruleMarkerKind::Shrine => show_shrines,
+                    HyruleMarkerKind::Stable => show_stables,
+                    HyruleMarkerKind::DivineBeast => show_beasts,
+                    HyruleMarkerKind::Tower => show_towers,
+                    HyruleMarkerKind::Village | HyruleMarkerKind::Facility | HyruleMarkerKind::Shop => show_settlements,
+                };
+                if !visible {
+                    return None;
+                }
 
-            // 视口坐标投影与边界裁剪 (Viewport Culling: 超出屏幕可视范围极速跳过)
-            let (sx, sy) = world_to_screen(lm.position.0, lm.position.1, (0.0, 0.0), pan, zoom);
-            if !(-60.0..=2200.0).contains(&sx) || !(-60.0..=1400.0).contains(&sy) {
-                return None;
-            }
+                // 视口坐标投影与边界裁剪 (Viewport Culling: 超出屏幕可视范围极速跳过)
+                let (sx, sy) = world_to_screen(lm.position.0, lm.position.1, (0.0, 0.0), pan, zoom);
+                if !(-60.0..=2200.0).contains(&sx) || !(-60.0..=1400.0).contains(&sy) {
+                    return None;
+                }
 
-            let is_hovered = hovered_id == Some(lm.id.as_ref());
-            let is_selected = selected_id == Some(lm.id.as_ref());
+                let is_hovered = hovered_id == Some(lm.id.as_ref());
+                let is_selected = selected_id == Some(lm.id.as_ref());
 
-            Some(render_single_marker_card(
-                lm,
-                (sx, sy),
-                zoom,
-                is_zh,
-                is_hovered,
-                is_selected,
-                model,
-            ))
-        }))
+                Some((lm, (sx, sy), is_hovered, is_selected))
+            }).collect();
+
+            // 悬停或选中的卡片置于图层最顶层，彻底杜绝被同位置邻近地标遮挡
+            list.sort_by_key(|&(_, _, is_hovered, is_selected)| is_hovered || is_selected);
+
+            list.into_iter().map(move |(lm, (sx, sy), is_hovered, is_selected)| {
+                render_single_marker_card(
+                    lm,
+                    (sx, sy),
+                    zoom,
+                    is_zh,
+                    is_hovered,
+                    is_selected,
+                    model,
+                )
+            })
+        })
 }
 
 /// 渲染单个地标标点卡片 (全面接入官方游戏素材贴图与自定义 Mod 标识)
@@ -146,14 +155,22 @@ fn render_single_marker_card(
             if is_selected { rgb(0xffffff) } else if is_hovered { rgb(0x5eead4) } else { rgb(0x14b8a6) },
             rgb(0x5eead4),
         ),
+        HyruleMarkerKind::Shop => (
+            if is_selected { rgb(0xffffff) } else if is_hovered { rgb(0xfbbf24) } else { rgb(0xd97706) },
+            rgb(0xfef3c7),
+        ),
         HyruleMarkerKind::Facility => (
             if is_selected { rgb(0xffffff) } else if is_hovered { rgb(0xf43f5e) } else { rgb(0xe11d48) },
             rgb(0xfecdd3),
         ),
     };
 
-    // 缩放 LOD 策略：仅当鼠标悬停、选中、神兽（全境宏观参照物）、或局部区域深入放大 (zoom >= 0.12) 时才展开详细名称卡片
-    let show_full_label = is_hovered || is_selected || lm.kind == HyruleMarkerKind::DivineBeast || zoom >= 0.12;
+    // 缩放 LOD 策略：店铺密集聚集于村落中，中等缩放下以精致徽章图标展示，悬停/选中或深度放大时展开详细名称
+    let show_full_label = is_hovered
+        || is_selected
+        || lm.kind == HyruleMarkerKind::DivineBeast
+        || (lm.kind != HyruleMarkerKind::Shop && zoom >= 0.12)
+        || (lm.kind == HyruleMarkerKind::Shop && zoom >= 0.28);
     let is_compact = lm.kind == HyruleMarkerKind::Shrine && zoom < 0.06 && !is_hovered && !is_selected;
 
     // 获取官方游戏贴图路径 (全品类覆盖)
@@ -175,6 +192,7 @@ fn render_single_marker_card(
                 20.0
             }
         }
+        HyruleMarkerKind::Shop => if is_selected || is_hovered { 26.0 } else { 20.0 },
         HyruleMarkerKind::Facility => if is_selected || is_hovered { 30.0 } else { 24.0 },
         HyruleMarkerKind::Village => if is_selected || is_hovered { 28.0 } else { 22.0 },
     };

@@ -10,6 +10,8 @@ pub mod markers_data;
 pub mod markers_extractor;
 pub mod markers_landmarks;
 pub mod markers_layer;
+pub mod markers_msbt;
+pub mod markers_shops;
 pub mod markers_shrines;
 pub mod pin_tooltip;
 pub mod pins_layer;
