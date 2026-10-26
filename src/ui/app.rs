@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::input::{EditorState, InputEvent};
+use gpui_component::input::EditorState;
 use std::time::Instant;
 use crate::ui::app_layout::{wrap_fullscreen_tab, wrap_sidebar_workspace};
 use crate::ui::canvas::{render_flow_canvas, render_node_editor_modal};
@@ -25,6 +25,10 @@ pub struct AppView {
     pub code_editor: Option<Entity<EditorState>>,
     pub code_editor_tab_id: Option<String>,
     pub code_editor_version: usize,
+    pub msbt_bubble_editor: Option<Entity<EditorState>>,
+    pub msbt_bubble_tab_id: Option<String>,
+    pub msbt_bubble_entry_key: Option<String>,
+    pub msbt_bubble_last_draft: String,
     pub was_window_active: bool,
 }
 
@@ -49,6 +53,10 @@ impl AppView {
             code_editor: None,
             code_editor_tab_id: None,
             code_editor_version: 0,
+            msbt_bubble_editor: None,
+            msbt_bubble_tab_id: None,
+            msbt_bubble_entry_key: None,
+            msbt_bubble_last_draft: String::new(),
             was_window_active: false,
         }
     }
@@ -68,68 +76,9 @@ impl Render for AppView {
         }
         self.was_window_active = is_active;
 
-        // 1. 同步与管理高性能可编辑代码编辑器实例 (EditorState)
-        let active_tab_info = {
-            let state = self.model.read(cx);
-            let active_id = state.active_tab_id.clone();
-            active_id.and_then(|id| {
-                state.open_tabs.iter().find(|t| t.id == id).and_then(|tab| {
-                    tab.code_state.as_ref().map(|code| {
-                        (id, code.content.clone(), code.format.language_id(), code.version)
-                    })
-                })
-            })
-        };
-
-        if let Some((current_id, code_content, lang, current_version)) = active_tab_info {
-            if self.code_editor.is_none() || self.code_editor_tab_id.as_ref() != Some(&current_id) {
-                let new_editor = cx.new(|cx| {
-                    EditorState::new(window, cx)
-                        .language(lang)
-                        .line_number(true)
-                        .default_value(code_content)
-                });
-
-                let model_sub = self.model.clone();
-                let target_tab_id = current_id.clone();
-                cx.subscribe_in(
-                    &new_editor,
-                    window,
-                    move |_this: &mut AppView, editor, event: &InputEvent, _window, cx| {
-                        if let InputEvent::Change = event {
-                            let new_val = editor.read(cx).value();
-                            let tid = target_tab_id.clone();
-                            model_sub.update(cx, |st, cx| {
-                                if let Some(tab) = st.open_tabs.iter_mut().find(|t| t.id == tid) {
-                                    if let Some(ref mut code) = tab.code_state {
-                                        code.content = new_val.to_string();
-                                    }
-                                    tab.recompute_modified();
-                                    cx.notify();
-                                }
-                            });
-                        }
-                    },
-                )
-                .detach();
-
-                self.code_editor = Some(new_editor);
-                self.code_editor_tab_id = Some(current_id);
-                self.code_editor_version = current_version;
-            } else if self.code_editor_version != current_version {
-                // 底层数据由于外部放弃更改、Revert 或重新载入发生变动，即时刷新编辑器文本
-                if let Some(ref ed) = self.code_editor {
-                    ed.update(cx, |ed_state, cx| {
-                        ed_state.set_value(code_content, window, cx);
-                    });
-                }
-                self.code_editor_version = current_version;
-            }
-        } else if self.code_editor.is_some() {
-            // 当前非代码编辑器标签，释放旧实例与标签 ID
-            self.code_editor = None;
-            self.code_editor_tab_id = None;
-        }
+        // 1. 同步与管理高性能可编辑代码编辑器实例 (EditorState) 与 MSBT 气泡对话编辑器实例
+        self.sync_code_editor(window, cx);
+        self.sync_msbt_bubble_editor(window, cx);
 
         // 采样并计算真实渲染帧率
         self.frame_count += 1;
@@ -179,12 +128,19 @@ impl Render for AppView {
             })
         };
 
-        if has_active_field || is_bubble_active {
+        if has_active_field {
             if !self.focus_handle.is_focused(window) {
                 self.focus_handle.focus(window, cx);
             }
         } else if current_tab == AppWorkspaceTab::CodeEditor {
-            if let Some(ref editor) = self.code_editor {
+            if is_bubble_active {
+                if let Some(ref ed) = self.msbt_bubble_editor {
+                    let editor_focused = ed.read(cx).focus_handle(cx).is_focused(window);
+                    if !editor_focused {
+                        ed.update(cx, |editor, cx| editor.focus(window, cx));
+                    }
+                }
+            } else if let Some(ref editor) = self.code_editor {
                 let editor_focused = editor.read(cx).focus_handle(cx).is_focused(window);
                 if !editor_focused {
                     editor.update(cx, |ed, cx| ed.focus(window, cx));
@@ -259,24 +215,21 @@ impl Render for AppView {
             })
             // 全局键盘输入拦截器：快捷键与实体键盘键入
             .on_key_down(move |event, _window, cx| {
-                if event.keystroke.modifiers.control && event.keystroke.key == "o" {
+                if event.keystroke.modifiers.control && event.keystroke.key.eq_ignore_ascii_case("o") {
                     crate::ui::views::welcome::quick_tab::pick_and_load_file(&model_key, cx);
                     return;
                 }
 
-                let clipboard = if event.keystroke.modifiers.control && event.keystroke.key == "v" {
+                let clipboard = if event.keystroke.modifiers.control && event.keystroke.key.eq_ignore_ascii_case("v") {
                     cx.read_from_clipboard().and_then(|item| item.text())
                 } else {
                     None
                 };
 
                 model_key.update(cx, |st, cx| {
-                    if event.keystroke.modifiers.control && event.keystroke.key == "c" {
-                        if let Some(active_text) = st.active_text_input() {
-                            cx.write_to_clipboard(ClipboardItem::new_string(active_text.to_string()));
-                            cx.stop_propagation();
-                            return;
-                        }
+                    if crate::ui::key_handler::handle_clipboard_key_event(event, st, cx) {
+                        cx.stop_propagation();
+                        return;
                     }
 
                     let should_notify = handle_global_key_event(event, st, clipboard.as_deref());
@@ -318,7 +271,12 @@ impl Render for AppView {
                                 wrap_sidebar_workspace(
                                     state,
                                     &self.model,
-                                    render_code_editor_view(state, &self.model, self.code_editor.as_ref()),
+                                    render_code_editor_view(
+                                        state,
+                                        &self.model,
+                                        self.code_editor.as_ref(),
+                                        self.msbt_bubble_editor.as_ref(),
+                                    ),
                                     None,
                                 )
                                 .into_any_element()

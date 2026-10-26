@@ -11,6 +11,7 @@ pub use header_switch::render_msbt_view_mode_toggle;
 pub use types::BubbleType;
 
 use gpui::*;
+use gpui_component::input::EditorState;
 use crate::model::code_document::CodeDocumentState;
 use crate::ui::state::AppState;
 use bubble_input::render_msbt_bubble_input;
@@ -26,6 +27,7 @@ pub fn render_msbt_bubble_editor(
     _is_modified: bool,
     state: &AppState,
     model: &Entity<AppState>,
+    bubble_editor: Option<&Entity<EditorState>>,
 ) -> impl IntoElement {
     let pal = state.theme();
 
@@ -67,7 +69,7 @@ pub fn render_msbt_bubble_editor(
                                 .flex_col()
                                 .justify_between()
                                 .child(render_msbt_bubble_preview(active_entry, state.msbt_bubble_type, state))
-                                .child(render_msbt_bubble_input(active_entry, state, model)),
+                                .child(render_msbt_bubble_input(active_entry, state, model, bubble_editor)),
                         ),
                 )
                 // 3. 新建条目模态框

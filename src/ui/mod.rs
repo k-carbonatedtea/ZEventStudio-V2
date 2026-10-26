@@ -1,4 +1,5 @@
 pub mod app;
+pub mod app_editor_sync;
 pub mod app_layout;
 pub mod canvas;
 pub mod components;

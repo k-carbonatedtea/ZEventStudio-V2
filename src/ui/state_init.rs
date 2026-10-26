@@ -188,6 +188,8 @@ impl AppState {
             msbt_bubble_type: crate::ui::views::msbt_editor::BubbleType::Dialogue,
             msbt_text_editor_draft: String::new(),
             msbt_text_editor_focused: false,
+            msbt_text_editor_cursor: 0,
+            msbt_text_editor_select_anchor: None,
             msbt_new_entry_modal_open: false,
             msbt_new_entry_name: String::new(),
             msbt_new_entry_focused: false,

@@ -24,10 +24,14 @@ impl AppState {
             if let Some(target_key) = self.msbt_selected_entry_key.as_deref() {
                 if let Some(entry) = doc.entries.iter().find(|e| e.key == target_key) {
                     self.msbt_text_editor_draft = entry.raw_text.clone();
+                    self.msbt_text_editor_cursor = self.msbt_text_editor_draft.chars().count();
+                    self.msbt_text_editor_select_anchor = None;
                 }
             } else if let Some(first_entry) = doc.entries.first() {
                 self.msbt_selected_entry_key = Some(first_entry.key.clone());
                 self.msbt_text_editor_draft = first_entry.raw_text.clone();
+                self.msbt_text_editor_cursor = self.msbt_text_editor_draft.chars().count();
+                self.msbt_text_editor_select_anchor = None;
             }
         }
     }
@@ -62,19 +66,47 @@ impl AppState {
         }
     }
 
-    /// 使用前缀与后缀标签包裹当前编辑文本 (如 <red>...</color>)
+    /// 使用前缀与后缀标签包裹当前编辑文本或选中文本 (如 <colour:red>...</colour>)
     pub fn wrap_msbt_draft_with_tag(&mut self, prefix: &str, suffix: &str) {
-        if self.msbt_text_editor_draft.is_empty() {
-            self.msbt_text_editor_draft = format!("{}{}", prefix, suffix);
+        let (sel_start, sel_end) = match self.msbt_selection_range() {
+            Some((s, e)) => (Some(s), Some(e)),
+            None => (None, None),
+        };
+
+        if let (Some(start), Some(end)) = (sel_start, sel_end) {
+            let chars: Vec<char> = self.msbt_text_editor_draft.chars().collect();
+            let before: String = chars[..start].iter().collect();
+            let selected: String = chars[start..end].iter().collect();
+            let after: String = chars[end..].iter().collect();
+            self.msbt_text_editor_draft = format!("{}{}{}{}{}", before, prefix, selected, suffix, after);
+            self.msbt_text_editor_cursor = start + prefix.chars().count() + selected.chars().count() + suffix.chars().count();
+            self.msbt_text_editor_select_anchor = None;
         } else {
-            self.msbt_text_editor_draft = format!("{}{}{}", prefix, self.msbt_text_editor_draft, suffix);
+            let cursor = self.msbt_text_editor_cursor;
+            let chars: Vec<char> = self.msbt_text_editor_draft.chars().collect();
+            let total = chars.len();
+            let cur = cursor.min(total);
+            let before: String = chars[..cur].iter().collect();
+            let after: String = chars[cur..].iter().collect();
+            self.msbt_text_editor_draft = format!("{}{}{}{}", before, prefix, suffix, after);
+            self.msbt_text_editor_cursor = cur + prefix.chars().count();
+            self.msbt_text_editor_select_anchor = None;
         }
         self.commit_msbt_draft_to_active_tab();
     }
 
-    /// 向当前编辑文本末尾或光标处注入控制片段 (如 <pause:short>)
+    /// 向当前编辑文本光标处注入控制片段 (如 <pause:short>) 并替代选区
     pub fn insert_snippet_to_msbt_draft(&mut self, snippet: &str) {
-        self.msbt_text_editor_draft.push_str(snippet);
+        let (start, end) = self.msbt_selection_range().unwrap_or((self.msbt_text_editor_cursor, self.msbt_text_editor_cursor));
+        let chars: Vec<char> = self.msbt_text_editor_draft.chars().collect();
+        let total = chars.len();
+        let s = start.min(total);
+        let e = end.min(total);
+        let before: String = chars[..s].iter().collect();
+        let after: String = chars[e..].iter().collect();
+        self.msbt_text_editor_draft = format!("{}{}{}", before, snippet, after);
+        self.msbt_text_editor_cursor = s + snippet.chars().count();
+        self.msbt_text_editor_select_anchor = None;
         self.commit_msbt_draft_to_active_tab();
     }
 
@@ -123,6 +155,8 @@ impl AppState {
         if success {
             self.msbt_selected_entry_key = Some(new_key.clone());
             self.msbt_text_editor_draft.clear();
+            self.msbt_text_editor_cursor = 0;
+            self.msbt_text_editor_select_anchor = None;
             self.msbt_new_entry_modal_open = false;
             self.msbt_new_entry_name.clear();
             self.msbt_new_entry_focused = false;

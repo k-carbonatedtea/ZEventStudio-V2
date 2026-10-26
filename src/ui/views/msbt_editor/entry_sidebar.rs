@@ -236,6 +236,7 @@ pub fn render_msbt_entry_sidebar(
                                     model_select.update(cx, |st, cx| {
                                         st.msbt_selected_entry_key = Some(k);
                                         st.sync_msbt_selected_entry_to_draft();
+                                        st.msbt_text_editor_focused = true;
                                         cx.notify();
                                     });
                                 })

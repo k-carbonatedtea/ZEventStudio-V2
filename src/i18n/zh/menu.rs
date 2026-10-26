@@ -138,6 +138,11 @@ pub fn get_zh_menu(key: &str) -> Option<&'static str> {
         "msbt_editor.tag_pause_long" => "长停顿",
         "msbt_editor.tag_size_large" => "大字",
         "msbt_editor.tag_size_small" => "小字",
+        "msbt_editor.toast_copied" => "📋 已复制对白文本至剪贴板",
+        "msbt_editor.toast_cut" => "✂️ 已剪切对白文本至剪贴板",
+        "msbt_editor.toast_key_copied" => "📋 已复制条目键名至剪贴板",
+        "msbt_editor.copy_key_btn" => "📋 复制键名",
+        "msbt_editor.delete_entry_btn" => "🗑️ 删除条目",
 
         // ---------------- 角色管理主页面 (Actor Manager Page) ----------------
         "actors_view.add_actor_btn" => "+ 添加角色...",

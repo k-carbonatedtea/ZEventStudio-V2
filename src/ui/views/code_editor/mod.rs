@@ -13,6 +13,7 @@ pub fn render_code_editor_view(
     state: &AppState,
     model: &Entity<AppState>,
     editor_state: Option<&Entity<EditorState>>,
+    bubble_editor: Option<&Entity<EditorState>>,
 ) -> impl IntoElement {
     let pal = state.theme();
     let active_id = state.active_tab_id.as_deref().unwrap_or("");
@@ -31,7 +32,7 @@ pub fn render_code_editor_view(
                 .bg(pal.app_bg)
                 .child(render_code_editor_header(code_state, tab.is_modified, state, model, editor_state))
                 .child(if is_bubble_mode {
-                    crate::ui::views::render_msbt_bubble_editor(code_state, tab.is_modified, state, model).into_any_element()
+                    crate::ui::views::render_msbt_bubble_editor(code_state, tab.is_modified, state, model, bubble_editor).into_any_element()
                 } else {
                     render_editor_area(code_state, state, model, editor_state).into_any_element()
                 })

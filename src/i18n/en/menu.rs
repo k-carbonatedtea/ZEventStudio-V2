@@ -138,6 +138,11 @@ pub fn get_en_menu(key: &str) -> Option<&'static str> {
         "msbt_editor.tag_pause_long" => "Pause (Long)",
         "msbt_editor.tag_size_large" => "Large",
         "msbt_editor.tag_size_small" => "Small",
+        "msbt_editor.toast_copied" => "📋 Copied dialogue text to clipboard",
+        "msbt_editor.toast_cut" => "✂️ Cut dialogue text to clipboard",
+        "msbt_editor.toast_key_copied" => "📋 Copied entry key to clipboard",
+        "msbt_editor.copy_key_btn" => "📋 Copy Key",
+        "msbt_editor.delete_entry_btn" => "🗑️ Delete Entry",
 
         // ---------------- 角色管理主页面 (Actor Manager Page) ----------------
         "actors_view.add_actor_btn" => "+ Add Actor...",

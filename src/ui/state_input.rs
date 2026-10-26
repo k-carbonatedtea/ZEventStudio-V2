@@ -26,7 +26,7 @@ impl AppState {
         if self.rename_modal.as_ref().is_some_and(|m| m.focused) {
             return true;
         }
-        if self.msbt_search_focused || self.msbt_text_editor_focused || self.msbt_new_entry_focused {
+        if self.msbt_search_focused || self.msbt_new_entry_focused {
             return true;
         }
         false
@@ -123,9 +123,6 @@ impl AppState {
         }
         if self.msbt_search_focused {
             return Some(&self.msbt_search_query);
-        }
-        if self.msbt_text_editor_focused {
-            return Some(&self.msbt_text_editor_draft);
         }
         if self.msbt_new_entry_focused {
             return Some(&self.msbt_new_entry_name);
@@ -291,11 +288,6 @@ impl AppState {
         // 8. MSBT 气泡对话编辑器输入框
         if self.msbt_search_focused {
             self.msbt_search_query.push_str(&clean);
-            return true;
-        }
-        if self.msbt_text_editor_focused {
-            self.msbt_text_editor_draft.push_str(&clean);
-            self.commit_msbt_draft_to_active_tab();
             return true;
         }
         if self.msbt_new_entry_focused {

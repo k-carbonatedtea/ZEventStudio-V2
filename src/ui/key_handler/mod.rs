@@ -159,22 +159,39 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipb
         return changed;
     }
 
-    if state.msbt_text_editor_focused {
-        if event.keystroke.key == "escape" {
-            state.msbt_text_editor_focused = false;
+    false
+}
+
+/// 处理全局剪贴板快捷键 (Ctrl+C, Ctrl+X)
+pub fn handle_clipboard_key_event(
+    event: &KeyDownEvent,
+    state: &mut AppState,
+    cx: &mut gpui::Context<AppState>,
+) -> bool {
+    let key = event.keystroke.key.as_str();
+    let is_ctrl = event.keystroke.modifiers.control;
+    let is_alt = event.keystroke.modifiers.alt;
+
+    if !is_ctrl || is_alt {
+        return false;
+    }
+
+    // 1. Ctrl+C 复制 (针对搜索框/重命名等常规简单输入框)
+    if key.eq_ignore_ascii_case("c") {
+        if let Some(active_text) = state.active_text_input() {
+            cx.write_to_clipboard(gpui::ClipboardItem::new_string(active_text.to_string()));
             return true;
         }
-        if event.keystroke.key == "enter" {
-            state.msbt_text_editor_draft.push('\n');
-            state.commit_msbt_draft_to_active_tab();
+    }
+
+    // 2. Ctrl+X 剪切 (针对搜索框/重命名等常规简单输入框)
+    if key.eq_ignore_ascii_case("x") {
+        if let Some(active_text) = state.active_text_input() {
+            cx.write_to_clipboard(gpui::ClipboardItem::new_string(active_text.to_string()));
             return true;
         }
-        let (changed, _, _) = handle_text_key_event(&mut state.msbt_text_editor_draft, event, clipboard);
-        if changed {
-            state.commit_msbt_draft_to_active_tab();
-        }
-        return changed;
     }
 
     false
 }
+

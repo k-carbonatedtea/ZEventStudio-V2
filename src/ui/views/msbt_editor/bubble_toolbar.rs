@@ -183,6 +183,7 @@ fn render_quick_tag_button(
             if enabled {
                 model_tag.update(cx, |st, cx| {
                     st.wrap_msbt_draft_with_tag(prefix, suffix);
+                    st.msbt_text_editor_focused = true;
                     cx.notify();
                 });
             }
@@ -214,6 +215,7 @@ fn render_quick_insert_button(
             if enabled {
                 model_insert.update(cx, |st, cx| {
                     st.insert_snippet_to_msbt_draft(snippet);
+                    st.msbt_text_editor_focused = true;
                     cx.notify();
                 });
             }

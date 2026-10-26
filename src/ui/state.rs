@@ -211,13 +211,35 @@ pub struct AppState {
     pub msbt_bubble_type: crate::ui::views::msbt_editor::BubbleType,
     pub msbt_text_editor_draft: String,
     pub msbt_text_editor_focused: bool,
+    pub msbt_text_editor_cursor: usize,
+    pub msbt_text_editor_select_anchor: Option<usize>,
     pub msbt_new_entry_modal_open: bool,
     pub msbt_new_entry_name: String,
     pub msbt_new_entry_focused: bool,
 }
-
 #[allow(dead_code)]
 impl AppState {
+    /// 获取当前 MSBT 编辑器选区字符范围 [start, end)
+    pub fn msbt_selection_range(&self) -> Option<(usize, usize)> {
+        let anchor = self.msbt_text_editor_select_anchor?;
+        let cursor = self.msbt_text_editor_cursor;
+        if anchor == cursor {
+            None
+        } else {
+            let total = self.msbt_text_editor_draft.chars().count();
+            let start = anchor.min(cursor).min(total);
+            let end = anchor.max(cursor).min(total);
+            Some((start, end))
+        }
+    }
+
+    /// 获取当前选中的文本切片，若无选区则返回 None
+    pub fn msbt_selected_text(&self) -> Option<String> {
+        let (start, end) = self.msbt_selection_range()?;
+        let chars: Vec<char> = self.msbt_text_editor_draft.chars().collect();
+        Some(chars[start..end].iter().collect())
+    }
+
     /// 获取 2D 地图交互画布相对窗口的实际左上角原点 (用于精确消除鼠标偏移)
     pub fn get_map_canvas_origin(&self) -> (f32, f32) {
         if self.quest_map_canvas_origin.0 > 0.0 || self.quest_map_canvas_origin.1 > 0.0 {
