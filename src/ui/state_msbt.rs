@@ -68,7 +68,7 @@ impl AppState {
 
     /// 使用前缀与后缀标签包裹当前编辑文本或选中文本 (如 <colour:red>...</colour>)
     pub fn wrap_msbt_draft_with_tag(&mut self, prefix: &str, suffix: &str) {
-        let (sel_start, sel_end) = match self.msbt_selection_range() {
+        let (sel_start, sel_end) = match self.text_input_selection_range() {
             Some((s, e)) => (Some(s), Some(e)),
             None => (None, None),
         };
@@ -97,7 +97,7 @@ impl AppState {
 
     /// 向当前编辑文本光标处注入控制片段 (如 <pause:short>) 并替代选区
     pub fn insert_snippet_to_msbt_draft(&mut self, snippet: &str) {
-        let (start, end) = self.msbt_selection_range().unwrap_or((self.msbt_text_editor_cursor, self.msbt_text_editor_cursor));
+        let (start, end) = self.text_input_selection_range().unwrap_or((self.msbt_text_editor_cursor, self.msbt_text_editor_cursor));
         let chars: Vec<char> = self.msbt_text_editor_draft.chars().collect();
         let total = chars.len();
         let s = start.min(total);

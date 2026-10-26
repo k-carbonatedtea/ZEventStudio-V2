@@ -1,7 +1,6 @@
 use gpui::*;
 use crate::model::PropertyItem;
 use crate::ui::canvas::node_editor::{ActiveEditField, NodeEditorModalState};
-use crate::ui::components::render_blinking_cursor;
 use crate::ui::state::AppState;
 
 /// 渲染单行参数编辑项 (类型切换、自适应键编辑、值编辑与删除)
@@ -10,6 +9,7 @@ pub fn render_param_row(
     prop: &PropertyItem,
     key_col_w: f32,
     modal: &NodeEditorModalState,
+    state: &AppState,
     model: &Entity<AppState>,
 ) -> Div {
     let model_type = model.clone();
@@ -113,29 +113,34 @@ pub fn render_param_row(
                     .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                         cx.stop_propagation();
                         model_key.update(cx, |st, cx| {
+                            st.clear_active_text_inputs();
                             if let Some(ref mut m) = st.active_node_editor_modal {
                                 m.active_field = ActiveEditField::ParamKey(idx);
+                                if let Some(p) = m.properties.get(idx) {
+                                    st.text_input_cursor = p.key.chars().count();
+                                }
+                                st.text_input_select_anchor = None;
                             }
                             cx.notify();
                         });
                     })
                     .child(
-                        div()
-                            .text_size(px(11.5))
-                            .text_color(if p_key.is_empty() && !is_key_active {
-                                hsla(240.0 / 360.0, 0.05, 0.45, 1.0)
-                            } else {
-                                hsla(0.0, 0.0, 1.0, 1.0)
-                            })
-                            .child(if p_key.is_empty() && !is_key_active {
-                                "Key".to_string()
-                            } else {
-                                p_key
-                            }),
-                    )
-                    .children(is_key_active.then(|| {
-                        render_blinking_cursor(hsla(215.0 / 360.0, 0.90, 0.55, 1.0))
-                    })),
+                        if p_key.is_empty() && !is_key_active {
+                            div()
+                                .text_size(px(11.5))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.45, 1.0))
+                                .child("Key")
+                                .into_any_element()
+                        } else {
+                            crate::ui::components::render_input_text(
+                                &p_key,
+                                is_key_active,
+                                state,
+                                model,
+                            )
+                            .into_any_element()
+                        }
+                    ),
             ),
         )
         // 3. 值输入框 (Value Input / Bool Checkbox)
@@ -210,29 +215,34 @@ pub fn render_param_row(
                     .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                         cx.stop_propagation();
                         model_val.update(cx, |st, cx| {
+                            st.clear_active_text_inputs();
                             if let Some(ref mut m) = st.active_node_editor_modal {
                                 m.active_field = ActiveEditField::ParamVal(idx);
+                                if let Some(p) = m.properties.get(idx) {
+                                    st.text_input_cursor = p.val.chars().count();
+                                }
+                                st.text_input_select_anchor = None;
                             }
                             cx.notify();
                         });
                     })
                     .child(
-                        div()
-                            .text_size(px(11.5))
-                            .text_color(if p_val.is_empty() && !is_val_active {
-                                hsla(240.0 / 360.0, 0.05, 0.45, 1.0)
-                            } else {
-                                hsla(0.0, 0.0, 1.0, 1.0)
-                            })
-                            .child(if p_val.is_empty() && !is_val_active {
-                                "Value".to_string()
-                            } else {
-                                p_val
-                            }),
+                        if p_val.is_empty() && !is_val_active {
+                            div()
+                                .text_size(px(11.5))
+                                .text_color(hsla(240.0 / 360.0, 0.05, 0.45, 1.0))
+                                .child("Value")
+                                .into_any_element()
+                        } else {
+                            crate::ui::components::render_input_text(
+                                &p_val,
+                                is_val_active,
+                                state,
+                                model,
+                            )
+                            .into_any_element()
+                        }
                     )
-                    .children(is_val_active.then(|| {
-                        render_blinking_cursor(hsla(215.0 / 360.0, 0.90, 0.55, 1.0))
-                    }))
             }),
         )
         // 4. 删除按钮

@@ -88,10 +88,11 @@ mod tests {
 
     #[test]
     fn test_extract_node_message_target() {
-        let mut node = NodeData::default();
+        let mut node = NodeData::new("test", "test", crate::model::NodeKind::Action, (0.0, 0.0));
         node.properties.push(PropertyItem {
             key: "MessageId".to_string(),
             val: "EventFlowMsg/TwnObj_AncientOven_A_01:talk20".to_string(),
+            val_type: "string".to_string(),
         });
 
         let target = extract_node_message_target(&node);
@@ -109,10 +110,11 @@ mod tests {
         if !std::path::Path::new(r"C:\Users\Administrator\Desktop\任务测试1").exists() {
             return;
         }
-        let mut node = NodeData::default();
+        let mut node = NodeData::new("test", "test", crate::model::NodeKind::Action, (0.0, 0.0));
         node.properties.push(PropertyItem {
             key: "MessageId".to_string(),
             val: "EventFlowMsg/TwnObj_AncientOven_A_01:talk20".to_string(),
+            val_type: "string".to_string(),
         });
 
         let mut gp = GamePathSettings::default();

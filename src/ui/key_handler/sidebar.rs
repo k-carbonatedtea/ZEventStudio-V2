@@ -10,7 +10,7 @@ pub fn handle_sidebar_inputs(event: &KeyDownEvent, state: &mut AppState, clipboa
             state.global_search_focused = false;
             return Some(true);
         }
-        let (changed, _, _) = handle_text_key_event(&mut state.global_search_query, event, clipboard);
+        let (changed, _, _) = handle_text_key_event(&mut state.global_search_query, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         if changed {
             state.update_global_search_results();
         }
@@ -23,7 +23,7 @@ pub fn handle_sidebar_inputs(event: &KeyDownEvent, state: &mut AppState, clipboa
             state.git_history_search_focused = false;
             return Some(true);
         }
-        let (changed, _, _) = handle_text_key_event(&mut state.git_history_search_query, event, clipboard);
+        let (changed, _, _) = handle_text_key_event(&mut state.git_history_search_query, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         return Some(changed);
     }
 
@@ -33,7 +33,7 @@ pub fn handle_sidebar_inputs(event: &KeyDownEvent, state: &mut AppState, clipboa
             state.plugin_search_focused = false;
             return Some(true);
         }
-        let (changed, _, _) = handle_text_key_event(&mut state.plugin_search_query, event, clipboard);
+        let (changed, _, _) = handle_text_key_event(&mut state.plugin_search_query, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         return Some(changed);
     }
 
@@ -43,7 +43,7 @@ pub fn handle_sidebar_inputs(event: &KeyDownEvent, state: &mut AppState, clipboa
             state.quests_search_focused = false;
             return Some(true);
         }
-        let (changed, _, _) = handle_text_key_event(&mut state.quests_search_query, event, clipboard);
+        let (changed, _, _) = handle_text_key_event(&mut state.quests_search_query, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         return Some(changed);
     }
 
@@ -65,7 +65,7 @@ pub fn handle_sidebar_inputs(event: &KeyDownEvent, state: &mut AppState, clipboa
                 state.git_commit_focus = GitCommitFocus::Description;
                 return Some(true);
             }
-            let (changed, _, _) = handle_text_key_event(&mut state.git_commit_title, event, clipboard);
+            let (changed, _, _) = handle_text_key_event(&mut state.git_commit_title, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
             return Some(changed);
         }
         GitCommitFocus::Description => {
@@ -81,7 +81,7 @@ pub fn handle_sidebar_inputs(event: &KeyDownEvent, state: &mut AppState, clipboa
                 state.git_commit_focus = GitCommitFocus::Title;
                 return Some(true);
             }
-            let (changed, is_enter, _) = handle_text_key_event(&mut state.git_commit_desc, event, clipboard);
+            let (changed, is_enter, _) = handle_text_key_event(&mut state.git_commit_desc, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
             if is_enter {
                 state.git_commit_desc.push('\n');
                 return Some(true);
@@ -93,7 +93,7 @@ pub fn handle_sidebar_inputs(event: &KeyDownEvent, state: &mut AppState, clipboa
 
     // 4. 角色与动作/查询快速输入
     if state.is_adding_action {
-        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_action_name, event, clipboard);
+        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_action_name, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         if is_enter {
             let act_name = if state.new_action_name.trim().is_empty() {
                 "Demo_WaitFrame".to_string()
@@ -113,7 +113,7 @@ pub fn handle_sidebar_inputs(event: &KeyDownEvent, state: &mut AppState, clipboa
     }
 
     if state.is_adding_query {
-        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_query_name, event, clipboard);
+        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_query_name, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         if is_enter {
             let qry_name = if state.new_query_name.trim().is_empty() {
                 "CheckFlag".to_string()
@@ -133,7 +133,7 @@ pub fn handle_sidebar_inputs(event: &KeyDownEvent, state: &mut AppState, clipboa
     }
 
     if state.is_adding_actor {
-        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_actor_name, event, clipboard);
+        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_actor_name, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         if is_enter {
             let name = if state.new_actor_name.trim().is_empty() {
                 format!("Actor_{}", state.graph.actors.len())
@@ -152,7 +152,7 @@ pub fn handle_sidebar_inputs(event: &KeyDownEvent, state: &mut AppState, clipboa
     }
 
     if state.is_adding_param {
-        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_param_key, event, clipboard);
+        let (changed, is_enter, is_esc) = handle_text_key_event(&mut state.new_param_key, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         if is_enter {
             if let Some(act) = state.graph.actors.get_mut(state.selected_actor_idx) {
                 act.params.push(crate::model::node::PropertyItem {

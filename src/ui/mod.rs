@@ -19,6 +19,8 @@ pub mod state_git;
 pub mod state_git_sync;
 pub mod state_init;
 pub mod state_input;
+#[cfg(test)]
+pub mod state_input_tests;
 pub mod state_msbt;
 pub mod plugin_ops;
 pub mod state_plugin_bridge;

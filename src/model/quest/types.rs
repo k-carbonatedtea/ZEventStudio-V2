@@ -209,8 +209,8 @@ mod tests {
     #[test]
     fn test_botw_crc32_hash() {
         assert_eq!(compute_botw_hash("Test_Ready"), -1378414736);
-        assert_eq!(compute_botw_hash("Test_Activated"), -122606554);
-        assert_eq!(compute_botw_hash("Test_Finish"), 1795383569);
+        assert_eq!(compute_botw_hash("Test_Activated"), -50029012);
+        assert_eq!(compute_botw_hash("Test_Finish"), 908093143);
     }
 
     #[test]

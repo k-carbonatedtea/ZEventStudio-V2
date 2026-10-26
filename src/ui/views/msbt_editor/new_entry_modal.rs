@@ -1,5 +1,4 @@
 use gpui::*;
-use crate::ui::components::render_blinking_cursor;
 use crate::ui::state::AppState;
 
 /// 渲染新建 MSBT 消息条目模态弹窗
@@ -89,6 +88,8 @@ pub fn render_new_entry_modal(state: &AppState, model: &Entity<AppState>) -> imp
                                     model_input_click.update(cx, |st, cx| {
                                         st.clear_active_text_inputs();
                                         st.msbt_new_entry_focused = true;
+                                        st.text_input_cursor = st.msbt_new_entry_name.chars().count();
+                                        st.text_input_select_anchor = None;
                                         cx.notify();
                                     });
                                 })
@@ -107,17 +108,13 @@ pub fn render_new_entry_modal(state: &AppState, model: &Entity<AppState>) -> imp
                                         .child("如: Npc_Zora001_Talk_00")
                                         .into_any_element()
                                 } else {
-                                    div()
-                                        .flex()
-                                        .items_center()
-                                        .text_size(px(12.0))
-                                        .text_color(pal.text_primary)
-                                        .child(name_query.clone())
-                                        .children(is_focused.then(|| {
-                                            render_blinking_cursor(pal.primary_accent.into())
-                                                .into_any_element()
-                                        }))
-                                        .into_any_element()
+                                    crate::ui::components::render_input_text(
+                                        &name_query,
+                                        is_focused,
+                                        state,
+                                        model,
+                                    )
+                                    .into_any_element()
                                 }),
                         ),
                 )

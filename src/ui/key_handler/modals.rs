@@ -46,7 +46,7 @@ pub fn handle_modal_key_event(event: &KeyDownEvent, state: &mut AppState, clipbo
             state.execute_rename_item();
             return Some(true);
         }
-        let (changed, _, _) = handle_text_key_event(&mut modal.new_name, event, clipboard);
+        let (changed, _, _) = handle_text_key_event(&mut modal.new_name, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         return Some(changed);
     }
 
@@ -95,26 +95,28 @@ pub fn handle_modal_key_event(event: &KeyDownEvent, state: &mut AppState, clipbo
             ActiveSettingsField::AiDumpDir => &mut state.settings_draft.custom_ai_dump_dir,
             ActiveSettingsField::None => return Some(false),
         };
-        let (changed, _, _) = handle_text_key_event(target, event, clipboard);
+        let (changed, _, _) = handle_text_key_event(target, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         return Some(changed);
     }
 
     // 10. 节点属性与分支编辑模态框
     if let Some(ref mut modal) = state.active_node_editor_modal {
+        let cursor = &mut state.text_input_cursor;
+        let select_anchor = &mut state.text_input_select_anchor;
         let should_notify = match modal.active_field {
             ActiveEditField::FlowchartName => {
-                let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.res_flowchart_name, event, clipboard);
+                let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.res_flowchart_name, cursor, select_anchor, event, clipboard);
                 if is_esc || is_enter { modal.active_field = ActiveEditField::None; }
                 changed || is_enter || is_esc
             }
             ActiveEditField::EntryPointName => {
-                let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.entry_point_name, event, clipboard);
+                let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.entry_point_name, cursor, select_anchor, event, clipboard);
                 if is_esc || is_enter { modal.active_field = ActiveEditField::None; }
                 changed || is_enter || is_esc
             }
             ActiveEditField::BranchValue(idx) => {
                 if idx < modal.branches.len() {
-                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.branches[idx].value, event, clipboard);
+                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.branches[idx].value, cursor, select_anchor, event, clipboard);
                     if is_esc { modal.active_field = ActiveEditField::None; }
                     if is_enter { modal.active_field = ActiveEditField::BranchTarget(idx); }
                     changed || is_enter || is_esc
@@ -122,14 +124,14 @@ pub fn handle_modal_key_event(event: &KeyDownEvent, state: &mut AppState, clipbo
             }
             ActiveEditField::BranchTarget(idx) => {
                 if idx < modal.branches.len() {
-                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.branches[idx].target_id, event, clipboard);
+                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.branches[idx].target_id, cursor, select_anchor, event, clipboard);
                     if is_esc || is_enter { modal.active_field = ActiveEditField::None; }
                     changed || is_enter || is_esc
                 } else { false }
             }
             ActiveEditField::ParamKey(idx) => {
                 if idx < modal.properties.len() {
-                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.properties[idx].key, event, clipboard);
+                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.properties[idx].key, cursor, select_anchor, event, clipboard);
                     if is_esc { modal.active_field = ActiveEditField::None; }
                     if is_enter { modal.active_field = ActiveEditField::ParamVal(idx); }
                     changed || is_enter || is_esc
@@ -137,7 +139,7 @@ pub fn handle_modal_key_event(event: &KeyDownEvent, state: &mut AppState, clipbo
             }
             ActiveEditField::ParamVal(idx) => {
                 if idx < modal.properties.len() {
-                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.properties[idx].val, event, clipboard);
+                    let (changed, is_enter, is_esc) = handle_text_key_event(&mut modal.properties[idx].val, cursor, select_anchor, event, clipboard);
                     if is_esc || is_enter { modal.active_field = ActiveEditField::None; }
                     changed || is_enter || is_esc
                 } else { false }
@@ -218,7 +220,7 @@ pub fn handle_modal_key_event(event: &KeyDownEvent, state: &mut AppState, clipbo
 
         let current_field = modal.focused_field;
         if let Some(target) = modal.get_mut_focused() {
-            let (changed, _, _) = handle_text_key_event(target, event, clipboard);
+            let (changed, _, _) = handle_text_key_event(target, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
             if changed {
                 if current_field == QuestCreatorFocusField::Name {
                     modal.sync_flags_from_name();

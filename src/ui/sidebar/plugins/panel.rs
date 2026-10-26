@@ -1,5 +1,4 @@
 use super::card::render_plugin_card;
-use crate::ui::components::render_blinking_cursor;
 use crate::ui::state::AppState;
 use gpui::*;
 
@@ -173,6 +172,8 @@ fn render_plugin_search_input(state: &AppState, model: &Entity<AppState>) -> imp
                     model_click.update(cx, |st, cx| {
                         st.clear_active_text_inputs();
                         st.plugin_search_focused = true;
+                        st.text_input_cursor = st.plugin_search_query.chars().count();
+                        st.text_input_select_anchor = None;
                         cx.notify();
                     });
                 })
@@ -200,17 +201,13 @@ fn render_plugin_search_input(state: &AppState, model: &Entity<AppState>) -> imp
                                     .child(state.t("plugins.search_placeholder"))
                                     .into_any_element()
                             } else {
-                                div()
-                                    .flex()
-                                    .items_center()
-                                    .text_size(px(11.0))
-                                    .text_color(pal.text_primary)
-                                    .child(query.clone())
-                                    .children(is_focused.then(|| {
-                                        render_blinking_cursor(pal.primary_accent.into())
-                                            .into_any_element()
-                                    }))
-                                    .into_any_element()
+                                crate::ui::components::render_input_text(
+                                    &query,
+                                    is_focused,
+                                    state,
+                                    model,
+                                )
+                                .into_any_element()
                             },
                         ),
                 )

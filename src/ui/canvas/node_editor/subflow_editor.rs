@@ -1,7 +1,6 @@
 use gpui::*;
 use crate::ui::canvas::node_editor::params_editor::render_params_table_editor;
 use crate::ui::canvas::node_editor::{ActiveEditField, NodeEditorModalState};
-use crate::ui::components::render_blinking_cursor;
 use crate::ui::state::AppState;
 
 /// 渲染 SubFlow 子流程属性与参数编辑器
@@ -73,25 +72,32 @@ pub fn render_subflow_editor(
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                             cx.stop_propagation();
                             model_flow.update(cx, |st, cx| {
+                                st.clear_active_text_inputs();
                                 if let Some(ref mut m) = st.active_node_editor_modal {
                                     m.active_field = ActiveEditField::FlowchartName;
+                                    st.text_input_cursor = m.res_flowchart_name.chars().count();
+                                    st.text_input_select_anchor = None;
                                 }
                                 cx.notify();
                             });
                         })
                         .child(
-                            div()
-                                .text_size(px(12.0))
-                                .text_color(if modal.res_flowchart_name.is_empty() && !is_flow_active {
-                                    hsla(240.0 / 360.0, 0.05, 0.45, 1.0)
-                                } else {
-                                    hsla(0.0, 0.0, 1.0, 1.0)
-                                })
-                                .child(flow_name),
-                        )
-                        .children(is_flow_active.then(|| {
-                            render_blinking_cursor(hsla(215.0 / 360.0, 0.90, 0.55, 1.0))
-                        })),
+                            if modal.res_flowchart_name.is_empty() && !is_flow_active {
+                                div()
+                                    .text_size(px(12.0))
+                                    .text_color(hsla(240.0 / 360.0, 0.05, 0.45, 1.0))
+                                    .child(flow_name)
+                                    .into_any_element()
+                            } else {
+                                crate::ui::components::render_input_text(
+                                    &modal.res_flowchart_name,
+                                    is_flow_active,
+                                    state,
+                                    model,
+                                )
+                                .into_any_element()
+                            }
+                        ),
                 ),
         )
         // 入口点名称 (EntryPoint)
@@ -127,25 +133,32 @@ pub fn render_subflow_editor(
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                             cx.stop_propagation();
                             model_ep.update(cx, |st, cx| {
+                                st.clear_active_text_inputs();
                                 if let Some(ref mut m) = st.active_node_editor_modal {
                                     m.active_field = ActiveEditField::EntryPointName;
+                                    st.text_input_cursor = m.entry_point_name.chars().count();
+                                    st.text_input_select_anchor = None;
                                 }
                                 cx.notify();
                             });
                         })
                         .child(
-                            div()
-                                .text_size(px(12.0))
-                                .text_color(if modal.entry_point_name.is_empty() && !is_ep_active {
-                                    hsla(240.0 / 360.0, 0.05, 0.45, 1.0)
-                                } else {
-                                    hsla(0.0, 0.0, 1.0, 1.0)
-                                })
-                                .child(ep_name),
-                        )
-                        .children(is_ep_active.then(|| {
-                            render_blinking_cursor(hsla(215.0 / 360.0, 0.90, 0.55, 1.0))
-                        })),
+                            if modal.entry_point_name.is_empty() && !is_ep_active {
+                                div()
+                                    .text_size(px(12.0))
+                                    .text_color(hsla(240.0 / 360.0, 0.05, 0.45, 1.0))
+                                    .child(ep_name)
+                                    .into_any_element()
+                            } else {
+                                crate::ui::components::render_input_text(
+                                    &modal.entry_point_name,
+                                    is_ep_active,
+                                    state,
+                                    model,
+                                )
+                                .into_any_element()
+                            }
+                        ),
                 ),
         )
         // 提示说明

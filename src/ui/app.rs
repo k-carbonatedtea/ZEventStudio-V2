@@ -208,6 +208,10 @@ impl Render for AppView {
                         st.is_resizing_settings = false;
                         changed = true;
                     }
+                    if st.text_input_is_dragging {
+                        st.text_input_is_dragging = false;
+                        changed = true;
+                    }
                     if changed {
                         cx.notify();
                     }

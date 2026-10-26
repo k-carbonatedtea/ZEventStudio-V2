@@ -53,6 +53,9 @@ impl AppState {
         self.msbt_search_focused = false;
         self.msbt_text_editor_focused = false;
         self.msbt_new_entry_focused = false;
+        self.text_input_cursor = 0;
+        self.text_input_select_anchor = None;
+        self.text_input_is_dragging = false;
     }
 
     /// 获取当前激活的输入框文本内容切片
@@ -130,6 +133,149 @@ impl AppState {
         None
     }
 
+    /// 获取当前激活输入框的字符级选区范围 [start, end)
+    pub fn text_input_selection_range(&self) -> Option<(usize, usize)> {
+        let anchor = self.text_input_select_anchor?;
+        let cursor = self.text_input_cursor;
+        if anchor == cursor {
+            None
+        } else {
+            let total = self.active_text_input().map(|s| s.chars().count()).unwrap_or(0);
+            let start = anchor.min(cursor).min(total);
+            let end = anchor.max(cursor).min(total);
+            if start < end {
+                Some((start, end))
+            } else {
+                None
+            }
+        }
+    }
+
+    /// 获取当前选中的文本切片，若无选区则返回整个输入文本
+    pub fn active_selected_text(&self) -> Option<String> {
+        let text = self.active_text_input()?;
+        let chars: Vec<char> = text.chars().collect();
+        if let Some((start, end)) = self.text_input_selection_range() {
+            let s = start.min(chars.len());
+            let e = end.min(chars.len());
+            Some(chars[s..e].iter().collect())
+        } else {
+            Some(text.to_string())
+        }
+    }
+
+    /// 删除当前选区中的文本并重置选区锚点
+    pub fn delete_active_selection(&mut self) -> bool {
+        let (start, end) = match self.text_input_selection_range() {
+            Some(r) => r,
+            None => return self.clear_active_input_content(),
+        };
+        self.apply_to_active_input(|target| {
+            let mut chars: Vec<char> = target.chars().collect();
+            let total = chars.len();
+            let s = start.min(total);
+            let e = end.min(total);
+            chars.drain(s..e);
+            *target = chars.into_iter().collect();
+            s
+        })
+    }
+
+    /// 清空当前激活输入框的所有内容
+    pub fn clear_active_input_content(&mut self) -> bool {
+        self.apply_to_active_input(|target| {
+            target.clear();
+            0
+        })
+    }
+
+    /// 对当前激活的输入框字符串执行就地修改闭包，并自动同步 cursor 与 anchor
+    pub fn apply_to_active_input<F: FnOnce(&mut String) -> usize>(&mut self, f: F) -> bool {
+        // 1. 设置弹窗
+        if self.settings_modal_open {
+            let target = match self.active_settings_field {
+                ActiveSettingsField::SwitchGameDir => Some(&mut self.settings_draft.switch.game_dir),
+                ActiveSettingsField::SwitchDlcDir => Some(&mut self.settings_draft.switch.dlc_dir),
+                ActiveSettingsField::SwitchExportDir => Some(&mut self.settings_draft.switch.export_dir),
+                ActiveSettingsField::WiiuGameDir => Some(&mut self.settings_draft.wiiu.game_dir),
+                ActiveSettingsField::WiiuUpdateDir => Some(&mut self.settings_draft.wiiu.update_dir),
+                ActiveSettingsField::WiiuDlcDir => Some(&mut self.settings_draft.wiiu.dlc_dir),
+                ActiveSettingsField::WiiuExportDir => Some(&mut self.settings_draft.wiiu.export_dir),
+                ActiveSettingsField::AiDumpDir => Some(&mut self.settings_draft.custom_ai_dump_dir),
+                ActiveSettingsField::None => None,
+            };
+            if let Some(target) = target {
+                let new_cursor = f(target);
+                self.text_input_cursor = new_cursor;
+                self.text_input_select_anchor = None;
+                return true;
+            }
+        }
+
+        // 2. 节点编辑器
+        if let Some(ref mut modal) = self.active_node_editor_modal {
+            use crate::ui::canvas::node_editor::ActiveEditField;
+            let target = match modal.active_field {
+                ActiveEditField::FlowchartName => Some(&mut modal.res_flowchart_name),
+                ActiveEditField::EntryPointName => Some(&mut modal.entry_point_name),
+                ActiveEditField::BranchValue(idx) => modal.branches.get_mut(idx).map(|b| &mut b.value),
+                ActiveEditField::BranchTarget(idx) => modal.branches.get_mut(idx).map(|b| &mut b.target_id),
+                ActiveEditField::ParamKey(idx) => modal.properties.get_mut(idx).map(|p| &mut p.key),
+                ActiveEditField::ParamVal(idx) => modal.properties.get_mut(idx).map(|p| &mut p.val),
+                ActiveEditField::None => None,
+            };
+            if let Some(target) = target {
+                let new_cursor = f(target);
+                self.text_input_cursor = new_cursor;
+                self.text_input_select_anchor = None;
+                return true;
+            }
+        }
+
+        // 3. 常规输入框
+        let new_cursor = if self.global_search_focused {
+            let c = f(&mut self.global_search_query);
+            self.update_global_search_results();
+            c
+        } else if self.file_search_focused {
+            f(&mut self.file_search_query)
+        } else if self.git_history_search_focused {
+            f(&mut self.git_history_search_query)
+        } else if self.plugin_search_focused {
+            f(&mut self.plugin_search_query)
+        } else if self.quests_search_focused {
+            f(&mut self.quests_search_query)
+        } else if self.msbt_search_focused {
+            f(&mut self.msbt_search_query)
+        } else if self.msbt_new_entry_focused {
+            f(&mut self.msbt_new_entry_name)
+        } else if self.rename_modal.as_ref().is_some_and(|m| m.focused) {
+            if let Some(ref mut m) = self.rename_modal {
+                f(&mut m.new_name)
+            } else {
+                return false;
+            }
+        } else if self.is_adding_action {
+            f(&mut self.new_action_name)
+        } else if self.is_adding_query {
+            f(&mut self.new_query_name)
+        } else if self.is_adding_actor {
+            f(&mut self.new_actor_name)
+        } else if self.is_adding_param {
+            f(&mut self.new_param_key)
+        } else {
+            match self.git_commit_focus {
+                GitCommitFocus::Title => f(&mut self.git_commit_title),
+                GitCommitFocus::Description => f(&mut self.git_commit_desc),
+                GitCommitFocus::None => return false,
+            }
+        };
+
+        self.text_input_cursor = new_cursor;
+        self.text_input_select_anchor = None;
+        true
+    }
+
     /// 向当前聚焦的输入框插入文本 (支持中文 IME 提交、剪贴板粘贴等)
     pub fn insert_text_to_active_input(&mut self, text: &str) -> bool {
         let clean: String = text.chars().filter(|&c| c != '\r' && c != '\x08' && c != '\x1b').collect();
@@ -137,240 +283,20 @@ impl AppState {
             return false;
         }
 
-        // 1. 设置弹窗输入框
-        if self.settings_modal_open {
-            match self.active_settings_field {
-                ActiveSettingsField::SwitchGameDir => {
-                    self.settings_draft.switch.game_dir.push_str(&clean);
-                    return true;
-                }
-                ActiveSettingsField::SwitchDlcDir => {
-                    self.settings_draft.switch.dlc_dir.push_str(&clean);
-                    return true;
-                }
-                ActiveSettingsField::SwitchExportDir => {
-                    self.settings_draft.switch.export_dir.push_str(&clean);
-                    return true;
-                }
-                ActiveSettingsField::WiiuGameDir => {
-                    self.settings_draft.wiiu.game_dir.push_str(&clean);
-                    return true;
-                }
-                ActiveSettingsField::WiiuUpdateDir => {
-                    self.settings_draft.wiiu.update_dir.push_str(&clean);
-                    return true;
-                }
-                ActiveSettingsField::WiiuDlcDir => {
-                    self.settings_draft.wiiu.dlc_dir.push_str(&clean);
-                    return true;
-                }
-                ActiveSettingsField::WiiuExportDir => {
-                    self.settings_draft.wiiu.export_dir.push_str(&clean);
-                    return true;
-                }
-                ActiveSettingsField::AiDumpDir => {
-                    self.settings_draft.custom_ai_dump_dir.push_str(&clean);
-                    return true;
-                }
-                ActiveSettingsField::None => {}
-            }
-        }
-
-        // 2. 节点编辑器模态框输入框
-        if let Some(ref mut modal) = self.active_node_editor_modal {
-            use crate::ui::canvas::node_editor::ActiveEditField;
-            match modal.active_field {
-                ActiveEditField::FlowchartName => {
-                    modal.res_flowchart_name.push_str(&clean);
-                    return true;
-                }
-                ActiveEditField::EntryPointName => {
-                    modal.entry_point_name.push_str(&clean);
-                    return true;
-                }
-                ActiveEditField::BranchValue(idx) => {
-                    if let Some(b) = modal.branches.get_mut(idx) {
-                        b.value.push_str(&clean);
-                        return true;
-                    }
-                }
-                ActiveEditField::BranchTarget(idx) => {
-                    if let Some(b) = modal.branches.get_mut(idx) {
-                        b.target_id.push_str(&clean);
-                        return true;
-                    }
-                }
-                ActiveEditField::ParamKey(idx) => {
-                    if let Some(p) = modal.properties.get_mut(idx) {
-                        p.key.push_str(&clean);
-                        return true;
-                    }
-                }
-                ActiveEditField::ParamVal(idx) => {
-                    if let Some(p) = modal.properties.get_mut(idx) {
-                        p.val.push_str(&clean);
-                        return true;
-                    }
-                }
-                ActiveEditField::None => {}
-            }
-        }
-
-        // 3. 全局搜索输入框
-        if self.global_search_focused {
-            self.global_search_query.push_str(&clean);
-            self.update_global_search_results();
-            return true;
-        }
-
-        // 3.1 Git 历史提交搜索框
-        if self.git_history_search_focused {
-            self.git_history_search_query.push_str(&clean);
-            return true;
-        }
-
-        // 3.2 插件搜索输入框
-        if self.plugin_search_focused {
-            self.plugin_search_query.push_str(&clean);
-            return true;
-        }
-
-        // 4. Git 提交输入框
-        match self.git_commit_focus {
-            GitCommitFocus::Title => {
-                self.git_commit_title.push_str(&clean);
-                return true;
-            }
-            GitCommitFocus::Description => {
-                self.git_commit_desc.push_str(&clean);
-                return true;
-            }
-            GitCommitFocus::None => {}
-        }
-
-        // 5. 侧边栏/角色管理器快速输入
-        if self.is_adding_action {
-            self.new_action_name.push_str(&clean);
-            return true;
-        }
-        if self.is_adding_query {
-            self.new_query_name.push_str(&clean);
-            return true;
-        }
-        if self.is_adding_actor {
-            self.new_actor_name.push_str(&clean);
-            return true;
-        }
-        if self.is_adding_param {
-            self.new_param_key.push_str(&clean);
-            return true;
-        }
-
-        // 6. 任务管理器搜索与新建向导输入
-        if self.quests_search_focused {
-            self.quests_search_query.push_str(&clean);
-            return true;
-        }
+        // 任务创建向导模态框优先处理
         if let Some(ref mut modal) = self.quest_creator_modal {
             if modal.insert_text(&clean) {
                 return true;
             }
         }
 
-        // 7. 重命名模态框输入
-        if let Some(ref mut m) = self.rename_modal {
-            if m.focused {
-                m.new_name.push_str(&clean);
-                return true;
-            }
-        }
-
-        // 8. MSBT 气泡对话编辑器输入框
-        if self.msbt_search_focused {
-            self.msbt_search_query.push_str(&clean);
-            return true;
-        }
-        if self.msbt_new_entry_focused {
-            self.msbt_new_entry_name.push_str(&clean);
-            return true;
-        }
-
-        false
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_chinese_input_global_search() {
-        let mut state = AppState::new();
-        assert!(!state.has_active_text_input());
-
-        state.global_search_focused = true;
-        assert!(state.has_active_text_input());
-        assert_eq!(state.active_text_input(), Some(""));
-
-        // 模拟 Windows IME 提交中文字符
-        let inserted = state.insert_text_to_active_input("林克");
-        assert!(inserted);
-        assert_eq!(state.global_search_query, "林克");
-        assert_eq!(state.active_text_input(), Some("林克"));
-
-        let inserted2 = state.insert_text_to_active_input(" 测试搜索");
-        assert!(inserted2);
-        assert_eq!(state.global_search_query, "林克 测试搜索");
-    }
-
-    #[test]
-    fn test_chinese_input_git_commit() {
-        let mut state = AppState::new();
-        state.git_commit_focus = GitCommitFocus::Title;
-        assert!(state.has_active_text_input());
-
-        let inserted = state.insert_text_to_active_input("feat: 支持中文输入法");
-        assert!(inserted);
-        assert_eq!(state.git_commit_title, "feat: 支持中文输入法");
-
-        state.git_commit_focus = GitCommitFocus::Description;
-        let inserted_desc = state.insert_text_to_active_input("修复全局搜索和提交描述无法输入中文的问题");
-        assert!(inserted_desc);
-        assert_eq!(state.git_commit_desc, "修复全局搜索和提交描述无法输入中文的问题");
-    }
-
-    #[test]
-    fn test_chinese_input_actor_manager() {
-        let mut state = AppState::new();
-        state.is_adding_action = true;
-        assert!(state.has_active_text_input());
-
-        let inserted = state.insert_text_to_active_input("动作_播放动画");
-        assert!(inserted);
-        assert_eq!(state.new_action_name, "动作_播放动画");
-    }
-
-    #[test]
-    fn test_clear_active_text_inputs() {
-        let mut state = AppState::new();
-        state.git_commit_focus = GitCommitFocus::Title;
-        assert!(state.has_active_text_input());
-        state.clear_active_text_inputs();
-        assert!(!state.has_active_text_input());
-
-        state.global_search_focused = true;
-        assert!(state.has_active_text_input());
-        state.clear_active_text_inputs();
-        assert!(!state.has_active_text_input());
-
-        state.file_search_focused = true;
-        assert!(state.has_active_text_input());
-        state.clear_active_text_inputs();
-        assert!(!state.has_active_text_input());
-
-        state.is_adding_param = true;
-        assert!(state.has_active_text_input());
-        state.clear_active_text_inputs();
-        assert!(!state.has_active_text_input());
+        let cursor = self.text_input_cursor;
+        let anchor = self.text_input_select_anchor;
+        self.apply_to_active_input(|target| {
+            let mut cur = cursor;
+            let mut anc = anchor;
+            crate::ui::components::splice_string_at(target, &mut cur, &mut anc, &clean);
+            cur
+        })
     }
 }

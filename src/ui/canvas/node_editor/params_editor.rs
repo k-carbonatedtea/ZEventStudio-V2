@@ -174,7 +174,7 @@ pub fn render_params_table_editor(
                 )
                 .children(if has_params {
                     modal.properties.iter().enumerate().map(|(idx, prop)| {
-                        render_param_row(idx, prop, key_col_w, modal, model)
+                        render_param_row(idx, prop, key_col_w, modal, state, model)
                     }).collect()
                 } else {
                     vec![div()

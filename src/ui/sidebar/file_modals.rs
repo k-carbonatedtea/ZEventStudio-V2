@@ -1,5 +1,4 @@
 use gpui::*;
-use crate::ui::components::render_blinking_cursor;
 use crate::ui::state::AppState;
 use crate::ui::state_types::{DeleteConfirmModalState, RenameModalState};
 
@@ -120,6 +119,8 @@ pub fn render_rename_modal(
                                 st.clear_active_text_inputs();
                                 if let Some(ref mut m) = st.rename_modal {
                                     m.focused = true;
+                                    st.text_input_cursor = m.new_name.chars().count();
+                                    st.text_input_select_anchor = None;
                                 }
                                 cx.notify();
                             });
@@ -147,16 +148,13 @@ pub fn render_rename_modal(
                                             .child(state.t("modal.rename_placeholder"))
                                             .into_any_element()
                                     } else {
-                                        div()
-                                            .flex()
-                                            .items_center()
-                                            .text_size(px(12.0))
-                                            .text_color(pal.text_primary)
-                                            .child(new_name.clone())
-                                            .children(is_focused.then(|| {
-                                                render_blinking_cursor(pal.primary_accent.into()).into_any_element()
-                                            }))
-                                            .into_any_element()
+                                        crate::ui::components::render_input_text(
+                                            &new_name,
+                                            is_focused,
+                                            state,
+                                            model,
+                                        )
+                                        .into_any_element()
                                     }
                                 )
                         )

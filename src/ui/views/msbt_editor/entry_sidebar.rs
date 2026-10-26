@@ -1,5 +1,4 @@
 use gpui::*;
-use crate::ui::components::render_blinking_cursor;
 use crate::ui::state::AppState;
 use crate::ui::views::msbt_editor::types::MsbtDocument;
 
@@ -132,6 +131,8 @@ pub fn render_msbt_entry_sidebar(
                             model_search_click.update(cx, |st, cx| {
                                 st.clear_active_text_inputs();
                                 st.msbt_search_focused = true;
+                                st.text_input_cursor = st.msbt_search_query.chars().count();
+                                st.text_input_select_anchor = None;
                                 cx.notify();
                             });
                         })
@@ -157,17 +158,13 @@ pub fn render_msbt_entry_sidebar(
                                         .child(state.t("msbt_editor.search_placeholder"))
                                         .into_any_element()
                                 } else {
-                                    div()
-                                        .flex()
-                                        .items_center()
-                                        .text_size(px(11.0))
-                                        .text_color(pal.text_primary)
-                                        .child(search_query.clone())
-                                        .children(is_search_focused.then(|| {
-                                            render_blinking_cursor(pal.primary_accent.into())
-                                                .into_any_element()
-                                        }))
-                                        .into_any_element()
+                                    crate::ui::components::render_input_text(
+                                        &search_query,
+                                        is_search_focused,
+                                        state,
+                                        model,
+                                    )
+                                    .into_any_element()
                                 }),
                         )
                         .children((!search_query.is_empty()).then(|| {

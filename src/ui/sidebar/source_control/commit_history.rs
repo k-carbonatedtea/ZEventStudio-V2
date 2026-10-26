@@ -1,5 +1,4 @@
 use gpui::*;
-use crate::ui::components::render_blinking_cursor;
 use crate::ui::state::AppState;
 use super::commit_row::render_commit_row;
 /// 渲染 Git 提交历史与分支图谱视图 (Git Graph & Commit History Section)
@@ -183,6 +182,8 @@ pub fn render_commit_history_section(
                             model_search.update(cx, |st, cx| {
                                 st.clear_active_text_inputs();
                                 st.git_history_search_focused = true;
+                                st.text_input_cursor = st.git_history_search_query.chars().count();
+                                st.text_input_select_anchor = None;
                                 cx.notify();
                             });
                         })
@@ -214,16 +215,13 @@ pub fn render_commit_history_section(
                                             .child(state.t("source_control.search_commits_placeholder"))
                                             .into_any_element()
                                     } else {
-                                        div()
-                                            .flex()
-                                            .items_center()
-                                            .text_size(px(9.5))
-                                            .text_color(pal.text_primary)
-                                            .child(search_query.clone())
-                                            .children(is_search_focused.then(|| {
-                                                render_blinking_cursor(pal_c.primary_accent.into()).into_any_element()
-                                            }))
-                                            .into_any_element()
+                                        crate::ui::components::render_input_text(
+                                            &search_query,
+                                            is_search_focused,
+                                            state,
+                                            model,
+                                        )
+                                        .into_any_element()
                                     },
                                 ),
                         )

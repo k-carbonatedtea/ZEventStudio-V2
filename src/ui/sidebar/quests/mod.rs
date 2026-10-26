@@ -11,7 +11,6 @@ pub mod quest_card;
 
 use gpui::*;
 use crate::model::quest::QuestType;
-use crate::ui::components::render_blinking_cursor;
 use crate::ui::sidebar::quests::quest_card::render_expandable_quest_card;
 use crate::ui::state::AppState;
 
@@ -195,6 +194,8 @@ fn render_quest_search_box(state: &AppState, model: &Entity<AppState>) -> impl I
                     model_click.update(cx, |st, cx| {
                         st.clear_active_text_inputs();
                         st.quests_search_focused = true;
+                        st.text_input_cursor = st.quests_search_query.chars().count();
+                        st.text_input_select_anchor = None;
                         cx.notify();
                     });
                 })
@@ -222,16 +223,13 @@ fn render_quest_search_box(state: &AppState, model: &Entity<AppState>) -> impl I
                                     .child(state.t("quests.search_placeholder"))
                                     .into_any_element()
                             } else {
-                                div()
-                                    .flex()
-                                    .items_center()
-                                    .text_size(px(11.5))
-                                    .text_color(pal.text_primary)
-                                    .child(query.clone())
-                                    .children(is_focused.then(|| {
-                                        render_blinking_cursor(pal.primary_accent.into()).into_any_element()
-                                    }))
-                                    .into_any_element()
+                                crate::ui::components::render_input_text(
+                                    &query,
+                                    is_focused,
+                                    state,
+                                    model,
+                                )
+                                .into_any_element()
                             },
                         ),
                 )

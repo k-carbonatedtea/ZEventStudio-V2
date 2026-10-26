@@ -117,7 +117,7 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipb
             state.file_search_focused = false;
             return true;
         }
-        let (changed, _, _) = handle_text_key_event(&mut state.file_search_query, event, clipboard);
+        let (changed, _, _) = handle_text_key_event(&mut state.file_search_query, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         return changed;
     }
 
@@ -146,7 +146,7 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipb
             state.confirm_create_msbt_entry();
             return true;
         }
-        let (changed, _, _) = handle_text_key_event(&mut state.msbt_new_entry_name, event, clipboard);
+        let (changed, _, _) = handle_text_key_event(&mut state.msbt_new_entry_name, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         return changed;
     }
 
@@ -155,7 +155,7 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipb
             state.msbt_search_focused = false;
             return true;
         }
-        let (changed, _, _) = handle_text_key_event(&mut state.msbt_search_query, event, clipboard);
+        let (changed, _, _) = handle_text_key_event(&mut state.msbt_search_query, &mut state.text_input_cursor, &mut state.text_input_select_anchor, event, clipboard);
         return changed;
     }
 
@@ -176,18 +176,26 @@ pub fn handle_clipboard_key_event(
         return false;
     }
 
-    // 1. Ctrl+C 复制 (针对搜索框/重命名等常规简单输入框)
+    // 1. Ctrl+C 复制 (优先复制选区，若无选区则复制全部)
     if key.eq_ignore_ascii_case("c") {
-        if let Some(active_text) = state.active_text_input() {
+        if let Some(selected_text) = state.active_selected_text() {
+            cx.write_to_clipboard(gpui::ClipboardItem::new_string(selected_text));
+            return true;
+        } else if let Some(active_text) = state.active_text_input() {
             cx.write_to_clipboard(gpui::ClipboardItem::new_string(active_text.to_string()));
             return true;
         }
     }
 
-    // 2. Ctrl+X 剪切 (针对搜索框/重命名等常规简单输入框)
+    // 2. Ctrl+X 剪切 (优先剪切选区，若无选区则剪切全部并清空)
     if key.eq_ignore_ascii_case("x") {
-        if let Some(active_text) = state.active_text_input() {
+        if let Some(selected_text) = state.active_selected_text() {
+            cx.write_to_clipboard(gpui::ClipboardItem::new_string(selected_text));
+            state.delete_active_selection();
+            return true;
+        } else if let Some(active_text) = state.active_text_input() {
             cx.write_to_clipboard(gpui::ClipboardItem::new_string(active_text.to_string()));
+            state.clear_active_input_content();
             return true;
         }
     }

@@ -195,6 +195,7 @@ where
     let pal = state.theme();
     let is_empty = current_val.trim().is_empty();
     let is_active = state.active_settings_field == field_id;
+    let current_val_len = current_val.chars().count();
     let m = model.clone();
 
     div()
@@ -243,7 +244,10 @@ where
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                             cx.stop_propagation();
                             m.update(cx, |st, cx| {
+                                st.clear_active_text_inputs();
                                 st.active_settings_field = field_id;
+                                st.text_input_cursor = current_val_len;
+                                st.text_input_select_anchor = None;
                                 cx.notify();
                             });
                         })
@@ -251,17 +255,21 @@ where
                         .items_center()
                         .overflow_hidden()
                         .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .text_size(px(11.5))
-                                .text_color(if is_empty && !is_active { pal.text_secondary.opacity(0.6) } else { pal.text_primary })
-                                .child(if is_empty && !is_active { placeholder.to_string() } else { current_val.to_string() })
-                                .children(if is_active {
-                                    Some(crate::ui::components::text_input::render_blinking_cursor(pal.primary_accent.into()))
-                                } else {
-                                    None
-                                }),
+                            if is_empty && !is_active {
+                                div()
+                                    .text_size(px(11.5))
+                                    .text_color(pal.text_secondary.opacity(0.6))
+                                    .child(placeholder.to_string())
+                                    .into_any_element()
+                            } else {
+                                crate::ui::components::render_input_text(
+                                    current_val,
+                                    is_active,
+                                    state,
+                                    model,
+                                )
+                                .into_any_element()
+                            }
                         ),
                 )
                 // 浏览文件夹选择按钮

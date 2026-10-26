@@ -1,6 +1,5 @@
 use gpui::*;
 use std::sync::Arc;
-use crate::ui::components::render_blinking_cursor;
 use crate::ui::state::AppState;
 use super::search_row::{render_search_header, render_search_row};
 pub use crate::model::{MAX_SEARCH_RESULTS, SearchResultItem};
@@ -64,8 +63,10 @@ pub fn render_search_panel(
                         .cursor_text()
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                             model_input.update(cx, |st, cx| {
+                                st.clear_active_text_inputs();
                                 st.global_search_focused = true;
-                                st.file_search_focused = false;
+                                st.text_input_cursor = st.global_search_query.chars().count();
+                                st.text_input_select_anchor = None;
                                 cx.notify();
                             });
                         })
@@ -90,26 +91,20 @@ pub fn render_search_panel(
                                         .text_color(pal.text_secondary)
                                         .child("🔍"),
                                 )
-                                .children(if query.is_empty() && !is_focused {
-                                    vec![
-                                        div()
-                                            .text_size(px(11.0))
-                                            .text_color(pal.text_secondary)
-                                            .child(state.t("search.placeholder"))
-                                            .into_any_element(),
-                                    ]
+                                .child(if state.global_search_query.is_empty() && !is_focused {
+                                    div()
+                                        .text_size(px(11.0))
+                                        .text_color(pal.text_secondary)
+                                        .child(state.t("search.placeholder"))
+                                        .into_any_element()
                                 } else {
-                                    let mut elems = vec![
-                                        div()
-                                            .text_size(px(11.0))
-                                            .text_color(pal.text_primary)
-                                            .child(state.global_search_query.clone())
-                                            .into_any_element(),
-                                    ];
-                                    if is_focused {
-                                        elems.push(render_blinking_cursor(pal.primary_accent.into()).into_any_element());
-                                    }
-                                    elems
+                                    crate::ui::components::render_input_text(
+                                        &state.global_search_query,
+                                        is_focused,
+                                        state,
+                                        model,
+                                    )
+                                    .into_any_element()
                                 }),
                         )
                         // 右侧内嵌模式切换按钮组

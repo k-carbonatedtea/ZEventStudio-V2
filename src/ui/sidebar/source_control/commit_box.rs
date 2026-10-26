@@ -1,5 +1,4 @@
 use gpui::*;
-use crate::ui::components::render_blinking_cursor;
 use crate::ui::state::{AppState, GitCommitFocus};
 /// 渲染提交信息输入与提交操作区 (Commit Title, Description & Action Button)
 pub fn render_commit_box(
@@ -56,7 +55,10 @@ pub fn render_commit_box(
                 .cursor_text()
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     model_title_click.update(cx, |st, cx| {
+                        st.clear_active_text_inputs();
                         st.git_commit_focus = GitCommitFocus::Title;
+                        st.text_input_cursor = st.git_commit_title.chars().count();
+                        st.text_input_select_anchor = None;
                         cx.notify();
                     });
                 })
@@ -74,26 +76,20 @@ pub fn render_commit_box(
                         .items_center()
                         .gap_1()
                         .overflow_hidden()
-                        .children(if state.git_commit_title.is_empty() && !is_title_focused {
-                            vec![
-                                div()
-                                    .text_size(px(11.0))
-                                    .text_color(pal.text_secondary)
-                                    .child(state.t("source_control.commit_title_placeholder"))
-                                    .into_any_element(),
-                            ]
+                        .child(if state.git_commit_title.is_empty() && !is_title_focused {
+                            div()
+                                .text_size(px(11.0))
+                                .text_color(pal.text_secondary)
+                                .child(state.t("source_control.commit_title_placeholder"))
+                                .into_any_element()
                         } else {
-                            let mut elems = vec![
-                                div()
-                                    .text_size(px(11.0))
-                                    .text_color(pal.text_primary)
-                                    .child(state.git_commit_title.clone())
-                                    .into_any_element(),
-                            ];
-                            if is_title_focused {
-                                elems.push(render_blinking_cursor(pal.primary_accent.into()).into_any_element());
-                            }
-                            elems
+                            crate::ui::components::render_input_text(
+                                &state.git_commit_title,
+                                is_title_focused,
+                                state,
+                                model,
+                            )
+                            .into_any_element()
                         }),
                 ),
         )
@@ -137,12 +133,6 @@ pub fn render_commit_box(
 
         // 3. 详细描述多行输入框 (Commit Description)
         .children(show_desc.then(|| {
-            let desc_lines: Vec<String> = if state.git_commit_desc.is_empty() {
-                vec![]
-            } else {
-                state.git_commit_desc.split('\n').map(|s| s.to_string()).collect()
-            };
-
             div()
                 .min_h(px(54.0))
                 .px_2()
@@ -158,7 +148,10 @@ pub fn render_commit_box(
                 .cursor_text()
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     model_desc_click.update(cx, |st, cx| {
+                        st.clear_active_text_inputs();
                         st.git_commit_focus = GitCommitFocus::Description;
+                        st.text_input_cursor = st.git_commit_desc.chars().count();
+                        st.text_input_select_anchor = None;
                         cx.notify();
                     });
                 })
@@ -175,48 +168,20 @@ pub fn render_commit_box(
                         .flex()
                         .flex_col()
                         .gap_0p5()
-                        .children(if desc_lines.is_empty() && !is_desc_focused {
-                            vec![
-                                div()
-                                    .text_size(px(10.5))
-                                    .text_color(pal.text_secondary)
-                                    .child(state.t("source_control.commit_desc_placeholder"))
-                                    .into_any_element(),
-                            ]
+                        .child(if state.git_commit_desc.is_empty() && !is_desc_focused {
+                            div()
+                                .text_size(px(10.5))
+                                .text_color(pal.text_secondary)
+                                .child(state.t("source_control.commit_desc_placeholder"))
+                                .into_any_element()
                         } else {
-                            let mut line_elems = Vec::new();
-                            let last_idx = if desc_lines.is_empty() { 0 } else { desc_lines.len() - 1 };
-                            if desc_lines.is_empty() {
-                                line_elems.push(
-                                    div()
-                                        .flex()
-                                        .items_center()
-                                        .h(px(14.0))
-                                        .child(render_blinking_cursor(pal.primary_accent.into()))
-                                        .into_any_element(),
-                                );
-                            } else {
-                                for (i, line) in desc_lines.iter().enumerate() {
-                                    let is_last = i == last_idx;
-                                    line_elems.push(
-                                        div()
-                                            .flex()
-                                            .items_center()
-                                            .min_h(px(14.0))
-                                            .child(
-                                                div()
-                                                    .text_size(px(10.5))
-                                                    .text_color(pal.text_primary)
-                                                    .child(line.clone()),
-                                            )
-                                            .children((is_last && is_desc_focused).then(|| {
-                                                render_blinking_cursor(pal.primary_accent.into()).into_any_element()
-                                            }))
-                                            .into_any_element(),
-                                    );
-                                }
-                            }
-                            line_elems
+                            crate::ui::components::render_input_text(
+                                &state.git_commit_desc,
+                                is_desc_focused,
+                                state,
+                                model,
+                            )
+                            .into_any_element()
                         }),
                 )
         }))

@@ -193,6 +193,10 @@ impl AppState {
             msbt_new_entry_modal_open: false,
             msbt_new_entry_name: String::new(),
             msbt_new_entry_focused: false,
+
+            text_input_cursor: 0,
+            text_input_select_anchor: None,
+            text_input_is_dragging: false,
         };
 
         state.clean_invalid_recent_projects();
