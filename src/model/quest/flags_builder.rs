@@ -73,15 +73,30 @@ fn update_gamedata_flags(
     let mut b1_byml = Byml::from_binary(b1_file.data())
         .map_err(|e| format!("解析 bool_data_1.bgdata 失败: {:?}", e))?;
 
-    let ready_flag = format!("{}_Ready", config.name);
-    let act_flag = format!("{}_Activated", config.name);
-    let fin_flag = format!("{}_Finish", config.name);
+    let ready_flag = if config.ready_flag.is_empty() {
+        format!("{}_Ready", config.name)
+    } else {
+        config.ready_flag.clone()
+    };
+    let act_flag = if config.activated_flag.is_empty() {
+        format!("{}_Activated", config.name)
+    } else {
+        config.activated_flag.clone()
+    };
+    let fin_flag = if config.finish_flag.is_empty() {
+        format!("{}_Finish", config.name)
+    } else {
+        config.finish_flag.clone()
+    };
 
     if let Byml::Map(ref mut root_map) = b1_byml {
         if let Some(Byml::Array(ref mut bool_arr)) = root_map.get_mut("bool_data") {
             insert_or_replace_bgdata_entry(bool_arr, &ready_flag, 1);
             insert_or_replace_bgdata_entry(bool_arr, &act_flag, 0);
             insert_or_replace_bgdata_entry(bool_arr, &fin_flag, 0);
+            if !config.dependency_flag.is_empty() {
+                insert_or_replace_bgdata_entry(bool_arr, &config.dependency_flag, 0);
+            }
         }
     }
 
@@ -147,14 +162,29 @@ fn update_savedata_flags(
         .map_err(|e| format!("解析 savedataformat.ssarc 失败: {:?}", e))?;
     let mut sv_writer = SarcWriter::from_sarc(&sv_sarc);
 
-    let ready_flag = format!("{}_Ready", config.name);
-    let act_flag = format!("{}_Activated", config.name);
-    let fin_flag = format!("{}_Finish", config.name);
+    let ready_flag = if config.ready_flag.is_empty() {
+        format!("{}_Ready", config.name)
+    } else {
+        config.ready_flag.clone()
+    };
+    let act_flag = if config.activated_flag.is_empty() {
+        format!("{}_Activated", config.name)
+    } else {
+        config.activated_flag.clone()
+    };
+    let fin_flag = if config.finish_flag.is_empty() {
+        format!("{}_Finish", config.name)
+    } else {
+        config.finish_flag.clone()
+    };
 
     // 分配槽位：Ready -> saveformat_5, Activated -> saveformat_3, Finish -> saveformat_0
     update_single_saveformat(&mut sv_writer, "saveformat_5.bgsvdata", &ready_flag)?;
     update_single_saveformat(&mut sv_writer, "saveformat_3.bgsvdata", &act_flag)?;
     update_single_saveformat(&mut sv_writer, "saveformat_0.bgsvdata", &fin_flag)?;
+    if !config.dependency_flag.is_empty() {
+        update_single_saveformat(&mut sv_writer, "saveformat_1.bgsvdata", &config.dependency_flag)?;
+    }
 
     let new_sv_bytes = sv_writer.to_binary();
     let new_sv_yaz0 = roead::yaz0::compress(&new_sv_bytes);

@@ -1,4 +1,9 @@
+pub mod input_helper;
 pub mod modal;
+pub mod modal_coords;
+pub mod modal_deploy;
+pub mod modal_flags;
+pub mod modal_general;
 pub mod quest_card;
 
 use gpui::*;

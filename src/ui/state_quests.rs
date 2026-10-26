@@ -30,6 +30,19 @@ impl AppState {
         self.quest_creator_modal = None;
     }
 
+    /// 从当前 2D 地图标点一键拾取坐标至任务创建向导
+    pub fn fill_quest_creator_from_map_pin(&mut self) -> bool {
+        if let Some((wx, wz)) = self.quest_map_user_pin {
+            if let Some(ref mut m) = self.quest_creator_modal {
+                m.coord_x = format!("{:.1}", wx);
+                m.coord_z = format!("{:.1}", wz);
+                m.enable_indicator = true;
+                return true;
+            }
+        }
+        false
+    }
+
     /// 执行任务创建并应用到项目和当前打开的流程图画布
     pub fn apply_quest_creation(&mut self) -> Result<Vec<String>, String> {
         let modal = self.quest_creator_modal.clone()
@@ -44,6 +57,26 @@ impl AppState {
             .ok_or_else(|| "未打开任何项目，请先打开项目文件夹".to_string())?;
         let project_path = Path::new(&project_str);
 
+        let ready_flag = if modal.ready_flag.trim().is_empty() {
+            format!("{}_Ready", clean_name)
+        } else {
+            modal.ready_flag.trim().to_string()
+        };
+        let activated_flag = if modal.activated_flag.trim().is_empty() {
+            format!("{}_Activated", clean_name)
+        } else {
+            modal.activated_flag.trim().to_string()
+        };
+        let finish_flag = if modal.finish_flag.trim().is_empty() {
+            format!("{}_Finish", clean_name)
+        } else {
+            modal.finish_flag.trim().to_string()
+        };
+
+        let coord_x = modal.coord_x.trim().parse::<f32>().unwrap_or(0.0);
+        let coord_y = modal.coord_y.trim().parse::<f32>().unwrap_or(0.0);
+        let coord_z = modal.coord_z.trim().parse::<f32>().unwrap_or(0.0);
+
         let config = QuestScaffoldConfig {
             name: clean_name.to_string(),
             quest_type: modal.quest_type,
@@ -52,6 +85,20 @@ impl AppState {
             display_title: modal.display_title.trim().to_string(),
             desc_text: modal.desc_text.trim().to_string(),
             finish_text: modal.finish_text.trim().to_string(),
+            ready_flag,
+            activated_flag,
+            finish_flag,
+            dependency_flag: modal.dependency_flag.trim().to_string(),
+            enable_indicator: modal.enable_indicator,
+            indicator_actor: if modal.indicator_actor.trim().is_empty() {
+                modal.orderer.trim().to_string()
+            } else {
+                modal.indicator_actor.trim().to_string()
+            },
+            indicator_pos: (coord_x, coord_y, coord_z),
+            indicator_off_flag: modal.indicator_off_flag.trim().to_string(),
+            indicator_has_far: modal.indicator_has_far,
+            not_post_note: modal.not_post_note,
             inject_titlebg: modal.inject_titlebg,
             inject_bootup_flags: modal.inject_bootup_flags,
             inject_ql_msbt: modal.inject_ql_msbt,

@@ -1,7 +1,9 @@
 use gpui::*;
-use crate::model::quest::QuestType;
-use crate::ui::components::render_blinking_cursor;
-use crate::ui::state::{AppState, QuestCreatorFocusField, QuestCreatorModalState};
+use crate::ui::sidebar::quests::modal_coords::render_tab_coords;
+use crate::ui::sidebar::quests::modal_deploy::render_tab_deploy;
+use crate::ui::sidebar::quests::modal_flags::render_tab_flags;
+use crate::ui::sidebar::quests::modal_general::render_tab_general;
+use crate::ui::state::{AppState, QuestCreatorModalState, QuestCreatorTab};
 
 /// 渲染新建任务向导模态框
 pub fn render_quest_creator_modal(
@@ -33,8 +35,8 @@ pub fn render_quest_creator_modal(
         .child(
             div()
                 .id("quest_creator_modal_window")
-                .w(px(560.0))
-                .max_h(px(680.0))
+                .w(px(580.0))
+                .max_h(px(700.0))
                 .rounded_lg()
                 .bg(pal.panel_surface)
                 .border_1()
@@ -90,361 +92,143 @@ pub fn render_quest_creator_modal(
                                 .child("✕"),
                         ),
                 )
-                // 2. 表单内容滚动区
+                // 2. 选项卡分段切换栏
+                .child(render_tab_nav_bar(modal, state, model))
+                // 3. 表单内容滚动区 (根据激活选项卡切换)
                 .child(
                     div()
                         .id("quest_creator_scroll_body")
                         .flex_1()
                         .overflow_y_scroll()
                         .p_4()
-                        .flex()
-                        .flex_col()
-                        .gap_3()
-                        // 任务类型选择 (Main / Sub / Mini)
-                        .child(render_type_selector(modal, state, model))
-                        // 任务标识符与界面标题
-                        .child(
-                            div()
-                                .flex()
-                                .gap_3()
-                                .child(render_input_field(
-                                    state.t("quests.field_id"),
-                                    &modal.name,
-                                    modal.focused_field == QuestCreatorFocusField::Name,
-                                    QuestCreatorFocusField::Name,
-                                    "Quest_MyChallenge",
-                                    state,
-                                    model,
-                                ))
-                                .child(render_input_field(
-                                    state.t("quests.field_title"),
-                                    &modal.display_title,
-                                    modal.focused_field == QuestCreatorFocusField::DisplayTitle,
-                                    QuestCreatorFocusField::DisplayTitle,
-                                    "小樱桃的新挑战",
-                                    state,
-                                    model,
-                                )),
-                        )
-                        // 委托人与区域
-                        .child(
-                            div()
-                                .flex()
-                                .gap_3()
-                                .child(render_input_field(
-                                    state.t("quests.field_orderer"),
-                                    &modal.orderer,
-                                    modal.focused_field == QuestCreatorFocusField::Orderer,
-                                    QuestCreatorFocusField::Orderer,
-                                    "Npc_AncientDoctor_Robbie",
-                                    state,
-                                    model,
-                                ))
-                                .child(render_input_field(
-                                    state.t("quests.field_location"),
-                                    &modal.location,
-                                    modal.focused_field == QuestCreatorFocusField::Location,
-                                    QuestCreatorFocusField::Location,
-                                    "Akkala",
-                                    state,
-                                    model,
-                                )),
-                        )
-                        // 冒险笔记：接取初始描述
-                        .child(render_input_field(
-                            state.t("quests.field_desc"),
-                            &modal.desc_text,
-                            modal.focused_field == QuestCreatorFocusField::DescText,
-                            QuestCreatorFocusField::DescText,
-                            "在古代研究所接受了小樱桃的委托...",
-                            state,
-                            model,
-                        ))
-                        // 冒险笔记：完成总结描述
-                        .child(render_input_field(
-                            state.t("quests.field_finish"),
-                            &modal.finish_text,
-                            modal.focused_field == QuestCreatorFocusField::FinishText,
-                            QuestCreatorFocusField::FinishText,
-                            "向小樱桃汇报了成果，圆满完成了挑战！",
-                            state,
-                            model,
-                        ))
-                        // 自动化 5 支柱生成勾选项
-                        .child(render_automation_options(modal, state, model)),
+                        .child(match modal.active_tab {
+                            QuestCreatorTab::General => render_tab_general(modal, state, model).into_any_element(),
+                            QuestCreatorTab::Flags => render_tab_flags(modal, state, model).into_any_element(),
+                            QuestCreatorTab::Coordinates => render_tab_coords(modal, state, model).into_any_element(),
+                            QuestCreatorTab::Deploy => render_tab_deploy(modal, state, model).into_any_element(),
+                        }),
                 )
-                // 3. 底部操作按钮栏
+                // 4. 底部操作按钮栏
                 .child(
                     div()
                         .flex()
                         .items_center()
-                        .justify_end()
+                        .justify_between()
                         .px_4()
                         .py_3()
                         .border_t_1()
                         .border_color(pal.panel_border)
-                        .gap_2()
                         .child(
                             div()
-                                .px_3()
-                                .py_1p5()
-                                .rounded_sm()
-                                .border_1()
-                                .border_color(pal.panel_border)
-                                .text_size(px(12.0))
+                                .text_size(px(11.0))
                                 .text_color(pal.text_secondary)
-                                .cursor_pointer()
-                                .hover(|s| s.bg(pal.card_hover).text_color(pal.text_primary))
-                                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                                    model_cancel.update(cx, |st, cx| {
-                                        st.close_quest_creator();
-                                        cx.notify();
-                                    });
-                                })
-                                .child(state.t("quests.btn_cancel")),
+                                .child("按 Tab 键切换字段，Esc 取消"),
                         )
                         .child(
                             div()
-                                .id("btn_submit_quest_creation")
-                                .px_4()
-                                .py_1p5()
-                                .rounded_sm()
-                                .bg(pal.primary_accent)
-                                .text_color(rgb(0x000000))
-                                .text_size(px(12.0))
-                                .font_weight(FontWeight::BOLD)
-                                .cursor_pointer()
-                                .hover(|s| s.opacity(0.88))
-                                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                                    model_submit.update(cx, |st, cx| {
-                                        if let Err(e) = st.apply_quest_creation() {
-                                            st.toast = Some(crate::ui::components::Toast::error(e));
-                                        }
-                                        cx.notify();
-                                    });
-                                })
-                                .child("✨")
-                                .child(state.t("quests.btn_create_quest")),
+                                .flex()
+                                .items_center()
+                                .gap_2()
+                                .child(
+                                    div()
+                                        .px_3()
+                                        .py_1p5()
+                                        .rounded_sm()
+                                        .border_1()
+                                        .border_color(pal.panel_border)
+                                        .text_size(px(12.0))
+                                        .text_color(pal.text_secondary)
+                                        .cursor_pointer()
+                                        .hover(|s| s.bg(pal.card_hover).text_color(pal.text_primary))
+                                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                                            model_cancel.update(cx, |st, cx| {
+                                                st.close_quest_creator();
+                                                cx.notify();
+                                            });
+                                        })
+                                        .child(state.t("quests.btn_cancel")),
+                                )
+                                .child(
+                                    div()
+                                        .id("btn_submit_quest_creation")
+                                        .px_4()
+                                        .py_1p5()
+                                        .rounded_sm()
+                                        .bg(pal.primary_accent)
+                                        .text_color(rgb(0x000000))
+                                        .text_size(px(12.0))
+                                        .font_weight(FontWeight::BOLD)
+                                        .cursor_pointer()
+                                        .hover(|s| s.opacity(0.88))
+                                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                                            model_submit.update(cx, |st, cx| {
+                                                if let Err(e) = st.apply_quest_creation() {
+                                                    st.toast = Some(crate::ui::components::Toast::error(e));
+                                                }
+                                                cx.notify();
+                                            });
+                                        })
+                                        .child("✨ ")
+                                        .child(state.t("quests.btn_create_quest")),
+                                ),
                         ),
                 ),
         )
 }
 
-/// 渲染任务类型选择器 (Main, Sub, Mini)
-fn render_type_selector(
+/// 渲染选项卡分段导航栏
+fn render_tab_nav_bar(
     modal: &QuestCreatorModalState,
     state: &AppState,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
     let pal = state.theme();
-    let current_type = modal.quest_type;
+    let current_tab = modal.active_tab;
 
-    let items = [
-        (QuestType::Mini, state.t("quests.type_mini")),
-        (QuestType::Sub, state.t("quests.type_sub")),
-        (QuestType::Main, state.t("quests.type_main")),
+    let tabs = [
+        (QuestCreatorTab::General, state.t("quests.tab_general"), "🏷️"),
+        (QuestCreatorTab::Flags, state.t("quests.tab_flags"), "🚩"),
+        (QuestCreatorTab::Coordinates, state.t("quests.tab_coords"), "📍"),
+        (QuestCreatorTab::Deploy, state.t("quests.tab_deploy"), "🚀"),
     ];
 
     div()
         .flex()
-        .flex_col()
+        .items_center()
+        .px_4()
+        .pt_2()
+        .pb_1()
+        .border_b_1()
+        .border_color(pal.panel_border.opacity(0.6))
         .gap_1()
-        .child(
-            div()
-                .text_size(px(11.5))
-                .font_weight(FontWeight::SEMIBOLD)
-                .text_color(pal.text_secondary)
-                .child(state.t("quests.field_type")),
-        )
-        .child(
-            div()
-                .flex()
-                .gap_2()
-                .children(items.into_iter().map(|(t, label)| {
-                    let is_active = current_type == t;
-                    let model_click = model.clone();
-                    div()
-                        .flex_1()
-                        .py_1p5()
-                        .rounded_sm()
-                        .border_1()
-                        .border_color(if is_active { pal.primary_accent } else { pal.panel_border })
-                        .bg(if is_active { pal.primary_accent.opacity(0.12) } else { pal.panel_surface })
-                        .text_color(if is_active { pal.primary_accent } else { pal.text_secondary })
-                        .text_size(px(12.0))
-                        .font_weight(if is_active { FontWeight::SEMIBOLD } else { FontWeight::NORMAL })
-                        .cursor_pointer()
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                            model_click.update(cx, |st, cx| {
-                                if let Some(ref mut m) = st.quest_creator_modal {
-                                    m.quest_type = t;
-                                    cx.notify();
-                                }
-                            });
-                        })
-                        .child(label)
-                })),
-        )
-}
-
-/// 渲染遵循 8.3 范式的文本输入项
-fn render_input_field(
-    label: &str,
-    value: &str,
-    is_focused: bool,
-    field: QuestCreatorFocusField,
-    placeholder: &str,
-    state: &AppState,
-    model: &Entity<AppState>,
-) -> impl IntoElement {
-    let pal = state.theme();
-    let model_click = model.clone();
-    let model_out = model.clone();
-    let val_clone = value.to_string();
-    let placeholder_str = placeholder.to_string();
-
-    div()
-        .flex_1()
-        .flex()
-        .flex_col()
-        .gap_1()
-        .child(
-            div()
-                .text_size(px(11.5))
-                .font_weight(FontWeight::SEMIBOLD)
-                .text_color(pal.text_secondary)
-                .child(label.to_string()),
-        )
-        .child(
-            div()
-                .id(SharedString::from(format!("input_field_{:?}", field)))
-                .cursor_text()
-                .h(px(30.0))
-                .px_2()
-                .rounded_sm()
-                .border_1()
-                .border_color(if is_focused { pal.primary_accent } else { pal.panel_border })
-                .bg(pal.panel_surface)
-                .flex()
-                .items_center()
-                // 1. 点击获得焦点并设置自身字段
-                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                    model_click.update(cx, |st, cx| {
-                        st.clear_active_text_inputs();
-                        if let Some(ref mut m) = st.quest_creator_modal {
-                            m.focused_field = field;
-                        }
-                        cx.notify();
-                    });
-                })
-                // 2. 点击外部必须自动失焦 (规范 8.3 严禁遗漏！)
-                .on_mouse_down_out(move |_, _, cx| {
-                    model_out.update(cx, |st, cx| {
-                        if let Some(ref mut m) = st.quest_creator_modal {
-                            if m.focused_field == field {
-                                m.focused_field = QuestCreatorFocusField::None;
-                                cx.notify();
-                            }
-                        }
-                    });
-                })
-                .child(
-                    if val_clone.is_empty() && !is_focused {
-                        div()
-                            .text_size(px(12.0))
-                            .text_color(pal.text_secondary.opacity(0.6))
-                            .child(placeholder_str)
-                            .into_any_element()
-                    } else {
-                        div()
-                            .flex()
-                            .items_center()
-                            .text_size(px(12.0))
-                            .text_color(pal.text_primary)
-                            .child(val_clone)
-                            .children(is_focused.then(|| {
-                                render_blinking_cursor(pal.primary_accent.into()).into_any_element()
-                            }))
-                            .into_any_element()
-                    },
-                ),
-        )
-}
-
-/// 渲染 5 支柱自动化生成勾选项
-fn render_automation_options(
-    modal: &QuestCreatorModalState,
-    state: &AppState,
-    model: &Entity<AppState>,
-) -> impl IntoElement {
-    let pal = state.theme();
-
-    let options = [
-        (modal.inject_titlebg, state.t("quests.opt_titlebg"), 0),
-        (modal.inject_bootup_flags, state.t("quests.opt_bootup_flags"), 1),
-        (modal.inject_ql_msbt, state.t("quests.opt_ql_msbt"), 2),
-        (modal.scaffold_graph_nodes, state.t("quests.opt_scaffold_graph"), 3),
-    ];
-
-    div()
-        .flex()
-        .flex_col()
-        .gap_1p5()
-        .p_2p5()
-        .rounded_sm()
-        .bg(pal.card_hover.opacity(0.5))
-        .border_1()
-        .border_color(pal.panel_border.opacity(0.5))
-        .child(
-            div()
-                .text_size(px(11.5))
-                .font_weight(FontWeight::BOLD)
-                .text_color(pal.text_primary)
-                .child(state.t("quests.automation_header")),
-        )
-        .children(options.into_iter().map(|(checked, label, idx)| {
+        .children(tabs.into_iter().map(|(tab, label, icon)| {
+            let is_active = current_tab == tab;
             let model_click = model.clone();
             div()
+                .flex_1()
+                .py_1p5()
+                .rounded_sm()
+                .border_b_2()
+                .border_color(if is_active { pal.primary_accent } else { rgba(0x00000000) })
+                .bg(if is_active { pal.primary_accent.opacity(0.10) } else { pal.panel_surface })
+                .text_color(if is_active { pal.primary_accent } else { pal.text_secondary })
+                .text_size(px(11.5))
+                .font_weight(if is_active { FontWeight::BOLD } else { FontWeight::NORMAL })
+                .cursor_pointer()
                 .flex()
                 .items_center()
-                .gap_2()
-                .cursor_pointer()
+                .justify_center()
+                .gap_1p5()
+                .hover(|s| s.bg(pal.card_hover).text_color(pal.text_primary))
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     model_click.update(cx, |st, cx| {
                         if let Some(ref mut m) = st.quest_creator_modal {
-                            match idx {
-                                0 => m.inject_titlebg = !m.inject_titlebg,
-                                1 => m.inject_bootup_flags = !m.inject_bootup_flags,
-                                2 => m.inject_ql_msbt = !m.inject_ql_msbt,
-                                3 => m.scaffold_graph_nodes = !m.scaffold_graph_nodes,
-                                _ => {}
-                            }
+                            m.active_tab = tab;
                             cx.notify();
                         }
                     });
                 })
-                .child(
-                    div()
-                        .size(px(14.0))
-                        .rounded_sm()
-                        .border_1()
-                        .border_color(if checked { pal.primary_accent } else { pal.panel_border })
-                        .bg(if checked { pal.primary_accent } else { pal.panel_surface })
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .text_size(px(10.0))
-                        .text_color(rgb(0x000000))
-                        .child(if checked { "✓" } else { "" }),
-                )
-                .child(
-                    div()
-                        .text_size(px(11.5))
-                        .text_color(pal.text_secondary)
-                        .child(label),
-                )
+                .child(icon)
+                .child(label)
         }))
 }

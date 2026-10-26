@@ -77,6 +77,7 @@ pub struct QuestDefinition {
     pub orderer: String,
     pub location: String,
     pub not_post_note: bool,
+    pub dependency_flag: Option<String>,
     pub steps: Vec<QuestStep>,
     // 关联的本地化文本预览 (来自 QL_<Quest>.msbt)
     pub display_title: Option<String>,
@@ -99,6 +100,7 @@ impl Default for QuestDefinition {
             orderer: String::new(),
             location: "Unknown".to_string(),
             not_post_note: false,
+            dependency_flag: None,
             steps: Vec::new(),
             display_title: None,
             desc_text: None,
@@ -108,7 +110,7 @@ impl Default for QuestDefinition {
 }
 
 /// 新建任务脚手架向导配置
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct QuestScaffoldConfig {
     pub name: String,
     pub quest_type: QuestType,
@@ -117,6 +119,19 @@ pub struct QuestScaffoldConfig {
     pub display_title: String,
     pub desc_text: String,
     pub finish_text: String,
+    // Flag 标志位设定
+    pub ready_flag: String,
+    pub activated_flag: String,
+    pub finish_flag: String,
+    pub dependency_flag: String,
+    // 地图指示器与坐标设定
+    pub enable_indicator: bool,
+    pub indicator_actor: String,
+    pub indicator_pos: (f32, f32, f32),
+    pub indicator_off_flag: String,
+    pub indicator_has_far: bool,
+    // 其他任务元数据
+    pub not_post_note: bool,
     // 自动化模块勾选项
     pub inject_titlebg: bool,
     pub inject_bootup_flags: bool,
@@ -135,6 +150,16 @@ impl Default for QuestScaffoldConfig {
             display_title: String::new(),
             desc_text: String::new(),
             finish_text: String::new(),
+            ready_flag: String::new(),
+            activated_flag: String::new(),
+            finish_flag: String::new(),
+            dependency_flag: String::new(),
+            enable_indicator: false,
+            indicator_actor: String::new(),
+            indicator_pos: (0.0, 0.0, 0.0),
+            indicator_off_flag: String::new(),
+            indicator_has_far: false,
+            not_post_note: false,
             inject_titlebg: true,
             inject_bootup_flags: true,
             inject_ql_msbt: true,

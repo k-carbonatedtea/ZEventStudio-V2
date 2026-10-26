@@ -84,6 +84,12 @@ fn parse_quest_byml(byml: &Byml) -> Option<QuestDefinition> {
     let orderer = map.get("Orderer").and_then(|v| v.as_string().ok()).map(|s| s.as_str()).unwrap_or("").to_string();
     let location = map.get("Location").and_then(|v| v.as_string().ok()).map(|s| s.as_str()).unwrap_or("Unknown").to_string();
     let not_post_note = map.get("NotPostNote").and_then(|v| v.as_bool().ok()).unwrap_or(false);
+    let dependency_flag = map
+        .get("QuestDependencyFlag")
+        .and_then(|v| v.as_string().ok())
+        .map(|s| s.as_str())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string());
 
     let mut steps = Vec::new();
     if let Some(Byml::Array(step_arr)) = map.get("Steps") {
@@ -114,6 +120,7 @@ fn parse_quest_byml(byml: &Byml) -> Option<QuestDefinition> {
         orderer,
         location,
         not_post_note,
+        dependency_flag,
         steps,
         display_title: None,
         desc_text: None,

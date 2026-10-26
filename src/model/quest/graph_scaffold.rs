@@ -15,6 +15,22 @@ pub fn scaffold_quest_graph_nodes(graph: &mut Graph, config: &QuestScaffoldConfi
         config.orderer.clone()
     };
 
+    let ready_flag = if config.ready_flag.is_empty() {
+        format!("{}_Ready", config.name)
+    } else {
+        config.ready_flag.clone()
+    };
+    let act_flag = if config.activated_flag.is_empty() {
+        format!("{}_Activated", config.name)
+    } else {
+        config.activated_flag.clone()
+    };
+    let fin_flag = if config.finish_flag.is_empty() {
+        format!("{}_Finish", config.name)
+    } else {
+        config.finish_flag.clone()
+    };
+
     // 1. 接取链路 (Ready 序列)
     // 节点 1: Demo_FlagON(<Quest>_Ready)
     let node1_id = format!("Quest_{}_FlagReady", config.name);
@@ -25,7 +41,7 @@ pub fn scaffold_quest_graph_nodes(graph: &mut Graph, config: &QuestScaffoldConfi
         vec![
             PropertyItem {
                 key: "FlagName".into(),
-                val: format!("{}_Ready", config.name),
+                val: ready_flag,
                 val_type: "string".into(),
             },
             PropertyItem {
@@ -46,7 +62,7 @@ pub fn scaffold_quest_graph_nodes(graph: &mut Graph, config: &QuestScaffoldConfi
         vec![
             PropertyItem {
                 key: "FlagName".into(),
-                val: format!("{}_Activated", config.name),
+                val: act_flag,
                 val_type: "string".into(),
             },
             PropertyItem {
@@ -122,7 +138,7 @@ pub fn scaffold_quest_graph_nodes(graph: &mut Graph, config: &QuestScaffoldConfi
         vec![
             PropertyItem {
                 key: "FlagName".into(),
-                val: format!("{}_Finish", config.name),
+                val: fin_flag,
                 val_type: "string".into(),
             },
             PropertyItem {

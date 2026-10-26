@@ -106,14 +106,8 @@ impl AppState {
             return Some(&self.quests_search_query);
         }
         if let Some(ref modal) = self.quest_creator_modal {
-            match modal.focused_field {
-                QuestCreatorFocusField::Name => return Some(&modal.name),
-                QuestCreatorFocusField::DisplayTitle => return Some(&modal.display_title),
-                QuestCreatorFocusField::Orderer => return Some(&modal.orderer),
-                QuestCreatorFocusField::Location => return Some(&modal.location),
-                QuestCreatorFocusField::DescText => return Some(&modal.desc_text),
-                QuestCreatorFocusField::FinishText => return Some(&modal.finish_text),
-                QuestCreatorFocusField::None => {}
+            if let Some(s) = modal.active_input() {
+                return Some(s);
             }
         }
         if let Some(ref m) = self.rename_modal {
@@ -266,32 +260,8 @@ impl AppState {
             return true;
         }
         if let Some(ref mut modal) = self.quest_creator_modal {
-            match modal.focused_field {
-                QuestCreatorFocusField::Name => {
-                    modal.name.push_str(&clean);
-                    return true;
-                }
-                QuestCreatorFocusField::DisplayTitle => {
-                    modal.display_title.push_str(&clean);
-                    return true;
-                }
-                QuestCreatorFocusField::Orderer => {
-                    modal.orderer.push_str(&clean);
-                    return true;
-                }
-                QuestCreatorFocusField::Location => {
-                    modal.location.push_str(&clean);
-                    return true;
-                }
-                QuestCreatorFocusField::DescText => {
-                    modal.desc_text.push_str(&clean);
-                    return true;
-                }
-                QuestCreatorFocusField::FinishText => {
-                    modal.finish_text.push_str(&clean);
-                    return true;
-                }
-                QuestCreatorFocusField::None => {}
+            if modal.insert_text(&clean) {
+                return true;
             }
         }
 

@@ -289,6 +289,8 @@ fn render_quest_inline_details(
                         .cursor_pointer()
                         .hover(|s| s.bg(pal.primary_accent.opacity(0.28)))
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            let act_flag = q_clone.steps.iter().find(|s| s.name == "Ready").map(|s| s.next_flag.clone()).unwrap_or_else(|| format!("{}_Activated", q_clone.name));
+                            let fin_flag = q_clone.steps.iter().find(|s| s.name == "Finish").map(|s| s.next_flag.clone()).unwrap_or_else(|| format!("{}_Finish", q_clone.name));
                             let q_cfg = crate::model::quest::QuestScaffoldConfig {
                                 name: q_clone.name.clone(),
                                 quest_type: q_clone.quest_type,
@@ -297,6 +299,16 @@ fn render_quest_inline_details(
                                 display_title: q_clone.display_title.clone().unwrap_or_default(),
                                 desc_text: q_clone.desc_text.clone().unwrap_or_default(),
                                 finish_text: String::new(),
+                                ready_flag: format!("{}_Ready", q_clone.name),
+                                activated_flag: act_flag,
+                                finish_flag: fin_flag,
+                                dependency_flag: q_clone.dependency_flag.clone().unwrap_or_default(),
+                                enable_indicator: false,
+                                indicator_actor: String::new(),
+                                indicator_pos: (0.0, 0.0, 0.0),
+                                indicator_off_flag: String::new(),
+                                indicator_has_far: false,
+                                not_post_note: q_clone.not_post_note,
                                 inject_titlebg: false,
                                 inject_bootup_flags: false,
                                 inject_ql_msbt: false,

@@ -168,30 +168,50 @@ pub fn handle_modal_key_event(event: &KeyDownEvent, state: &mut AppState, clipbo
         }
 
         if event.keystroke.key == "tab" {
-            modal.focused_field = match modal.focused_field {
-                QuestCreatorFocusField::None => QuestCreatorFocusField::Name,
-                QuestCreatorFocusField::Name => QuestCreatorFocusField::DisplayTitle,
-                QuestCreatorFocusField::DisplayTitle => QuestCreatorFocusField::Orderer,
-                QuestCreatorFocusField::Orderer => QuestCreatorFocusField::Location,
-                QuestCreatorFocusField::Location => QuestCreatorFocusField::DescText,
-                QuestCreatorFocusField::DescText => QuestCreatorFocusField::FinishText,
-                QuestCreatorFocusField::FinishText => QuestCreatorFocusField::Name,
+            modal.focused_field = match modal.active_tab {
+                crate::ui::state_types::QuestCreatorTab::General => match modal.focused_field {
+                    QuestCreatorFocusField::Name => QuestCreatorFocusField::DisplayTitle,
+                    QuestCreatorFocusField::DisplayTitle => QuestCreatorFocusField::Orderer,
+                    QuestCreatorFocusField::Orderer => QuestCreatorFocusField::Location,
+                    _ => QuestCreatorFocusField::Name,
+                },
+                crate::ui::state_types::QuestCreatorTab::Flags => match modal.focused_field {
+                    QuestCreatorFocusField::ReadyFlag => QuestCreatorFocusField::ActivatedFlag,
+                    QuestCreatorFocusField::ActivatedFlag => QuestCreatorFocusField::FinishFlag,
+                    QuestCreatorFocusField::FinishFlag => QuestCreatorFocusField::DependencyFlag,
+                    _ => QuestCreatorFocusField::ReadyFlag,
+                },
+                crate::ui::state_types::QuestCreatorTab::Coordinates => match modal.focused_field {
+                    QuestCreatorFocusField::IndicatorActor => QuestCreatorFocusField::CoordX,
+                    QuestCreatorFocusField::CoordX => QuestCreatorFocusField::CoordY,
+                    QuestCreatorFocusField::CoordY => QuestCreatorFocusField::CoordZ,
+                    QuestCreatorFocusField::CoordZ => QuestCreatorFocusField::IndicatorOffFlag,
+                    _ => QuestCreatorFocusField::IndicatorActor,
+                },
+                crate::ui::state_types::QuestCreatorTab::Deploy => match modal.focused_field {
+                    QuestCreatorFocusField::DescText => QuestCreatorFocusField::FinishText,
+                    _ => QuestCreatorFocusField::DescText,
+                },
             };
             return Some(true);
         }
 
-        let target = match modal.focused_field {
-            QuestCreatorFocusField::Name => &mut modal.name,
-            QuestCreatorFocusField::DisplayTitle => &mut modal.display_title,
-            QuestCreatorFocusField::Orderer => &mut modal.orderer,
-            QuestCreatorFocusField::Location => &mut modal.location,
-            QuestCreatorFocusField::DescText => &mut modal.desc_text,
-            QuestCreatorFocusField::FinishText => &mut modal.finish_text,
-            QuestCreatorFocusField::None => return Some(false),
-        };
-
-        let (changed, _, _) = handle_text_key_event(target, event, clipboard);
-        return Some(changed);
+        let current_field = modal.focused_field;
+        if let Some(target) = modal.get_mut_focused() {
+            let (changed, _, _) = handle_text_key_event(target, event, clipboard);
+            if changed {
+                if current_field == QuestCreatorFocusField::Name {
+                    modal.sync_flags_from_name();
+                } else if current_field == QuestCreatorFocusField::ReadyFlag
+                    || current_field == QuestCreatorFocusField::ActivatedFlag
+                    || current_field == QuestCreatorFocusField::FinishFlag
+                {
+                    modal.custom_flags = true;
+                }
+            }
+            return Some(changed);
+        }
+        return Some(false);
     }
 
     None

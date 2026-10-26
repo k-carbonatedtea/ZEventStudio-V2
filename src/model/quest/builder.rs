@@ -113,21 +113,56 @@ fn build_quest_byml_entry(config: &QuestScaffoldConfig) -> Byml {
     map.insert("Type".into(), Byml::String(config.quest_type.as_str().into()));
     map.insert("Orderer".into(), Byml::String(config.orderer.clone().into()));
     map.insert("Location".into(), Byml::String(config.location.clone().into()));
-    map.insert("NotPostNote".into(), Byml::Bool(false));
+    map.insert("NotPostNote".into(), Byml::Bool(config.not_post_note));
     map.insert("StepDependencyFlags".into(), Byml::Array(Vec::new()));
+
+    if !config.dependency_flag.is_empty() {
+        map.insert("QuestDependencyFlag".into(), Byml::String(config.dependency_flag.clone().into()));
+        map.insert("QuestDependencyFlagType".into(), Byml::String("BoolData".into()));
+    }
 
     // 默认两个阶段: Ready 与 Finish
     let mut ready_step = roead::byml::Map::default();
     ready_step.insert("Name".into(), Byml::String("Ready".into()));
     ready_step.insert("MessageName".into(), Byml::String("Desc".into()));
-    ready_step.insert("NextFlag".into(), Byml::String(format!("{}_Activated", config.name).into()));
+    let act_flag = if config.activated_flag.is_empty() {
+        format!("{}_Activated", config.name)
+    } else {
+        config.activated_flag.clone()
+    };
+    ready_step.insert("NextFlag".into(), Byml::String(act_flag.into()));
     ready_step.insert("UpdateStep".into(), Byml::Bool(true));
     ready_step.insert("AttentionOff".into(), Byml::Bool(false));
+
+    // 如果启用了地图指引标点，在 Ready 阶段生成 IndicatorActors
+    if config.enable_indicator {
+        let mut ind_map = roead::byml::Map::default();
+        ind_map.insert("HasFar".into(), Byml::Bool(config.indicator_has_far));
+        ind_map.insert("InstanceName".into(), Byml::String("".into()));
+        let mut loc = roead::byml::Map::default();
+        loc.insert("X".into(), Byml::Float(config.indicator_pos.0));
+        loc.insert("Y".into(), Byml::Float(config.indicator_pos.1));
+        loc.insert("Z".into(), Byml::Float(config.indicator_pos.2));
+        ind_map.insert("Location".into(), Byml::Map(loc));
+        let ind_name = if config.indicator_actor.is_empty() {
+            config.orderer.clone()
+        } else {
+            config.indicator_actor.clone()
+        };
+        ind_map.insert("Name".into(), Byml::String(ind_name.into()));
+        ind_map.insert("OffFlag".into(), Byml::String(config.indicator_off_flag.clone().into()));
+        ready_step.insert("IndicatorActors".into(), Byml::Array(vec![Byml::Map(ind_map)]));
+    }
 
     let mut fin_step = roead::byml::Map::default();
     fin_step.insert("Name".into(), Byml::String("Finish".into()));
     fin_step.insert("MessageName".into(), Byml::String("Finish".into()));
-    fin_step.insert("NextFlag".into(), Byml::String(format!("{}_Finish", config.name).into()));
+    let fin_flag = if config.finish_flag.is_empty() {
+        format!("{}_Finish", config.name)
+    } else {
+        config.finish_flag.clone()
+    };
+    fin_step.insert("NextFlag".into(), Byml::String(fin_flag.into()));
     fin_step.insert("UpdateStep".into(), Byml::Bool(true));
     fin_step.insert("AttentionOff".into(), Byml::Bool(false));
 
