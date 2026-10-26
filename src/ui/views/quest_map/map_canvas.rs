@@ -43,11 +43,14 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
         } else {
             CursorStyle::Arrow
         })
-        // 鼠标左键按下：开始拖拽平移
+        // 鼠标左键按下：开始拖拽平移 (当有模态框开启时忽略)
         .on_mouse_down(MouseButton::Left, move |e, _, cx| {
             let mx: f32 = e.position.x.into();
             let my: f32 = e.position.y.into();
             model_down.update(cx, |st, cx| {
+                if st.has_active_modal() {
+                    return;
+                }
                 st.quest_map_is_dragging = true;
                 st.quest_map_drag_start = (mx, my);
                 st.quest_map_drag_dist = 0.0;
@@ -59,6 +62,10 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
             let mx: f32 = e.position.x.into();
             let my: f32 = e.position.y.into();
             model_up.update(cx, |st, cx| {
+                if st.has_active_modal() {
+                    st.quest_map_is_dragging = false;
+                    return;
+                }
                 st.quest_map_is_dragging = false;
                 // 位移低于 6 像素判定为左键点击空白处
                 if st.quest_map_drag_dist < 6.0 {
@@ -81,6 +88,9 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
             let mx: f32 = e.position.x.into();
             let my: f32 = e.position.y.into();
             model_mid_down.update(cx, |st, cx| {
+                if st.has_active_modal() {
+                    return;
+                }
                 st.quest_map_is_dragging = true;
                 st.quest_map_drag_start = (mx, my);
                 cx.notify();
@@ -99,6 +109,9 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
             let my: f32 = e.position.y.into();
 
             model_move.update(cx, |st, cx| {
+                if st.has_active_modal() {
+                    return;
+                }
                 if st.quest_map_is_dragging {
                     let dx = mx - st.quest_map_drag_start.0;
                     let dy = my - st.quest_map_drag_start.1;
@@ -117,7 +130,7 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
                 cx.notify();
             });
         })
-        // 滚轮缩放：以鼠标当前位置为锚点缩放
+        // 滚轮缩放：以鼠标当前位置为锚点缩放 (当模态框激活时不缩放背景地图)
         .on_scroll(move |e, _, cx| {
             let dy: f32 = match e.delta {
                 ScrollDelta::Pixels(pt) => pt.y.into(),
@@ -126,6 +139,9 @@ pub fn render_map_canvas(state: &AppState, model: &Entity<AppState>) -> impl Int
             let factor = if dy > 0.0 { 1.15 } else { 0.85 };
 
             model_scroll.update(cx, |st, cx| {
+                if st.has_active_modal() {
+                    return;
+                }
                 let old_zoom = st.quest_map_zoom;
                 let new_zoom = (old_zoom * factor).clamp(0.015, 2.5);
 

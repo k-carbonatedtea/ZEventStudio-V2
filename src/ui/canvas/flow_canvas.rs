@@ -207,7 +207,7 @@ pub fn render_flow_canvas(
         // Scroll wheel to zoom (当模态框激活时不缩放背景画布)
         .on_scroll(move |e, _, cx| {
             model_scroll.update(cx, |st, cx| {
-                if st.active_node_editor_modal.is_some() || st.quick_add_modal.is_some() {
+                if st.has_active_modal() {
                     return;
                 }
                 let dy: f32 = match e.delta {

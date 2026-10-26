@@ -40,7 +40,11 @@ pub fn wrap_sidebar_workspace(
                         .flex_col()
                         .size_full()
                         .overflow_hidden()
-                        .child(crate::ui::render_document_tab_bar(state, model))
+                        .child(if state.current_tab == crate::ui::state::AppWorkspaceTab::Quests {
+                            crate::ui::views::quest_map::render_quest_map_top_bar(state, model).into_any_element()
+                        } else {
+                            crate::ui::render_document_tab_bar(state, model).into_any_element()
+                        })
                         .child(
                             div()
                                 .flex_1()

@@ -21,17 +21,34 @@ pub fn render_quest_creator_modal(
         .id("quest_creator_modal_overlay")
         .absolute()
         .inset_0()
+        .occlude()
         .bg(rgba(0x00000088))
         .flex()
         .items_center()
         .justify_center()
+        .on_scroll(|_, _, cx| {
+            cx.stop_propagation();
+        })
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+            cx.stop_propagation();
             model_backdrop.update(cx, |st, cx| {
                 st.close_quest_creator();
                 cx.notify();
             });
         })
-        // 模态弹窗主体 (防止遮罩点击冒泡)
+        .on_mouse_down(MouseButton::Right, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Right, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_click(|_, _, cx| {
+            cx.stop_propagation();
+        })
+        // 模态弹窗主体 (防止遮罩点击冒泡与滚轮穿透)
         .child(
             div()
                 .id("quest_creator_modal_window")
@@ -45,7 +62,22 @@ pub fn render_quest_creator_modal(
                 .flex()
                 .flex_col()
                 .overflow_hidden()
+                .on_scroll(|_, _, cx| {
+                    cx.stop_propagation();
+                })
                 .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_down(MouseButton::Right, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_up(MouseButton::Left, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_up(MouseButton::Right, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_click(|_, _, cx| {
                     cx.stop_propagation();
                 })
                 // 1. 弹窗标题栏

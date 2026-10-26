@@ -27,11 +27,14 @@ pub fn render_rename_modal(
         .id("rename_modal_overlay")
         .absolute()
         .inset_0()
+        .occlude()
         .bg(rgba(0x00000077))
         .flex()
         .items_center()
         .justify_center()
+        .on_scroll(|_, _, cx| cx.stop_propagation())
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+            cx.stop_propagation();
             model_close.update(cx, |st, cx| {
                 st.rename_modal = None;
                 cx.notify();
@@ -245,11 +248,14 @@ pub fn render_delete_confirm_modal(
         .id("delete_modal_overlay")
         .absolute()
         .inset_0()
+        .occlude()
         .bg(rgba(0x00000077))
         .flex()
         .items_center()
         .justify_center()
+        .on_scroll(|_, _, cx| cx.stop_propagation())
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+            cx.stop_propagation();
             model_close.update(cx, |st, cx| {
                 st.delete_confirm_modal = None;
                 cx.notify();

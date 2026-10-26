@@ -174,6 +174,7 @@ pub fn resolve_maptex_source(
 }
 
 /// 统计目录中 .png 瓦片数量
+#[allow(dead_code)]
 pub fn count_pngs_in_dir(dir: &Path) -> usize {
     if !dir.exists() {
         return 0;
@@ -193,6 +194,7 @@ pub fn count_pngs_in_dir(dir: &Path) -> usize {
 }
 
 /// 统计当前生效的瓦片数量 (项目专有瓦片优先)
+#[allow(dead_code)]
 pub fn count_cached_map_tiles(project_path: Option<&str>) -> usize {
     if let Some(proj) = project_path {
         let p_dir = get_project_tiles_cache_dir(proj);

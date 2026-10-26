@@ -34,11 +34,14 @@ pub fn render_git_diff_modal(
         .id("git_diff_modal_overlay")
         .absolute()
         .inset_0()
+        .occlude()
         .bg(rgba(0x000000aa))
         .flex()
         .items_center()
         .justify_center()
+        .on_scroll(|_, _, cx| cx.stop_propagation())
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+            cx.stop_propagation();
             model_close.update(cx, |st, cx| {
                 st.close_diff_modal();
                 cx.notify();
@@ -59,6 +62,7 @@ pub fn render_git_diff_modal(
                 .flex()
                 .flex_col()
                 .overflow_hidden()
+                .on_scroll(|_, _, cx| cx.stop_propagation())
                 // 阻止卡片内部点击事件冒泡到背景遮罩
                 .on_mouse_down(MouseButton::Left, |_, _, cx| {
                     cx.stop_propagation();

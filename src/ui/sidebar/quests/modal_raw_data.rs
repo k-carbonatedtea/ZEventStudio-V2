@@ -32,15 +32,32 @@ pub fn render_quest_raw_data_modal(
         .id("quest_raw_data_modal_overlay")
         .absolute()
         .inset_0()
+        .occlude()
         .bg(rgba(0x00000088))
         .flex()
         .items_center()
         .justify_center()
+        .on_scroll(|_, _, cx| {
+            cx.stop_propagation();
+        })
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+            cx.stop_propagation();
             model_backdrop.update(cx, |st, cx| {
                 st.close_quest_raw_data();
                 cx.notify();
             });
+        })
+        .on_mouse_down(MouseButton::Right, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Right, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_click(|_, _, cx| {
+            cx.stop_propagation();
         })
         .child(
             div()
@@ -55,7 +72,22 @@ pub fn render_quest_raw_data_modal(
                 .flex()
                 .flex_col()
                 .overflow_hidden()
+                .on_scroll(|_, _, cx| {
+                    cx.stop_propagation();
+                })
                 .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_down(MouseButton::Right, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_up(MouseButton::Left, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_up(MouseButton::Right, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_click(|_, _, cx| {
                     cx.stop_propagation();
                 })
                 // 1. 弹窗头部：图标、任务名、分类 Badge 与操作快捷按钮

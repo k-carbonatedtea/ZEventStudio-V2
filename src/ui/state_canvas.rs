@@ -4,6 +4,19 @@ use crate::ui::state::AppState;
 
 #[allow(dead_code)]
 impl AppState {
+    /// 检查全局是否有任何模态对话框处于激活开启状态
+    pub fn has_active_modal(&self) -> bool {
+        self.quest_creator_modal.is_some()
+            || self.quest_raw_data_modal.is_some()
+            || self.active_node_editor_modal.is_some()
+            || self.rename_modal.is_some()
+            || self.delete_confirm_modal.is_some()
+            || self.unsaved_changes_modal.is_some()
+            || self.settings_modal_open
+            || self.active_diff_modal.is_some()
+            || self.quick_add_modal.is_some()
+    }
+
     /// 动态刷新图表中所有节点的物理尺寸与边界
     pub fn update_node_sizes(&mut self) {
         for node in &mut self.graph.nodes {

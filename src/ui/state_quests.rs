@@ -228,6 +228,7 @@ impl AppState {
     }
 
     /// 重置 2D 地图至海拉鲁全景居中
+    #[allow(dead_code)]
     pub fn reset_quest_map_view(&mut self) {
         self.quest_map_pan = (600.0, 400.0);
         self.quest_map_zoom = 0.085;
@@ -235,6 +236,7 @@ impl AppState {
     }
 
     /// 缩放 2D 地图
+    #[allow(dead_code)]
     pub fn zoom_quest_map(&mut self, factor: f32) {
         self.quest_map_zoom = (self.quest_map_zoom * factor).clamp(0.02, 1.8);
     }
