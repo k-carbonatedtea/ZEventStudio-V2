@@ -203,6 +203,17 @@ pub struct AppState {
     pub quest_map_is_extracting_markers: bool,
     /// 实时提取中当前正在解压/读取的文件名或阶段提示
     pub quest_map_extracting_file_label: String,
+
+    // MSBT 可视化气泡对话编辑器 (Bubble-Wrap) 专属状态
+    pub msbt_search_query: String,
+    pub msbt_search_focused: bool,
+    pub msbt_selected_entry_key: Option<String>,
+    pub msbt_bubble_type: crate::ui::views::msbt_editor::BubbleType,
+    pub msbt_text_editor_draft: String,
+    pub msbt_text_editor_focused: bool,
+    pub msbt_new_entry_modal_open: bool,
+    pub msbt_new_entry_name: String,
+    pub msbt_new_entry_focused: bool,
 }
 
 #[allow(dead_code)]

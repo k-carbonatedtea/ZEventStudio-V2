@@ -20,6 +20,9 @@ pub fn render_code_editor_view(
 
     if let Some(tab) = active_tab {
         if let Some(ref code_state) = tab.code_state {
+            let is_bubble_mode = code_state.format == crate::model::code_document::CodeFormat::Msbt
+                && code_state.msbt_view_mode == crate::model::code_document::MsbtViewMode::Bubble;
+
             return div()
                 .flex()
                 .flex_col()
@@ -27,7 +30,11 @@ pub fn render_code_editor_view(
                 .overflow_hidden()
                 .bg(pal.app_bg)
                 .child(render_code_editor_header(code_state, tab.is_modified, state, model, editor_state))
-                .child(render_editor_area(code_state, state, model, editor_state))
+                .child(if is_bubble_mode {
+                    crate::ui::views::render_msbt_bubble_editor(code_state, tab.is_modified, state, model).into_any_element()
+                } else {
+                    render_editor_area(code_state, state, model, editor_state).into_any_element()
+                })
                 .into_any_element();
         }
     }

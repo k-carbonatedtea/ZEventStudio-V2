@@ -94,7 +94,7 @@ pub fn get_en_menu(key: &str) -> Option<&'static str> {
         "tab.quests" => "Quests & Map",
         "tab.json" => "JSON",
 
-        // ---------------- 代码编辑器 (Code Editor) ----------------
+        // ---------------- 代码编辑器与 MSBT 气泡对话 (Code Editor & MSBT Bubble) ----------------
         "code_editor.save" => "Save",
         "code_editor.revert" => "Revert Changes",
         "code_editor.copy_all" => "Copy All",
@@ -102,6 +102,34 @@ pub fn get_en_menu(key: &str) -> Option<&'static str> {
         "code_editor.lines" => "lines",
         "code_editor.chars" => "chars",
         "code_editor.empty_prompt" => "Select a file from the explorer to view and edit",
+        "code_editor.mode_msyt" => "MSYT Source",
+        "code_editor.mode_bubble" => "Bubble Editor",
+
+        "msbt_editor.entries" => "Entries",
+        "msbt_editor.add_entry" => "New",
+        "msbt_editor.delete_entry" => "Delete",
+        "msbt_editor.search_placeholder" => "Search entry keys or text...",
+        "msbt_editor.no_entries" => "No matching entries found",
+        "msbt_editor.type_dialogue" => "Dialogue",
+        "msbt_editor.type_signboard" => "Sign",
+        "msbt_editor.type_item" => "Item",
+        "msbt_editor.type_compendium" => "Compendium",
+        "msbt_editor.type_quest" => "Quest",
+        "msbt_editor.type_tip" => "Tip",
+        "msbt_editor.char_overflow_warning" => "Exceeds in-game character limit",
+        "msbt_editor.line_overflow_warning" => "Exceeds recommended line limit",
+        "msbt_editor.anim_label" => "Anim",
+        "msbt_editor.sound_label" => "Sound",
+        "msbt_editor.empty_text_placeholder" => "[Empty dialogue text]",
+        "msbt_editor.select_entry_hint" => "Select a message entry from the list",
+        "msbt_editor.lines" => "Lines",
+        "msbt_editor.chars" => "Chars",
+        "msbt_editor.no_active_entry" => "No entry selected",
+        "msbt_editor.entry_label" => "Current Entry",
+        "msbt_editor.input_placeholder" => "Type or edit dialogue text here with color and pause tags...",
+        "msbt_editor.input_help_tip" => "💡 Tip: Type text directly or click tags above to insert controls; changes are saved back to MSBT",
+        "msbt_editor.new_entry_title" => "✨ New MSBT Entry",
+        "msbt_editor.entry_key_label" => "Entry Key",
 
         // ---------------- 角色管理主页面 (Actor Manager Page) ----------------
         "actors_view.add_actor_btn" => "+ Add Actor...",

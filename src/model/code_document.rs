@@ -78,6 +78,14 @@ impl CodeEndian {
     }
 }
 
+/// MSBT 本地化文本视图展现模式 (源码 MSYT 模式 vs 气泡对话编辑器 Bubble-Wrap)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum MsbtViewMode {
+    #[default]
+    Code,
+    Bubble,
+}
+
 /// 代码文档状态模型
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodeDocumentState {
@@ -93,6 +101,8 @@ pub struct CodeDocumentState {
     pub file_path: String,
     /// 数据版本号 (每次重新加载、放弃更改或外部更新时自增，通知 UI 同步)
     pub version: usize,
+    /// MSBT 文件的视图展示模式 (源码 vs 可视化气泡编辑器)
+    pub msbt_view_mode: MsbtViewMode,
 }
 
 impl CodeDocumentState {
@@ -110,6 +120,7 @@ impl CodeDocumentState {
             endian,
             file_path,
             version: 0,
+            msbt_view_mode: MsbtViewMode::Code,
         }
     }
 

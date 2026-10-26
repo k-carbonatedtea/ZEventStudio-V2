@@ -168,7 +168,18 @@ impl Render for AppView {
         // 焦点调度：
         // 1. 如果存在活跃的输入框（如全局搜索、Git提交、设置弹窗），确保应用主 FocusHandle 处于聚焦状态以接收输入
         // 2. 如果处于代码编辑视图且没有其他输入框活跃，确保代码编辑器实例获得焦点以支持文本输入、光标与 IME
-        if has_active_field {
+        let is_bubble_active = {
+            let state = self.model.read(cx);
+            let active_id = state.active_tab_id.as_deref().unwrap_or("");
+            state.open_tabs.iter().find(|t| t.id == active_id).is_some_and(|tab| {
+                tab.code_state.as_ref().is_some_and(|c| {
+                    c.format == crate::model::code_document::CodeFormat::Msbt
+                        && c.msbt_view_mode == crate::model::code_document::MsbtViewMode::Bubble
+                })
+            })
+        };
+
+        if has_active_field || is_bubble_active {
             if !self.focus_handle.is_focused(window) {
                 self.focus_handle.focus(window, cx);
             }

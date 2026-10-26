@@ -81,6 +81,10 @@ pub fn render_code_editor_header(
                         .text_color(pal.secondary_accent)
                         .child(endian_label),
                 )
+                // MSBT 模式切换控件 (源码模式 ⇋ 气泡对话编辑器 Bubble-Wrap)
+                .child(crate::ui::views::msbt_editor::render_msbt_view_mode_toggle(
+                    code_state, state, model,
+                ))
                 // 未保存修改指示
                 .children(is_modified.then(|| {
                     div()

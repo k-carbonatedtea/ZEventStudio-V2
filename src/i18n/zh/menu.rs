@@ -94,7 +94,7 @@ pub fn get_zh_menu(key: &str) -> Option<&'static str> {
         "tab.quests" => "任务地图 (Quests & Map)",
         "tab.json" => "JSON 源码",
 
-        // ---------------- 代码编辑器 (Code Editor) ----------------
+        // ---------------- 代码编辑器与 MSBT 气泡对话 (Code Editor & MSBT Bubble) ----------------
         "code_editor.save" => "保存",
         "code_editor.revert" => "重置修改",
         "code_editor.copy_all" => "复制全部",
@@ -102,6 +102,34 @@ pub fn get_zh_menu(key: &str) -> Option<&'static str> {
         "code_editor.lines" => "行",
         "code_editor.chars" => "字符",
         "code_editor.empty_prompt" => "请在左侧文件树选择文件以在代码编辑器中查看与编辑",
+        "code_editor.mode_msyt" => "MSYT 源码",
+        "code_editor.mode_bubble" => "气泡编辑器",
+
+        "msbt_editor.entries" => "条目列表",
+        "msbt_editor.add_entry" => "新建",
+        "msbt_editor.delete_entry" => "删除",
+        "msbt_editor.search_placeholder" => "搜索条目键名或文本...",
+        "msbt_editor.no_entries" => "未找到匹配的条目",
+        "msbt_editor.type_dialogue" => "对话",
+        "msbt_editor.type_signboard" => "木牌",
+        "msbt_editor.type_item" => "道具",
+        "msbt_editor.type_compendium" => "图鉴",
+        "msbt_editor.type_quest" => "任务",
+        "msbt_editor.type_tip" => "提示",
+        "msbt_editor.char_overflow_warning" => "超出游戏字符上限",
+        "msbt_editor.line_overflow_warning" => "超出建议行数上限",
+        "msbt_editor.anim_label" => "动作",
+        "msbt_editor.sound_label" => "音效",
+        "msbt_editor.empty_text_placeholder" => "「空对白文本」",
+        "msbt_editor.select_entry_hint" => "请在左侧条目列表选择一个消息条目",
+        "msbt_editor.lines" => "行数",
+        "msbt_editor.chars" => "字数",
+        "msbt_editor.no_active_entry" => "未选择条目",
+        "msbt_editor.entry_label" => "当前条目",
+        "msbt_editor.input_placeholder" => "在此输入或编辑对白文本，支持红字、蓝字与停顿标签...",
+        "msbt_editor.input_help_tip" => "💡 提示: 可直接输入文字，或点击上方红字/蓝字/停顿标签注入游戏控制码；修改将自动同步至 MSBT 二进制",
+        "msbt_editor.new_entry_title" => "✨ 新建 MSBT 消息条目",
+        "msbt_editor.entry_key_label" => "条目标识键名 (Entry Key)",
 
         // ---------------- 角色管理主页面 (Actor Manager Page) ----------------
         "actors_view.add_actor_btn" => "+ 添加角色...",

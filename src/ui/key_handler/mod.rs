@@ -135,5 +135,46 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipb
         return true;
     }
 
+    // 9. MSBT 气泡对话编辑器键盘事件拦截 (搜索、正文编辑与新建条目)
+    if state.msbt_new_entry_focused {
+        if event.keystroke.key == "escape" {
+            state.msbt_new_entry_modal_open = false;
+            state.msbt_new_entry_focused = false;
+            return true;
+        }
+        if event.keystroke.key == "enter" {
+            state.confirm_create_msbt_entry();
+            return true;
+        }
+        let (changed, _, _) = handle_text_key_event(&mut state.msbt_new_entry_name, event, clipboard);
+        return changed;
+    }
+
+    if state.msbt_search_focused {
+        if event.keystroke.key == "escape" || event.keystroke.key == "enter" {
+            state.msbt_search_focused = false;
+            return true;
+        }
+        let (changed, _, _) = handle_text_key_event(&mut state.msbt_search_query, event, clipboard);
+        return changed;
+    }
+
+    if state.msbt_text_editor_focused {
+        if event.keystroke.key == "escape" {
+            state.msbt_text_editor_focused = false;
+            return true;
+        }
+        if event.keystroke.key == "enter" {
+            state.msbt_text_editor_draft.push('\n');
+            state.commit_msbt_draft_to_active_tab();
+            return true;
+        }
+        let (changed, _, _) = handle_text_key_event(&mut state.msbt_text_editor_draft, event, clipboard);
+        if changed {
+            state.commit_msbt_draft_to_active_tab();
+        }
+        return changed;
+    }
+
     false
 }

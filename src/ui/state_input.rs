@@ -26,6 +26,9 @@ impl AppState {
         if self.rename_modal.as_ref().is_some_and(|m| m.focused) {
             return true;
         }
+        if self.msbt_search_focused || self.msbt_text_editor_focused || self.msbt_new_entry_focused {
+            return true;
+        }
         false
     }
 
@@ -47,6 +50,9 @@ impl AppState {
         if let Some(ref mut m) = self.rename_modal {
             m.focused = false;
         }
+        self.msbt_search_focused = false;
+        self.msbt_text_editor_focused = false;
+        self.msbt_new_entry_focused = false;
     }
 
     /// 获取当前激活的输入框文本内容切片
@@ -114,6 +120,15 @@ impl AppState {
             if m.focused {
                 return Some(&m.new_name);
             }
+        }
+        if self.msbt_search_focused {
+            return Some(&self.msbt_search_query);
+        }
+        if self.msbt_text_editor_focused {
+            return Some(&self.msbt_text_editor_draft);
+        }
+        if self.msbt_new_entry_focused {
+            return Some(&self.msbt_new_entry_name);
         }
         None
     }
@@ -271,6 +286,21 @@ impl AppState {
                 m.new_name.push_str(&clean);
                 return true;
             }
+        }
+
+        // 8. MSBT 气泡对话编辑器输入框
+        if self.msbt_search_focused {
+            self.msbt_search_query.push_str(&clean);
+            return true;
+        }
+        if self.msbt_text_editor_focused {
+            self.msbt_text_editor_draft.push_str(&clean);
+            self.commit_msbt_draft_to_active_tab();
+            return true;
+        }
+        if self.msbt_new_entry_focused {
+            self.msbt_new_entry_name.push_str(&clean);
+            return true;
         }
 
         false

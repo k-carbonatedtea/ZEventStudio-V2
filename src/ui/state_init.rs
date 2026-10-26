@@ -180,6 +180,17 @@ impl AppState {
             quest_map_markers_cache: None,
             quest_map_is_extracting_markers: false,
             quest_map_extracting_file_label: String::new(),
+
+            // MSBT 可视化气泡对话编辑器 (Bubble-Wrap) 专属状态
+            msbt_search_query: String::new(),
+            msbt_search_focused: false,
+            msbt_selected_entry_key: None,
+            msbt_bubble_type: crate::ui::views::msbt_editor::BubbleType::Dialogue,
+            msbt_text_editor_draft: String::new(),
+            msbt_text_editor_focused: false,
+            msbt_new_entry_modal_open: false,
+            msbt_new_entry_name: String::new(),
+            msbt_new_entry_focused: false,
         };
 
         state.clean_invalid_recent_projects();
