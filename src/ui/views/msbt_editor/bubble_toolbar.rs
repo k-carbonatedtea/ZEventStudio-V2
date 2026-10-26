@@ -80,7 +80,7 @@ pub fn render_msbt_bubble_toolbar(
                         })),
                 ),
         )
-        // 右侧：快速插入颜色、大小与停顿标签
+        // 右侧：快速插入颜色、大小与停顿标签 (参考 https://zeldamods.org/wiki/Help:Text_modding)
         .child(
             div()
                 .flex()
@@ -88,48 +88,57 @@ pub fn render_msbt_bubble_toolbar(
                 .gap_1p5()
                 // 红色标签
                 .child(render_quick_tag_button(
-                    "🔴 红字",
-                    "<red>",
-                    "</color>",
+                    format!("🔴 {}", state.t("msbt_editor.tag_red")),
+                    "<colour:red>",
+                    "</colour>",
                     rgb(0xF84858),
                     active_entry.is_some(),
                     model,
                 ))
                 // 蓝色标签
                 .child(render_quick_tag_button(
-                    "🔷 蓝字",
-                    "<blue>",
-                    "</color>",
+                    format!("🔷 {}", state.t("msbt_editor.tag_blue")),
+                    "<colour:blue>",
+                    "</colour>",
                     rgb(0x38DFD8),
+                    active_entry.is_some(),
+                    model,
+                ))
+                // 橙色标签
+                .child(render_quick_tag_button(
+                    format!("🟠 {}", state.t("msbt_editor.tag_orange")),
+                    "<colour:orange>",
+                    "</colour>",
+                    rgb(0xFB923C),
                     active_entry.is_some(),
                     model,
                 ))
                 // 灰色标签
                 .child(render_quick_tag_button(
-                    "🔘 灰字",
-                    "<grey>",
-                    "</color>",
+                    format!("🔘 {}", state.t("msbt_editor.tag_grey")),
+                    "<colour:grey>",
+                    "</colour>",
                     rgb(0xAFAFAA),
                     active_entry.is_some(),
                     model,
                 ))
                 // 短停顿
                 .child(render_quick_insert_button(
-                    "⏱️ 短停顿",
+                    format!("⏱️ {}", state.t("msbt_editor.tag_pause_short")),
                     "<pause:short>",
                     active_entry.is_some(),
                     model,
                 ))
                 // 长停顿
                 .child(render_quick_insert_button(
-                    "⏱️ 长停顿",
+                    format!("⏱️ {}", state.t("msbt_editor.tag_pause_long")),
                     "<pause:long>",
                     active_entry.is_some(),
                     model,
                 ))
                 // 大号字体 125%
                 .child(render_quick_tag_button(
-                    "📐 大字",
+                    format!("📐 {}", state.t("msbt_editor.tag_size_large")),
                     "<size:125>",
                     "</size>",
                     pal.text_primary,
@@ -138,7 +147,7 @@ pub fn render_msbt_bubble_toolbar(
                 ))
                 // 小号字体 80%
                 .child(render_quick_tag_button(
-                    "📏 小字",
+                    format!("📏 {}", state.t("msbt_editor.tag_size_small")),
                     "<size:80>",
                     "</size>",
                     pal.text_secondary,
@@ -148,9 +157,9 @@ pub fn render_msbt_bubble_toolbar(
         )
 }
 
-/// 渲染包裹式快捷格式标签按钮 (如 <red>...</color>)
+/// 渲染包裹式快捷格式标签按钮 (如 <colour:red>...</colour>)
 fn render_quick_tag_button(
-    label: &'static str,
+    label: impl IntoElement,
     prefix: &'static str,
     suffix: &'static str,
     fg: Rgba,
@@ -183,7 +192,7 @@ fn render_quick_tag_button(
 
 /// 渲染插入式快捷标签按钮 (如 <pause:short>)
 fn render_quick_insert_button(
-    label: &'static str,
+    label: impl IntoElement,
     snippet: &'static str,
     enabled: bool,
     model: &Entity<AppState>,

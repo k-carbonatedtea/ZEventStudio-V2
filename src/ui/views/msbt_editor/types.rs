@@ -65,7 +65,7 @@ impl BubbleType {
     }
 }
 
-/// 塞尔达对白文本富文本高亮颜色
+/// 塞尔达对白文本富文本高亮颜色 (参考 https://zeldamods.org/wiki/Help:Text_modding)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum BubbleColor {
     #[default]
@@ -73,6 +73,9 @@ pub enum BubbleColor {
     Grey,
     Blue,
     Red,
+    Orange,
+    Green,
+    Yellow,
 }
 
 impl BubbleColor {
@@ -83,6 +86,9 @@ impl BubbleColor {
             BubbleColor::Grey => gpui::rgb(0xAFAFAA),
             BubbleColor::Blue => gpui::rgb(0x38DFD8),
             BubbleColor::Red => gpui::rgb(0xF84858),
+            BubbleColor::Orange => gpui::rgb(0xFB923C),
+            BubbleColor::Green => gpui::rgb(0x34D399),
+            BubbleColor::Yellow => gpui::rgb(0xFACC15),
         }
     }
 
@@ -94,6 +100,9 @@ impl BubbleColor {
             BubbleColor::Grey => "grey",
             BubbleColor::Blue => "blue",
             BubbleColor::Red => "red",
+            BubbleColor::Orange => "orange",
+            BubbleColor::Green => "green",
+            BubbleColor::Yellow => "yellow",
         }
     }
 }

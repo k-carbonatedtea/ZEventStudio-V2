@@ -130,6 +130,14 @@ pub fn get_en_menu(key: &str) -> Option<&'static str> {
         "msbt_editor.input_help_tip" => "💡 Tip: Type text directly or click tags above to insert controls; changes are saved back to MSBT",
         "msbt_editor.new_entry_title" => "✨ New MSBT Entry",
         "msbt_editor.entry_key_label" => "Entry Key",
+        "msbt_editor.tag_red" => "Red",
+        "msbt_editor.tag_blue" => "Blue",
+        "msbt_editor.tag_orange" => "Orange",
+        "msbt_editor.tag_grey" => "Grey",
+        "msbt_editor.tag_pause_short" => "Pause (Short)",
+        "msbt_editor.tag_pause_long" => "Pause (Long)",
+        "msbt_editor.tag_size_large" => "Large",
+        "msbt_editor.tag_size_small" => "Small",
 
         // ---------------- 角色管理主页面 (Actor Manager Page) ----------------
         "actors_view.add_actor_btn" => "+ Add Actor...",

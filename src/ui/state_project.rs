@@ -1,4 +1,4 @@
-use crate::model::code_document::CodeDocumentState;
+use crate::model::code_document::{CodeDocumentState, CodeFormat};
 use crate::model::file_converter::parse_file_to_code;
 use crate::model::file_tree::{read_file_from_path, scan_project_path};
 use crate::model::{DocumentTabKind, Graph, OpenDocumentTab};
@@ -320,6 +320,10 @@ impl AppState {
 
                 self.open_tabs.push(new_tab);
                 self.active_tab_id = Some(new_id);
+
+                if format == CodeFormat::Msbt {
+                    self.sync_msbt_selected_entry_to_draft();
+                }
 
                 self.current_tab = AppWorkspaceTab::CodeEditor;
                 self.toast = Some(Toast::success(format!("{} {} [{}]", self.t("toast.file_loaded"), raw_name, format.display_name())));

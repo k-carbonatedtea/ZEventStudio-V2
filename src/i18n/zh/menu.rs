@@ -130,6 +130,14 @@ pub fn get_zh_menu(key: &str) -> Option<&'static str> {
         "msbt_editor.input_help_tip" => "💡 提示: 可直接输入文字，或点击上方红字/蓝字/停顿标签注入游戏控制码；修改将自动同步至 MSBT 二进制",
         "msbt_editor.new_entry_title" => "✨ 新建 MSBT 消息条目",
         "msbt_editor.entry_key_label" => "条目标识键名 (Entry Key)",
+        "msbt_editor.tag_red" => "红字",
+        "msbt_editor.tag_blue" => "蓝字",
+        "msbt_editor.tag_orange" => "橙字",
+        "msbt_editor.tag_grey" => "灰字",
+        "msbt_editor.tag_pause_short" => "短停顿",
+        "msbt_editor.tag_pause_long" => "长停顿",
+        "msbt_editor.tag_size_large" => "大字",
+        "msbt_editor.tag_size_small" => "小字",
 
         // ---------------- 角色管理主页面 (Actor Manager Page) ----------------
         "actors_view.add_actor_btn" => "+ 添加角色...",

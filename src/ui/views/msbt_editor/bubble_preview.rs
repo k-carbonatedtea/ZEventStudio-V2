@@ -1,8 +1,9 @@
 use gpui::*;
 use crate::ui::state::AppState;
-use crate::ui::views::msbt_editor::types::{BubbleType, MsbtEntry};
+use crate::ui::views::msbt_editor::parser::parse_raw_text_to_spans;
+use crate::ui::views::msbt_editor::types::{BubbleColor, BubbleSpan, BubbleType, MsbtEntry};
 
-/// 渲染高精度塞尔达荒野之息 / 王国之泪游戏内风格的对话气泡预览区 (参考 Bubble-Wrap)
+/// 渲染高精度塞尔达荒野之息 / 王国之泪游戏内风格的对话气泡预览区 (参考 Bubble-Wrap 与 Text Modding 标准)
 pub fn render_msbt_bubble_preview(
     entry: Option<&MsbtEntry>,
     bubble_type: BubbleType,
@@ -10,15 +11,18 @@ pub fn render_msbt_bubble_preview(
 ) -> impl IntoElement {
     let pal = state.theme();
 
-    let (_clean_text, line_count, char_count, anim, sound) = match entry {
-        Some(e) => (
-            e.clean_text.as_str(),
-            e.line_count,
-            e.char_count,
-            e.animation.as_str(),
-            e.sound.as_str(),
-        ),
-        None => ("", 0, 0, "none", "none"),
+    let (spans, clean_text, line_count, char_count, anim, sound) = if let Some(e) = entry {
+        let is_current_editing = state.msbt_selected_entry_key.as_deref() == Some(&e.key)
+            && !state.msbt_text_editor_draft.is_empty();
+
+        let (spans, clean, lines, chars) = if is_current_editing {
+            parse_raw_text_to_spans(&state.msbt_text_editor_draft)
+        } else {
+            (e.spans.clone(), e.clean_text.clone(), e.line_count, e.char_count)
+        };
+        (spans, clean, lines, chars, e.animation.clone(), e.sound.clone())
+    } else {
+        (Vec::new(), String::new(), 0, 0, "none".to_string(), "none".to_string())
     };
 
     let line_limit = bubble_type.line_limit();
@@ -36,6 +40,8 @@ pub fn render_msbt_bubble_preview(
         BubbleType::Quest => (px(508.0), px(280.0), px(10.0), px(26.0), px(26.0)),
         BubbleType::Tip => (px(634.0), px(100.0), px(10.0), px(30.0), px(18.0)),
     };
+
+    let grouped_lines = group_spans_into_lines(&spans);
 
     div()
         .w_full()
@@ -136,72 +142,83 @@ pub fn render_msbt_bubble_preview(
                                 .child(format!("{}: {}", state.t("msbt_editor.sound_label"), sound))
                         }))
                 }))
-                // 对白文本与富文本 Spans 渲染
+                // 对白文本与富文本 Spans 按行精准对齐渲染
                 .child(
                     div()
                         .w_full()
                         .flex()
-                        .flex_wrap()
-                        .items_center()
+                        .flex_col()
+                        .gap_1()
                         .line_height(relative(1.35))
-                        .children(if let Some(e) = entry {
-                            if e.spans.is_empty() {
-                                vec![div()
-                                    .text_size(px(18.0))
-                                    .text_color(rgb(0xF5F5EE))
-                                    .child(if e.clean_text.is_empty() {
-                                        state.t("msbt_editor.empty_text_placeholder").to_string()
-                                    } else {
-                                        e.clean_text.clone()
-                                    })
-                                    .into_any_element()]
-                            } else {
-                                e.spans
-                                    .iter()
-                                    .map(|span| {
-                                        if span.is_pause {
-                                            div()
-                                                .mx_1()
-                                                .px_1p5()
-                                                .py_0p5()
-                                                .rounded_sm()
-                                                .bg(rgba(0xFFFFFF22))
-                                                .border_1()
-                                                .border_color(rgba(0xFFFFFF44))
-                                                .text_size(px(10.0))
-                                                .text_color(rgb(0xFCD34D))
-                                                .child(format!("⏱️ {}", span.pause_label.as_deref().unwrap_or("停顿")))
-                                                .into_any_element()
-                                        } else if span.is_chip {
-                                            div()
-                                                .mx_1()
-                                                .px_1p5()
-                                                .py_0p5()
-                                                .rounded_sm()
-                                                .bg(rgba(0x38DFD822))
-                                                .border_1()
-                                                .border_color(rgba(0x38DFD855))
-                                                .text_size(px(10.0))
-                                                .text_color(rgb(0x38DFD8))
-                                                .child(format!("⚡ {}", span.chip_label.as_deref().unwrap_or("控制")))
-                                                .into_any_element()
-                                        } else {
-                                            div()
-                                                .text_size(px(span.size.font_size_px()))
-                                                .font_weight(FontWeight::BOLD)
-                                                .text_color(span.color.rgb_color())
-                                                .child(span.text.clone())
-                                                .into_any_element()
-                                        }
-                                    })
-                                    .collect()
-                            }
-                        } else {
+                        .children(if entry.is_none() {
                             vec![div()
                                 .text_size(px(16.0))
                                 .text_color(pal.text_secondary)
                                 .child(state.t("msbt_editor.select_entry_hint"))
                                 .into_any_element()]
+                        } else if grouped_lines.is_empty() || (grouped_lines.len() == 1 && grouped_lines[0].is_empty()) {
+                            vec![div()
+                                .text_size(px(18.0))
+                                .text_color(rgb(0xF5F5EE))
+                                .child(if clean_text.is_empty() {
+                                    state.t("msbt_editor.empty_text_placeholder").to_string()
+                                } else {
+                                    clean_text.clone()
+                                })
+                                .into_any_element()]
+                        } else {
+                            grouped_lines
+                                .into_iter()
+                                .map(|line_spans| {
+                                    div()
+                                        .w_full()
+                                        .flex()
+                                        .flex_wrap()
+                                        .items_baseline()
+                                        .children(line_spans.into_iter().map(|span| {
+                                            if span.is_pause {
+                                                div()
+                                                    .mx_1()
+                                                    .px_1p5()
+                                                    .py_0p5()
+                                                    .rounded_sm()
+                                                    .bg(rgba(0xFFFFFF22))
+                                                    .border_1()
+                                                    .border_color(rgba(0xFFFFFF44))
+                                                    .text_size(px(10.0))
+                                                    .text_color(rgb(0xFCD34D))
+                                                    .child(format!("⏱️ {}", span.pause_label.as_deref().unwrap_or("停顿")))
+                                                    .into_any_element()
+                                            } else if span.is_chip {
+                                                div()
+                                                    .mx_1()
+                                                    .px_1p5()
+                                                    .py_0p5()
+                                                    .rounded_sm()
+                                                    .bg(rgba(0x38DFD822))
+                                                    .border_1()
+                                                    .border_color(rgba(0x38DFD855))
+                                                    .text_size(px(10.0))
+                                                    .text_color(rgb(0x38DFD8))
+                                                    .child(format!("⚡ {}", span.chip_label.as_deref().unwrap_or("控制")))
+                                                    .into_any_element()
+                                            } else {
+                                                let is_colored = span.color != BubbleColor::Default && span.color != BubbleColor::Grey;
+                                                div()
+                                                    .text_size(px(span.size.font_size_px()))
+                                                    .font_weight(if is_colored {
+                                                        FontWeight::BOLD
+                                                    } else {
+                                                        FontWeight::NORMAL
+                                                    })
+                                                    .text_color(span.color.rgb_color())
+                                                    .child(span.text)
+                                                    .into_any_element()
+                                            }
+                                        }))
+                                        .into_any_element()
+                                })
+                                .collect()
                         }),
                 ),
         )
@@ -214,23 +231,73 @@ pub fn render_msbt_bubble_preview(
                 .text_size(px(11.0))
                 .text_color(pal.text_secondary)
                 .child(
-                    div()
-                        .child(format!(
-                            "{}: {} / {} {}",
-                            state.t("msbt_editor.lines"),
-                            line_count,
-                            line_limit,
-                            state.t("code_editor.lines")
-                        )),
+                    div().child(format!(
+                        "{}: {} / {} {}",
+                        state.t("msbt_editor.lines"),
+                        line_count,
+                        line_limit,
+                        state.t("code_editor.lines")
+                    )),
                 )
                 .child(div().child("•"))
                 .child(
-                    div()
-                        .child(if let Some(lim) = char_limit {
-                            format!("{}: {} / {} {}", state.t("msbt_editor.chars"), char_count, lim, state.t("code_editor.chars"))
-                        } else {
-                            format!("{}: {} {}", state.t("msbt_editor.chars"), char_count, state.t("code_editor.chars"))
-                        }),
+                    div().child(if let Some(lim) = char_limit {
+                        format!(
+                            "{}: {} / {} {}",
+                            state.t("msbt_editor.chars"),
+                            char_count,
+                            lim,
+                            state.t("code_editor.chars")
+                        )
+                    } else {
+                        format!(
+                            "{}: {} {}",
+                            state.t("msbt_editor.chars"),
+                            char_count,
+                            state.t("code_editor.chars")
+                        )
+                    }),
                 ),
         )
+}
+
+/// 将气泡 Spans 依据 '\n' 换行符精确拆分为多行子序列，实现真正的行内对齐与原生对白换行排版
+fn group_spans_into_lines(spans: &[BubbleSpan]) -> Vec<Vec<BubbleSpan>> {
+    let mut lines: Vec<Vec<BubbleSpan>> = Vec::new();
+    let mut current_line: Vec<BubbleSpan> = Vec::new();
+
+    for span in spans {
+        if span.is_pause || span.is_chip {
+            current_line.push(span.clone());
+            continue;
+        }
+
+        if !span.text.contains('\n') {
+            current_line.push(span.clone());
+        } else {
+            let parts: Vec<&str> = span.text.split('\n').collect();
+            for (idx, part) in parts.iter().enumerate() {
+                if idx > 0 {
+                    lines.push(std::mem::take(&mut current_line));
+                }
+                if !part.is_empty() {
+                    current_line.push(BubbleSpan {
+                        text: part.to_string(),
+                        color: span.color,
+                        size: span.size,
+                        is_pause: false,
+                        pause_label: None,
+                        is_chip: false,
+                        chip_label: None,
+                    });
+                }
+            }
+        }
+    }
+
+    if !current_line.is_empty() || lines.is_empty() {
+        lines.push(current_line);
+    }
+
+    lines
 }

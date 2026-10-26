@@ -11,15 +11,25 @@ pub fn render_msbt_bubble_input(
 ) -> impl IntoElement {
     let pal = state.theme();
     let is_focused = state.msbt_text_editor_focused;
-    let draft_text = state.msbt_text_editor_draft.clone();
+
+    let entry_key = entry.map(|e| e.key.clone()).unwrap_or_default();
+    let raw_text = entry.map(|e| e.raw_text.clone()).unwrap_or_default();
+
+    let is_selected_entry = state.msbt_selected_entry_key.as_deref() == Some(&entry_key);
+    let current_text = if is_selected_entry && !state.msbt_text_editor_draft.is_empty() {
+        state.msbt_text_editor_draft.clone()
+    } else {
+        raw_text.clone()
+    };
 
     let model_click = model.clone();
     let model_out = model.clone();
     let model_copy = model.clone();
     let model_del = model.clone();
-    let entry_key = entry.map(|e| e.key.clone()).unwrap_or_default();
     let entry_key_copy = entry_key.clone();
     let entry_key_del = entry_key.clone();
+    let entry_key_click = entry_key.clone();
+    let raw_text_click = raw_text.clone();
 
     let has_entry = entry.is_some();
 
@@ -116,8 +126,14 @@ pub fn render_msbt_bubble_input(
                 .cursor_text()
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     if has_entry {
+                        let k = entry_key_click.clone();
+                        let raw = raw_text_click.clone();
                         model_click.update(cx, |st, cx| {
                             st.clear_active_text_inputs();
+                            if st.msbt_selected_entry_key.as_deref() != Some(&k) || st.msbt_text_editor_draft.is_empty() {
+                                st.msbt_selected_entry_key = Some(k);
+                                st.msbt_text_editor_draft = raw;
+                            }
                             st.msbt_text_editor_focused = true;
                             cx.notify();
                         });
@@ -137,23 +153,40 @@ pub fn render_msbt_bubble_input(
                         .text_color(pal.text_secondary)
                         .child(state.t("msbt_editor.select_entry_hint"))
                         .into_any_element()
-                } else if draft_text.is_empty() && !is_focused {
+                } else if current_text.is_empty() && !is_focused {
                     div()
                         .text_size(px(12.0))
                         .text_color(pal.text_secondary)
                         .child(state.t("msbt_editor.input_placeholder"))
                         .into_any_element()
-                } else {
+                } else if current_text.is_empty() && is_focused {
                     div()
                         .flex()
-                        .flex_wrap()
                         .items_center()
-                        .text_size(px(13.5))
-                        .line_height(relative(1.4))
-                        .text_color(pal.text_primary)
-                        .child(draft_text.clone())
-                        .children(is_focused.then(|| {
-                            render_blinking_cursor(pal.primary_accent.into()).into_any_element()
+                        .child(render_blinking_cursor(pal.primary_accent.into()))
+                        .into_any_element()
+                } else {
+                    let lines: Vec<String> = current_text.split('\n').map(|s| s.to_string()).collect();
+                    let total_lines = lines.len();
+                    div()
+                        .w_full()
+                        .flex()
+                        .flex_col()
+                        .gap_0p5()
+                        .children(lines.into_iter().enumerate().map(|(idx, line)| {
+                            let is_last = idx + 1 == total_lines;
+                            div()
+                                .flex()
+                                .flex_wrap()
+                                .items_center()
+                                .text_size(px(13.0))
+                                .line_height(relative(1.4))
+                                .text_color(pal.text_primary)
+                                .child(if line.is_empty() { " ".to_string() } else { line })
+                                .children((is_focused && is_last).then(|| {
+                                    render_blinking_cursor(pal.primary_accent.into()).into_any_element()
+                                }))
+                                .into_any_element()
                         }))
                         .into_any_element()
                 }),

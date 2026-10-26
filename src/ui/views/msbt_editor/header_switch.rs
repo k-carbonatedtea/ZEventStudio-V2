@@ -96,6 +96,7 @@ pub fn render_msbt_view_mode_toggle(
                                 }
                             }
                         }
+                        st.sync_msbt_selected_entry_to_draft();
                         cx.notify();
                     });
                 })

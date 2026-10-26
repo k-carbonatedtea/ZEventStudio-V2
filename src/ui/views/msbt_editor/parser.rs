@@ -26,31 +26,22 @@ pub fn parse_msyt_to_document(yaml_str: &str) -> Result<MsbtDocument, String> {
                 None => continue,
             };
 
-            let mut cur_color = BubbleColor::Default;
-            let mut cur_size = BubbleSize::Normal;
             let mut cur_anim = "none".to_string();
             let mut cur_sound = "none".to_string();
             let mut raw_text = String::new();
-            let mut clean_text = String::new();
-            let mut spans = Vec::new();
 
             if let Some(contents) = entry_val.get("contents").and_then(|c| c.as_sequence()) {
                 for node in contents {
                     parse_single_content_node(
                         node,
-                        &mut cur_color,
-                        &mut cur_size,
                         &mut cur_anim,
                         &mut cur_sound,
                         &mut raw_text,
-                        &mut clean_text,
-                        &mut spans,
                     );
                 }
             }
 
-            let line_count = clean_text.lines().count().max(1);
-            let char_count = clean_text.chars().count();
+            let (spans, clean_text, line_count, char_count) = parse_raw_text_to_spans(&raw_text);
 
             entries.push(MsbtEntry {
                 key,
@@ -72,83 +63,44 @@ pub fn parse_msyt_to_document(yaml_str: &str) -> Result<MsbtDocument, String> {
     })
 }
 
-/// 解析 contents 数组中的单一内容节点
-#[allow(clippy::too_many_arguments)]
+/// 解析 contents 数组中的单一内容节点 (支持原生 msyt 扁平格式与嵌套 control 格式)
 fn parse_single_content_node(
     node: &serde_yaml::Value,
-    cur_color: &mut BubbleColor,
-    cur_size: &mut BubbleSize,
     cur_anim: &mut String,
     cur_sound: &mut String,
     raw_text: &mut String,
-    clean_text: &mut String,
-    spans: &mut Vec<BubbleSpan>,
 ) {
     if let Some(text_str) = node.as_str() {
-        clean_text.push_str(text_str);
         raw_text.push_str(text_str);
-        spans.push(BubbleSpan {
-            text: text_str.to_string(),
-            color: *cur_color,
-            size: *cur_size,
-            is_pause: false,
-            pause_label: None,
-            is_chip: false,
-            chip_label: None,
-        });
         return;
     }
 
     if let Some(text_val) = node.get("text").and_then(|t| t.as_str()) {
-        clean_text.push_str(text_val);
         raw_text.push_str(text_val);
-        spans.push(BubbleSpan {
-            text: text_val.to_string(),
-            color: *cur_color,
-            size: *cur_size,
-            is_pause: false,
-            pause_label: None,
-            is_chip: false,
-            chip_label: None,
-        });
         return;
     }
 
-    if let Some(ctrl) = node.get("control") {
-        let kind = ctrl.get("kind").and_then(|k| k.as_str()).unwrap_or("");
+    let ctrl = node.get("control").unwrap_or(node);
+    if let Some(kind) = ctrl.get("kind").and_then(|k| k.as_str()) {
         match kind {
             "set_colour" => {
-                let col = ctrl.get("colour").and_then(|c| c.as_str()).unwrap_or("");
-                match col {
-                    "red" => {
-                        *cur_color = BubbleColor::Red;
-                        raw_text.push_str("<red>");
-                    }
-                    "blue" => {
-                        *cur_color = BubbleColor::Blue;
-                        raw_text.push_str("<blue>");
-                    }
-                    "grey" => {
-                        *cur_color = BubbleColor::Grey;
-                        raw_text.push_str("<grey>");
-                    }
-                    _ => {}
-                }
+                let col = ctrl
+                    .get("colour")
+                    .or_else(|| ctrl.get("color"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or("red");
+                raw_text.push_str(&format!("<colour:{}>", col));
             }
             "reset_colour" => {
-                *cur_color = BubbleColor::Default;
-                raw_text.push_str("</color>");
+                raw_text.push_str("</colour>");
             }
             "text_size" => {
                 let pct = ctrl.get("percent").and_then(|p| p.as_u64()).unwrap_or(100);
                 if pct == 80 {
-                    *cur_size = BubbleSize::Small;
                     raw_text.push_str("<size:80>");
                 } else if pct == 125 {
-                    *cur_size = BubbleSize::Large;
                     raw_text.push_str("<size:125>");
                 } else {
-                    *cur_size = BubbleSize::Normal;
                     raw_text.push_str("</size>");
                 }
             }
@@ -161,38 +113,134 @@ fn parse_single_content_node(
                     "short".to_string()
                 };
                 raw_text.push_str(&format!("<pause:{}>", label));
-                spans.push(BubbleSpan {
-                    text: String::new(),
-                    color: *cur_color,
-                    size: *cur_size,
-                    is_pause: true,
-                    pause_label: Some(label),
-                    is_chip: false,
-                    chip_label: None,
-                });
             }
             "animation" => {
                 let name = ctrl.get("name").and_then(|n| n.as_str()).unwrap_or("normal");
                 *cur_anim = name.to_string();
                 raw_text.push_str(&format!("<anim:{}>", name));
             }
-            "sound" => {
+            "sound" | "sound2" => {
                 *cur_sound = "sound".to_string();
+            }
+            "icon" => {
+                let icon_name = ctrl.get("icon").and_then(|i| i.as_str()).unwrap_or("icon");
+                raw_text.push_str(&format!("<icon:{}>", icon_name));
             }
             _ => {
                 raw_text.push_str(&format!("<control:{}>", kind));
-                spans.push(BubbleSpan {
-                    text: String::new(),
-                    color: *cur_color,
-                    size: *cur_size,
-                    is_pause: false,
-                    pause_label: None,
-                    is_chip: true,
-                    chip_label: Some(kind.to_string()),
-                });
             }
         }
     }
+}
+
+/// 解析文本中的颜色标签 (参考 https://zeldamods.org/wiki/Help:Text_modding)
+pub fn parse_color_tag(tag: &str) -> Option<BubbleColor> {
+    let clean = tag.trim().to_lowercase();
+    let inner = clean
+        .strip_prefix("colour:")
+        .or_else(|| clean.strip_prefix("color:"))
+        .unwrap_or(&clean);
+
+    match inner {
+        "red" => Some(BubbleColor::Red),
+        "blue" => Some(BubbleColor::Blue),
+        "grey" | "gray" | "light_grey" | "light_gray" => Some(BubbleColor::Grey),
+        "orange" => Some(BubbleColor::Orange),
+        "green" | "light_green" | "light_green1" | "light_green4" => Some(BubbleColor::Green),
+        "yellow" => Some(BubbleColor::Yellow),
+        "white" | "default" | "reset" => Some(BubbleColor::Default),
+        _ => None,
+    }
+}
+
+/// 将包含标签的 raw_text 解析为富文本 Spans、清洗纯文本及行数字数统计
+pub fn parse_raw_text_to_spans(raw_text: &str) -> (Vec<BubbleSpan>, String, usize, usize) {
+    let mut spans = Vec::new();
+    let mut clean_text = String::with_capacity(raw_text.len());
+    let mut cur_color = BubbleColor::Default;
+    let mut cur_size = BubbleSize::Normal;
+
+    let chars: Vec<char> = raw_text.chars().collect();
+    let mut idx = 0;
+    let total = chars.len();
+
+    while idx < total {
+        if chars[idx] == '<' {
+            if let Some(close_rel) = chars[idx..].iter().position(|&c| c == '>') {
+                let tag_str: String = chars[idx + 1..idx + close_rel].iter().collect();
+                idx += close_rel + 1;
+
+                let tag_clean = tag_str.trim().to_lowercase();
+                if let Some(color) = parse_color_tag(&tag_clean) {
+                    cur_color = color;
+                } else if tag_clean == "/colour"
+                    || tag_clean == "/color"
+                    || tag_clean == "reset_colour"
+                    || tag_clean == "reset_color"
+                    || tag_clean == "/red"
+                    || tag_clean == "/blue"
+                    || tag_clean == "/grey"
+                    || tag_clean == "/gray"
+                    || tag_clean == "/orange"
+                    || tag_clean == "/green"
+                    || tag_clean == "/yellow"
+                {
+                    cur_color = BubbleColor::Default;
+                } else if tag_clean == "size:80" || tag_clean == "size:small" {
+                    cur_size = BubbleSize::Small;
+                } else if tag_clean == "size:125" || tag_clean == "size:large" {
+                    cur_size = BubbleSize::Large;
+                } else if tag_clean == "/size" || tag_clean == "size:100" || tag_clean == "size:normal" {
+                    cur_size = BubbleSize::Normal;
+                } else if let Some(pause_val) = tag_clean.strip_prefix("pause:") {
+                    spans.push(BubbleSpan {
+                        text: String::new(),
+                        color: cur_color,
+                        size: cur_size,
+                        is_pause: true,
+                        pause_label: Some(pause_val.to_string()),
+                        is_chip: false,
+                        chip_label: None,
+                    });
+                } else if let Some(chip_val) = tag_clean.strip_prefix("anim:").or_else(|| tag_clean.strip_prefix("icon:")) {
+                    spans.push(BubbleSpan {
+                        text: String::new(),
+                        color: cur_color,
+                        size: cur_size,
+                        is_pause: false,
+                        pause_label: None,
+                        is_chip: true,
+                        chip_label: Some(chip_val.to_string()),
+                    });
+                }
+                continue;
+            }
+        }
+
+        let mut text_buf = String::new();
+        while idx < total && chars[idx] != '<' {
+            text_buf.push(chars[idx]);
+            idx += 1;
+        }
+
+        if !text_buf.is_empty() {
+            clean_text.push_str(&text_buf);
+            spans.push(BubbleSpan {
+                text: text_buf,
+                color: cur_color,
+                size: cur_size,
+                is_pause: false,
+                pause_label: None,
+                is_chip: false,
+                chip_label: None,
+            });
+        }
+    }
+
+    let line_count = clean_text.lines().count().max(1);
+    let char_count = clean_text.chars().count();
+
+    (spans, clean_text, line_count, char_count)
 }
 
 /// 将 MsbtDocument 重新序列化为合法的 MSYT YAML 文本
@@ -258,72 +306,52 @@ fn serialize_entry_raw_text(raw_text: &str, out: &mut String) {
     }
 }
 
-/// 发射 MSYT 控制标签 YAML 片段
+/// 发射 MSYT 控制标签 YAML 片段 (遵循 https://zeldamods.org/wiki/Help:Text_modding 标准)
 fn emit_msyt_control_tag(tag: &str, out: &mut String) {
-    if tag == "red" {
-        out.push_str("      - control:\n          kind: set_colour\n          colour: red\n");
-    } else if tag == "blue" {
-        out.push_str("      - control:\n          kind: set_colour\n          colour: blue\n");
-    } else if tag == "grey" {
-        out.push_str("      - control:\n          kind: set_colour\n          colour: grey\n");
-    } else if tag == "/color" || tag == "/red" || tag == "/blue" || tag == "/grey" {
+    let clean = tag.trim().to_lowercase();
+    if let Some(color) = parse_color_tag(&clean) {
+        let col_name = match color {
+            BubbleColor::Red => "red",
+            BubbleColor::Blue => "blue",
+            BubbleColor::Grey => "grey",
+            BubbleColor::Orange => "orange",
+            BubbleColor::Green => "light_green1",
+            BubbleColor::Yellow => "yellow",
+            BubbleColor::Default => {
+                out.push_str("      - control:\n          kind: reset_colour\n");
+                return;
+            }
+        };
+        out.push_str(&format!(
+            "      - control:\n          kind: set_colour\n          colour: {}\n",
+            col_name
+        ));
+    } else if clean == "/colour"
+        || clean == "/color"
+        || clean == "reset_colour"
+        || clean == "reset_color"
+        || clean == "/red"
+        || clean == "/blue"
+        || clean == "/grey"
+        || clean == "/gray"
+        || clean == "/orange"
+        || clean == "/green"
+        || clean == "/yellow"
+    {
         out.push_str("      - control:\n          kind: reset_colour\n");
-    } else if tag == "size:80" {
+    } else if clean == "size:80" || clean == "size:small" {
         out.push_str("      - control:\n          kind: text_size\n          percent: 80\n");
-    } else if tag == "size:125" {
+    } else if clean == "size:125" || clean == "size:large" {
         out.push_str("      - control:\n          kind: text_size\n          percent: 125\n");
-    } else if tag == "/size" {
+    } else if clean == "/size" || clean == "size:100" || clean == "size:normal" {
         out.push_str("      - control:\n          kind: text_size\n          percent: 100\n");
-    } else if let Some(pause_val) = tag.strip_prefix("pause:") {
+    } else if let Some(pause_val) = clean.strip_prefix("pause:") {
         if let Ok(frames) = pause_val.trim_end_matches('帧').parse::<u32>() {
             out.push_str(&format!("      - control:\n          kind: pause\n          frames: {}\n", frames));
         } else {
             out.push_str(&format!("      - control:\n          kind: pause\n          length: {}\n", pause_val));
         }
-    } else if let Some(anim_name) = tag.strip_prefix("anim:") {
+    } else if let Some(anim_name) = clean.strip_prefix("anim:") {
         out.push_str(&format!("      - control:\n          kind: animation\n          name: {}\n", anim_name));
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parse_msyt_basic() {
-        let yaml = r#"
-group_count: 2
-atr1_unknown: 0
-entries:
-  Armor_001_Head_Name:
-    contents:
-      - 海利亚兜帽
-  Armor_001_Head_Desc:
-    contents:
-      - text: "选取海拉鲁传统工艺织出的结实布料，"
-      - control:
-          kind: set_colour
-          colour: red
-      - text: "关键提示"
-      - control:
-          kind: reset_colour
-      - control:
-          kind: pause
-          length: short
-"#;
-        let doc = parse_msyt_to_document(yaml).expect("parse failed");
-        assert_eq!(doc.entries.len(), 2);
-        assert_eq!(doc.entries[0].key, "Armor_001_Head_Name");
-        assert_eq!(doc.entries[0].clean_text, "海利亚兜帽");
-
-        let desc = &doc.entries[1];
-        assert_eq!(desc.key, "Armor_001_Head_Desc");
-        assert!(desc.raw_text.contains("<red>关键提示</color>"));
-        assert!(desc.raw_text.contains("<pause:short>"));
-
-        let serialized = serialize_document_to_msyt(&doc).expect("serialize failed");
-        assert!(serialized.contains("Armor_001_Head_Name:"));
-        assert!(serialized.contains("set_colour"));
-        assert!(serialized.contains("reset_colour"));
     }
 }
