@@ -210,6 +210,9 @@ impl Render for AppView {
                     }
                     if st.text_input_is_dragging {
                         st.text_input_is_dragging = false;
+                        if st.text_input_select_anchor == Some(st.text_input_cursor) {
+                            st.text_input_select_anchor = None;
+                        }
                         changed = true;
                     }
                     if changed {

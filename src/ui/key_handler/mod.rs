@@ -176,28 +176,23 @@ pub fn handle_clipboard_key_event(
         return false;
     }
 
-    // 1. Ctrl+C 复制 (优先复制选区，若无选区则复制全部)
+    // 1. Ctrl+C 复制 (仅当存在有效选区时复制选中文本)
     if key.eq_ignore_ascii_case("c") {
         if let Some(selected_text) = state.active_selected_text() {
             cx.write_to_clipboard(gpui::ClipboardItem::new_string(selected_text));
             return true;
-        } else if let Some(active_text) = state.active_text_input() {
-            cx.write_to_clipboard(gpui::ClipboardItem::new_string(active_text.to_string()));
-            return true;
         }
+        return false;
     }
 
-    // 2. Ctrl+X 剪切 (优先剪切选区，若无选区则剪切全部并清空)
+    // 2. Ctrl+X 剪切 (仅当存在有效选区时剪切选中文本)
     if key.eq_ignore_ascii_case("x") {
         if let Some(selected_text) = state.active_selected_text() {
             cx.write_to_clipboard(gpui::ClipboardItem::new_string(selected_text));
             state.delete_active_selection();
             return true;
-        } else if let Some(active_text) = state.active_text_input() {
-            cx.write_to_clipboard(gpui::ClipboardItem::new_string(active_text.to_string()));
-            state.clear_active_input_content();
-            return true;
         }
+        return false;
     }
 
     false

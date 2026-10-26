@@ -74,4 +74,41 @@ mod tests {
         state.clear_active_text_inputs();
         assert!(!state.has_active_text_input());
     }
+
+    #[test]
+    fn test_quest_creator_input_and_delete() {
+        let mut state = AppState::new();
+        state.open_quest_creator();
+        assert!(state.has_active_text_input());
+        assert_eq!(state.active_text_input(), Some("Quest_CustomMiniQuest"));
+        assert_eq!(state.text_input_cursor, "Quest_CustomMiniQuest".chars().count());
+
+        // 无选区时，active_selected_text 返回 None，delete_active_selection 不误删
+        assert_eq!(state.active_selected_text(), None);
+        assert!(!state.delete_active_selection());
+        assert_eq!(state.active_text_input(), Some("Quest_CustomMiniQuest"));
+
+        // 选定全文字符 [0, 22)
+        state.text_input_select_anchor = Some(0);
+        assert_eq!(state.active_selected_text(), Some("Quest_CustomMiniQuest".to_string()));
+
+        // 删除选区
+        assert!(state.delete_active_selection());
+        assert_eq!(state.active_text_input(), Some(""));
+        assert_eq!(state.text_input_cursor, 0);
+        assert_eq!(state.active_selected_text(), None);
+
+        // 测试输入新名称
+        assert!(state.insert_text_to_active_input("MyCustomQuest"));
+        assert_eq!(state.active_text_input(), Some("MyCustomQuest"));
+        assert_eq!(state.text_input_cursor, "MyCustomQuest".chars().count());
+
+        // 测试删除字符
+        state.apply_to_active_input(|target| {
+            target.pop();
+            target.chars().count()
+        });
+        assert_eq!(state.active_text_input(), Some("MyCustomQues"));
+        assert_eq!(state.text_input_cursor, "MyCustomQues".chars().count());
+    }
 }

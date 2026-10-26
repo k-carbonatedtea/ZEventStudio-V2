@@ -1,5 +1,5 @@
 use gpui::*;
-use crate::ui::components::render_blinking_cursor;
+use crate::ui::components::render_input_text;
 use crate::ui::state::{AppState, QuestCreatorFocusField};
 
 /// 渲染遵循规范 8.3 的通用任务向导文本输入字段
@@ -17,6 +17,7 @@ pub fn render_modal_text_field(
     let model_out = model.clone();
     let model_clear = model.clone();
     let val_clone = value.to_string();
+    let val_len = val_clone.chars().count();
     let placeholder_str = placeholder.to_string();
 
     div()
@@ -44,13 +45,15 @@ pub fn render_modal_text_field(
                 .flex()
                 .items_center()
                 .justify_between()
-                // 1. 点击获得焦点并设置自身字段
+                // 1. 点击获得焦点并初始化光标至文本末尾 (后续字符级交互由 render_input_text 接管)
                 .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                     model_click.update(cx, |st, cx| {
                         st.clear_active_text_inputs();
                         if let Some(ref mut m) = st.quest_creator_modal {
                             m.focused_field = field;
                         }
+                        st.text_input_cursor = val_len;
+                        st.text_input_select_anchor = None;
                         cx.notify();
                     });
                 })
@@ -71,26 +74,15 @@ pub fn render_modal_text_field(
                         .flex()
                         .items_center()
                         .overflow_hidden()
-                        .child(
-                            if val_clone.is_empty() && !is_focused {
-                                div()
-                                    .text_size(px(12.0))
-                                    .text_color(pal.text_secondary.opacity(0.6))
-                                    .child(placeholder_str)
-                                    .into_any_element()
-                            } else {
-                                div()
-                                    .flex()
-                                    .items_center()
-                                    .text_size(px(12.0))
-                                    .text_color(pal.text_primary)
-                                    .child(val_clone.clone())
-                                    .children(is_focused.then(|| {
-                                        render_blinking_cursor(pal.primary_accent.into()).into_any_element()
-                                    }))
-                                    .into_any_element()
-                            },
-                        ),
+                        .child(if val_clone.is_empty() && !is_focused {
+                            div()
+                                .text_size(px(12.0))
+                                .text_color(pal.text_secondary.opacity(0.6))
+                                .child(placeholder_str)
+                                .into_any_element()
+                        } else {
+                            render_input_text(&val_clone, is_focused, state, model).into_any_element()
+                        }),
                 )
                 // 3. 非空时渲染一键清空按钮
                 .children((!val_clone.is_empty()).then(|| {
@@ -110,6 +102,8 @@ pub fn render_modal_text_field(
                                     if field == QuestCreatorFocusField::Name {
                                         m.sync_flags_from_name();
                                     }
+                                    st.text_input_cursor = 0;
+                                    st.text_input_select_anchor = None;
                                     cx.notify();
                                 }
                             });

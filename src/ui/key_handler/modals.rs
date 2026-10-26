@@ -169,6 +169,8 @@ pub fn handle_modal_key_event(event: &KeyDownEvent, state: &mut AppState, clipbo
         if event.keystroke.key == "escape" {
             if modal.focused_field != QuestCreatorFocusField::None {
                 modal.focused_field = QuestCreatorFocusField::None;
+                state.text_input_cursor = 0;
+                state.text_input_select_anchor = None;
             } else {
                 state.quest_creator_modal = None;
             }
@@ -215,6 +217,9 @@ pub fn handle_modal_key_event(event: &KeyDownEvent, state: &mut AppState, clipbo
                     _ => QuestCreatorFocusField::DescText,
                 },
             };
+            let text_len = modal.active_input().map(|s| s.chars().count()).unwrap_or(0);
+            state.text_input_cursor = text_len;
+            state.text_input_select_anchor = None;
             return Some(true);
         }
 

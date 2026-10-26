@@ -151,25 +151,33 @@ impl AppState {
         }
     }
 
-    /// 获取当前选中的文本切片，若无选区则返回整个输入文本
+    /// 获取当前激活输入框的选中文本切片 (仅当存在非空有效选区时返回 Some)
     pub fn active_selected_text(&self) -> Option<String> {
         let text = self.active_text_input()?;
+        let (start, end) = self.text_input_selection_range()?;
+        if start >= end {
+            return None;
+        }
         let chars: Vec<char> = text.chars().collect();
-        if let Some((start, end)) = self.text_input_selection_range() {
-            let s = start.min(chars.len());
-            let e = end.min(chars.len());
+        let s = start.min(chars.len());
+        let e = end.min(chars.len());
+        if s < e {
             Some(chars[s..e].iter().collect())
         } else {
-            Some(text.to_string())
+            None
         }
     }
 
-    /// 删除当前选区中的文本并重置选区锚点
+    /// 删除当前选区中的文本并重置选区锚点 (若无选区则返回 false，严禁误清空全文)
     pub fn delete_active_selection(&mut self) -> bool {
         let (start, end) = match self.text_input_selection_range() {
             Some(r) => r,
-            None => return self.clear_active_input_content(),
+            None => return false,
         };
+        if start >= end {
+            self.text_input_select_anchor = None;
+            return false;
+        }
         self.apply_to_active_input(|target| {
             let mut chars: Vec<char> = target.chars().collect();
             let total = chars.len();
@@ -182,6 +190,7 @@ impl AppState {
     }
 
     /// 清空当前激活输入框的所有内容
+    #[allow(dead_code)]
     pub fn clear_active_input_content(&mut self) -> bool {
         self.apply_to_active_input(|target| {
             target.clear();
@@ -232,7 +241,28 @@ impl AppState {
             }
         }
 
-        // 3. 常规输入框
+        // 3. 任务向导模态框
+        if let Some(ref mut modal) = self.quest_creator_modal {
+            if modal.focused_field != QuestCreatorFocusField::None {
+                let field = modal.focused_field;
+                if let Some(target) = modal.get_mut_focused() {
+                    let new_cursor = f(target);
+                    if field == QuestCreatorFocusField::Name {
+                        modal.sync_flags_from_name();
+                    } else if field == QuestCreatorFocusField::ReadyFlag
+                        || field == QuestCreatorFocusField::ActivatedFlag
+                        || field == QuestCreatorFocusField::FinishFlag
+                    {
+                        modal.custom_flags = true;
+                    }
+                    self.text_input_cursor = new_cursor;
+                    self.text_input_select_anchor = None;
+                    return true;
+                }
+            }
+        }
+
+        // 4. 常规输入框
         let new_cursor = if self.global_search_focused {
             let c = f(&mut self.global_search_query);
             self.update_global_search_results();
@@ -281,13 +311,6 @@ impl AppState {
         let clean: String = text.chars().filter(|&c| c != '\r' && c != '\x08' && c != '\x1b').collect();
         if clean.is_empty() {
             return false;
-        }
-
-        // 任务创建向导模态框优先处理
-        if let Some(ref mut modal) = self.quest_creator_modal {
-            if modal.insert_text(&clean) {
-                return true;
-            }
         }
 
         let cursor = self.text_input_cursor;

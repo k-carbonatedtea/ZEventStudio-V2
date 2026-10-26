@@ -4,7 +4,7 @@ use crate::model::quest::{
     QuestDefinition, QuestScaffoldConfig,
 };
 use crate::ui::components::Toast;
-use crate::ui::state::{AppState, QuestCreatorModalState};
+use crate::ui::state::{AppState, QuestCreatorFocusField, QuestCreatorModalState};
 
 /// 任务管理器在 AppState 中的操作与调度扩展
 impl AppState {
@@ -22,13 +22,18 @@ impl AppState {
     /// 打开新建任务向导模态框
     pub fn open_quest_creator(&mut self) {
         self.clear_active_text_inputs();
-        self.quest_creator_modal = Some(QuestCreatorModalState::default());
+        let modal = QuestCreatorModalState { focused_field: QuestCreatorFocusField::Name, ..Default::default() };
+        self.text_input_cursor = modal.name.chars().count();
+        self.quest_creator_modal = Some(modal);
     }
 
     /// 打开任务编辑模态框 (从现有任务初始化向导)
     pub fn open_quest_editor(&mut self, quest: &QuestDefinition) {
         self.clear_active_text_inputs();
-        self.quest_creator_modal = Some(QuestCreatorModalState::from_quest(quest));
+        let mut modal = QuestCreatorModalState::from_quest(quest);
+        modal.focused_field = QuestCreatorFocusField::Name;
+        self.text_input_cursor = modal.name.chars().count();
+        self.quest_creator_modal = Some(modal);
     }
 
     /// 打开任务原始数据与拓扑查看模态框

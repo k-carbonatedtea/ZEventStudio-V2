@@ -221,25 +221,6 @@ impl QuestCreatorModalState {
     pub fn get_mut_focused(&mut self) -> Option<&mut String> {
         self.get_mut_focused_field(self.focused_field)
     }
-
-    /// 向当前聚焦的输入字段写入字符并执行联动逻辑
-    pub fn insert_text(&mut self, clean: &str) -> bool {
-        let field = self.focused_field;
-        if let Some(target) = self.get_mut_focused() {
-            target.push_str(clean);
-            if field == QuestCreatorFocusField::Name {
-                self.sync_flags_from_name();
-            } else if field == QuestCreatorFocusField::ReadyFlag
-                || field == QuestCreatorFocusField::ActivatedFlag
-                || field == QuestCreatorFocusField::FinishFlag
-            {
-                self.custom_flags = true;
-            }
-            true
-        } else {
-            false
-        }
-    }
 }
 
 impl Default for QuestCreatorModalState {
