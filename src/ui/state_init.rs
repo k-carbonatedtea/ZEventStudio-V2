@@ -152,6 +152,7 @@ impl AppState {
             quests_selected_id: None,
             quests_filter_type: None,
             quest_creator_modal: None,
+            quest_raw_data_modal: None,
             quests_list_state: gpui::ListState::new(0, gpui::ListAlignment::Top, gpui::px(120.0)).with_uniform_item_height(gpui::px(58.0)),
 
             // 2D 任务地图交互与展示状态 (初始居中置于画布中心)

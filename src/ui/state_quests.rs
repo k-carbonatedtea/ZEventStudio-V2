@@ -25,7 +25,23 @@ impl AppState {
         self.quest_creator_modal = Some(QuestCreatorModalState::default());
     }
 
-    /// 关闭新建任务向导模态框
+    /// 打开任务编辑模态框 (从现有任务初始化向导)
+    pub fn open_quest_editor(&mut self, quest: &QuestDefinition) {
+        self.clear_active_text_inputs();
+        self.quest_creator_modal = Some(QuestCreatorModalState::from_quest(quest));
+    }
+
+    /// 打开任务原始数据与拓扑查看模态框
+    pub fn open_quest_raw_data(&mut self, quest: &QuestDefinition) {
+        self.quest_raw_data_modal = Some(crate::ui::state_types::QuestRawDataModalState::new(quest.clone()));
+    }
+
+    /// 关闭任务原始数据与拓扑查看模态框
+    pub fn close_quest_raw_data(&mut self) {
+        self.quest_raw_data_modal = None;
+    }
+
+    /// 关闭新建/编辑任务向导模态框
     pub fn close_quest_creator(&mut self) {
         self.quest_creator_modal = None;
     }
@@ -123,8 +139,14 @@ impl AppState {
         self.quests_selected_id = Some(config.name.clone());
 
         // 4. 关闭模态框并给出 Toast 提示
+        let is_edit = modal.is_edit_mode;
         self.quest_creator_modal = None;
-        self.toast = Some(Toast::success(format!("任务 [{}] 创建成功！", config.name)));
+        let success_msg = if is_edit {
+            format!("任务 [{}] 修改已成功保存！", config.name)
+        } else {
+            format!("任务 [{}] 创建成功！", config.name)
+        };
+        self.toast = Some(Toast::success(success_msg));
 
         Ok(logs)
     }

@@ -135,9 +135,6 @@ fn render_quest_inline_details(
     pal: ThemePalette,
     model: &Entity<AppState>,
 ) -> impl IntoElement {
-    let q_clone = quest.clone();
-    let model_scaffold = model.clone();
-
     let journal_title = crate::i18n::t("quests.journal_desc", lang);
     let steps_header = crate::i18n::t("quests.steps_header", lang);
     let insert_label = crate::i18n::t("quests.insert_to_canvas", lang);
@@ -266,68 +263,117 @@ fn render_quest_inline_details(
                         }))
                 })),
         )
-        // 底部动作按钮：在当前流程图中生成脚手架拓扑
+        // 底部动作按钮：原始数据、编辑任务与脚手架拓扑注入
         .child(
             div()
                 .flex()
                 .items_center()
-                .justify_end()
+                .justify_between()
                 .pt_1()
+                .child({
+                    let q = quest.clone();
+                    let m = model.clone();
+                    render_small_btn(
+                        SharedString::from(format!("raw_btn_{}", quest.name)),
+                        "🔍",
+                        crate::i18n::t("quests.btn_view_raw", lang),
+                        pal.panel_surface,
+                        pal.text_secondary,
+                        pal.panel_border,
+                        move |_, _, cx| m.update(cx, |st, cx| { st.open_quest_raw_data(&q); cx.notify(); }),
+                    )
+                })
                 .child(
                     div()
-                        .id(SharedString::from(format!("scaffold_btn_{}", quest.name)))
                         .flex()
                         .items_center()
-                        .gap_1()
-                        .px_2p5()
-                        .py_1()
-                        .rounded_sm()
-                        .bg(pal.primary_accent.opacity(0.15))
-                        .text_color(pal.primary_accent)
-                        .text_size(px(11.0))
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .cursor_pointer()
-                        .hover(|s| s.bg(pal.primary_accent.opacity(0.28)))
-                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                            let act_flag = q_clone.steps.iter().find(|s| s.name == "Ready").map(|s| s.next_flag.clone()).unwrap_or_else(|| format!("{}_Activated", q_clone.name));
-                            let fin_flag = q_clone.steps.iter().find(|s| s.name == "Finish").map(|s| s.next_flag.clone()).unwrap_or_else(|| format!("{}_Finish", q_clone.name));
-                            let extra_flags: Vec<String> = q_clone.steps.iter()
-                                .filter(|s| s.name != "Ready" && s.name != "Finish")
-                                .map(|s| s.next_flag.clone())
-                                .collect();
-                            let q_cfg = crate::model::quest::QuestScaffoldConfig {
-                                name: q_clone.name.clone(),
-                                quest_type: q_clone.quest_type,
-                                orderer: q_clone.orderer.clone(),
-                                location: q_clone.location.clone(),
-                                display_title: q_clone.display_title.clone().unwrap_or_default(),
-                                desc_text: q_clone.desc_text.clone().unwrap_or_default(),
-                                finish_text: String::new(),
-                                ready_flag: format!("{}_Ready", q_clone.name),
-                                activated_flag: act_flag,
-                                finish_flag: fin_flag,
-                                dependency_flag: q_clone.dependency_flag.clone().unwrap_or_default(),
-                                extra_flags,
-                                enable_indicator: false,
-                                indicator_actor: String::new(),
-                                indicator_pos: (0.0, 0.0, 0.0),
-                                indicator_off_flag: String::new(),
-                                indicator_has_far: false,
-                                not_post_note: q_clone.not_post_note,
-                                inject_titlebg: false,
-                                inject_bootup_flags: false,
-                                inject_ql_msbt: false,
-                                scaffold_graph_nodes: true,
-                                inject_npc_choice: false,
-                            };
-                            model_scaffold.update(cx, |st, cx| {
-                                let node_ids = crate::model::quest::scaffold_quest_graph_nodes(&mut st.graph, &q_cfg);
-                                st.toast = Some(crate::ui::components::Toast::success(format!("已向当前流程图注入 {} 个节点", node_ids.len())));
-                                cx.notify();
-                            });
+                        .gap_1p5()
+                        .child({
+                            let q = quest.clone();
+                            let m = model.clone();
+                            render_small_btn(
+                                SharedString::from(format!("edit_btn_{}", quest.name)),
+                                "✏️",
+                                crate::i18n::t("quests.btn_edit_quest", lang),
+                                pal.card_hover.opacity(0.4),
+                                pal.text_primary,
+                                pal.panel_border,
+                                move |_, _, cx| m.update(cx, |st, cx| { st.open_quest_editor(&q); cx.notify(); }),
+                            )
                         })
-                        .child("⚡")
-                        .child(insert_label),
+                        .child({
+                            let m = model.clone();
+                            let q = quest.clone();
+                            render_small_btn(
+                                SharedString::from(format!("scaffold_btn_{}", quest.name)),
+                                "⚡",
+                                insert_label,
+                                pal.primary_accent.opacity(0.15),
+                                pal.primary_accent,
+                                pal.primary_accent.opacity(0.4),
+                                move |_, _, cx| m.update(cx, |st, cx| {
+                                    let q_cfg = create_card_scaffold_config(&q);
+                                    let node_ids = crate::model::quest::scaffold_quest_graph_nodes(&mut st.graph, &q_cfg);
+                                    st.toast = Some(crate::ui::components::Toast::success(format!("已向当前流程图注入 {} 个节点", node_ids.len())));
+                                    cx.notify();
+                                }),
+                            )
+                        }),
                 ),
         )
+}
+
+/// 渲染卡片底部通用小按钮
+fn render_small_btn(
+    id: SharedString,
+    icon: &'static str,
+    label: &'static str,
+    bg: Rgba,
+    text_color: Rgba,
+    border_color: Rgba,
+    on_click: impl Fn(&gpui::MouseDownEvent, &mut gpui::Window, &mut gpui::App) + 'static,
+) -> impl IntoElement {
+    div()
+        .id(id)
+        .flex()
+        .items_center()
+        .gap_1()
+        .px_2()
+        .py_1()
+        .rounded_sm()
+        .border_1()
+        .border_color(border_color)
+        .bg(bg)
+        .text_color(text_color)
+        .text_size(px(10.5))
+        .cursor_pointer()
+        .hover(move |s| s.opacity(0.85))
+        .on_mouse_down(MouseButton::Left, on_click)
+        .child(icon)
+        .child(label)
+}
+
+/// 快速为卡片构造拓扑脚手架配置
+fn create_card_scaffold_config(q: &QuestDefinition) -> crate::model::quest::QuestScaffoldConfig {
+    let act_flag = q.steps.iter().find(|s| s.name == "Ready").map(|s| s.next_flag.clone()).unwrap_or_else(|| format!("{}_Activated", q.name));
+    let fin_flag = q.steps.iter().find(|s| s.name == "Finish").map(|s| s.next_flag.clone()).unwrap_or_else(|| format!("{}_Finish", q.name));
+    let extra_flags = q.steps.iter().filter(|s| s.name != "Ready" && s.name != "Finish").map(|s| s.next_flag.clone()).collect();
+    crate::model::quest::QuestScaffoldConfig {
+        name: q.name.clone(),
+        quest_type: q.quest_type,
+        orderer: q.orderer.clone(),
+        location: q.location.clone(),
+        display_title: q.display_title.clone().unwrap_or_default(),
+        desc_text: q.desc_text.clone().unwrap_or_default(),
+        ready_flag: format!("{}_Ready", q.name),
+        activated_flag: act_flag,
+        finish_flag: fin_flag,
+        dependency_flag: q.dependency_flag.clone().unwrap_or_default(),
+        extra_flags,
+        scaffold_graph_nodes: true,
+        inject_titlebg: false,
+        inject_bootup_flags: false,
+        inject_ql_msbt: false,
+        ..Default::default()
+    }
 }

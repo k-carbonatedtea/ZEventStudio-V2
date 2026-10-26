@@ -69,7 +69,11 @@ pub fn render_quest_creator_modal(
                                         .text_size(px(14.0))
                                         .font_weight(FontWeight::BOLD)
                                         .text_color(pal.text_primary)
-                                        .child(state.t("quests.modal_title")),
+                                        .child(if modal.is_edit_mode {
+                                            format!("{}: {}", state.t("quests.modal_edit_title"), modal.name)
+                                        } else {
+                                            state.t("quests.modal_title").to_string()
+                                        }),
                                 ),
                         )
                         .child(
@@ -168,8 +172,12 @@ pub fn render_quest_creator_modal(
                                                 cx.notify();
                                             });
                                         })
-                                        .child("✨ ")
-                                        .child(state.t("quests.btn_create_quest")),
+                                        .child(if modal.is_edit_mode { "💾 " } else { "✨ " })
+                                        .child(if modal.is_edit_mode {
+                                            state.t("quests.btn_save_quest")
+                                        } else {
+                                            state.t("quests.btn_create_quest")
+                                        }),
                                 ),
                         ),
                 ),

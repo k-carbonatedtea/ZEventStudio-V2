@@ -155,7 +155,13 @@ pub fn handle_modal_key_event(event: &KeyDownEvent, state: &mut AppState, clipbo
         return Some(should_notify);
     }
 
-    // 11. 任务创建向导模态框键盘输入拦截 (Esc 关闭, Tab 切换字段, 文本键入)
+    // 11. 任务原始数据查看模态框 (Esc 关闭)
+    if state.quest_raw_data_modal.is_some() && event.keystroke.key == "escape" {
+        state.quest_raw_data_modal = None;
+        return Some(true);
+    }
+
+    // 12. 任务创建向导模态框键盘输入拦截 (Esc 关闭, Tab 切换字段, 文本键入)
     if let Some(ref mut modal) = state.quest_creator_modal {
         use crate::ui::state_types::QuestCreatorFocusField;
         if event.keystroke.key == "escape" {

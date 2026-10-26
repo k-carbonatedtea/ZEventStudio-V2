@@ -70,6 +70,7 @@ pub struct QuestCreatorModalState {
     pub scaffold_graph_nodes: bool,
     // 聚焦字段
     pub focused_field: QuestCreatorFocusField,
+    pub is_edit_mode: bool, // 是否为编辑现有任务模式
 }
 
 impl QuestCreatorModalState {
@@ -87,6 +88,67 @@ impl QuestCreatorModalState {
     pub fn reset_flags_to_default(&mut self) {
         self.custom_flags = false;
         self.sync_flags_from_name();
+        self.extra_flags.clear();
+    }
+
+    /// 从现有任务定义生成向导状态（用于编辑现有任务）
+    pub fn from_quest(quest: &crate::model::quest::QuestDefinition) -> Self {
+        let act_flag = quest.steps.iter().find(|s| s.name == "Ready")
+            .map(|s| s.next_flag.clone())
+            .unwrap_or_else(|| format!("{}_Activated", quest.name));
+        let fin_flag = quest.steps.iter().find(|s| s.name == "Finish")
+            .map(|s| s.next_flag.clone())
+            .unwrap_or_else(|| format!("{}_Finish", quest.name));
+        let extra_flags: Vec<String> = quest.steps.iter()
+            .filter(|s| s.name != "Ready" && s.name != "Finish")
+            .map(|s| s.next_flag.clone())
+            .collect();
+
+        let first_ind = quest.steps.iter().flat_map(|s| &s.indicators).next();
+        let (enable_ind, ind_actor, cx, cy, cz, off_flag, has_far) = if let Some(ind) = first_ind {
+            (
+                true,
+                ind.actor_name.clone().unwrap_or_default(),
+                format!("{:.1}", ind.position.0),
+                format!("{:.1}", ind.position.1),
+                format!("{:.1}", ind.position.2),
+                ind.off_flag.clone().unwrap_or_default(),
+                ind.has_far,
+            )
+        } else {
+            (false, String::new(), "0.0".into(), "0.0".into(), "0.0".into(), String::new(), false)
+        };
+
+        Self {
+            active_tab: QuestCreatorTab::General,
+            name: quest.name.clone(),
+            quest_type: quest.quest_type,
+            orderer: quest.orderer.clone(),
+            location: quest.location.clone(),
+            display_title: quest.display_title.clone().unwrap_or_default(),
+            desc_text: quest.desc_text.clone().unwrap_or_default(),
+            finish_text: quest.finish_text.clone().unwrap_or_default(),
+            custom_flags: true,
+            ready_flag: format!("{}_Ready", quest.name),
+            activated_flag: act_flag,
+            finish_flag: fin_flag,
+            dependency_flag: quest.dependency_flag.clone().unwrap_or_default(),
+            extra_flags,
+            enable_indicator: enable_ind,
+            indicator_actor: ind_actor,
+            coord_x: cx,
+            coord_y: cy,
+            coord_z: cz,
+            indicator_off_flag: off_flag,
+            indicator_has_far: has_far,
+            not_post_note: quest.not_post_note,
+            inject_titlebg: true,
+            inject_bootup_flags: true,
+            inject_ql_msbt: true,
+            scaffold_graph_nodes: false,
+            focused_field: QuestCreatorFocusField::None,
+            is_edit_mode: true,
+        }
     }
 
     /// 添加一个新的自定义扩展阶段 Flag
@@ -210,6 +272,33 @@ impl Default for QuestCreatorModalState {
             inject_ql_msbt: true,
             scaffold_graph_nodes: true,
             focused_field: QuestCreatorFocusField::None,
+            is_edit_mode: false,
+        }
+    }
+}
+
+/// 任务原始数据查看格式
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RawDataFormat {
+    #[default]
+    Json,      // 结构化 JSON
+    BymlYaml,  // BYML / YAML 拓扑规范
+    Msbt,      // 冒险笔记 MSBT 文本词条
+    FlagsHash, // 标志位与 CRC32 哈希 / 存档槽位
+}
+
+/// 任务原始数据查看模态框状态
+#[derive(Debug, Clone, PartialEq)]
+pub struct QuestRawDataModalState {
+    pub quest: crate::model::quest::QuestDefinition,
+    pub active_format: RawDataFormat,
+}
+
+impl QuestRawDataModalState {
+    pub fn new(quest: crate::model::quest::QuestDefinition) -> Self {
+        Self {
+            quest,
+            active_format: RawDataFormat::Json,
         }
     }
 }

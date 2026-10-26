@@ -21,7 +21,11 @@ pub use activity_bar::render_activity_bar;
 pub use search_panel::render_search_panel;
 pub use source_control::render_source_control_panel;
 pub use plugins::render_plugins_panel;
-pub use quests::{render_quests_panel, modal::render_quest_creator_modal};
+pub use quests::{
+    render_quests_panel,
+    modal::render_quest_creator_modal,
+    modal_raw_data::render_quest_raw_data_modal,
+};
 pub use diff_modal::render_git_diff_modal;
 pub use commit_context_menu::render_commit_context_menu;
 pub use file_async_ops::{pick_and_add_files, pick_and_export_container, pick_and_export_file, pick_and_replace_file};

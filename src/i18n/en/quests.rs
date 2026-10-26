@@ -120,6 +120,17 @@ pub fn get_en_quests(key: &str) -> Option<&'static str> {
         "quests.detail_title" => "Quest Details & Steps",
         "quests.btn_close" => "Close",
         "quests.btn_inspect" => "Inspect Steps",
+        "quests.modal_edit_title" => "Edit BotW Quest",
+        "quests.btn_save_quest" => "Save Changes",
+        "quests.btn_edit_quest" => "Edit Quest",
+        "quests.btn_view_raw" => "Raw Data",
+        "quests.raw_data_title" => "Raw Quest Data & Topology",
+        "quests.raw_data_copied" => "Copied raw data to clipboard",
+        "quests.btn_copy" => "Copy",
+        "quests.raw_tab_json" => "JSON Structure",
+        "quests.raw_tab_byml" => "BYML Spec",
+        "quests.raw_tab_msbt" => "MSBT Entries",
+        "quests.raw_tab_flags" => "Flags & Hashes",
         _ => return None,
     };
     Some(text)

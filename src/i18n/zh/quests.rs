@@ -120,6 +120,17 @@ pub fn get_zh_quests(key: &str) -> Option<&'static str> {
         "quests.detail_title" => "任务详情与阶段配置",
         "quests.btn_close" => "关闭",
         "quests.btn_inspect" => "查看阶段详情",
+        "quests.modal_edit_title" => "编辑 BotW 任务",
+        "quests.btn_save_quest" => "保存任务修改",
+        "quests.btn_edit_quest" => "编辑任务",
+        "quests.btn_view_raw" => "原始数据",
+        "quests.raw_data_title" => "任务原始数据与拓扑",
+        "quests.raw_data_copied" => "已复制原始数据至剪贴板",
+        "quests.btn_copy" => "复制",
+        "quests.raw_tab_json" => "JSON 结构",
+        "quests.raw_tab_byml" => "BYML 规范",
+        "quests.raw_tab_msbt" => "MSBT 文本",
+        "quests.raw_tab_flags" => "标志位与哈希",
         _ => return None,
     };
     Some(text)

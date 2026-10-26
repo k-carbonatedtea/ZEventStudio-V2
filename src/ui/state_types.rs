@@ -168,8 +168,10 @@ pub enum ActivityBarTab {
     Quests,        // 任务管理器
 }
 
+#[allow(unused_imports)]
 pub use crate::ui::sidebar::quests::modal_state::{
     QuestCreatorFocusField, QuestCreatorModalState, QuestCreatorTab,
+    QuestRawDataModalState, RawDataFormat,
 };
 
 /// Git 提交输入框焦点
