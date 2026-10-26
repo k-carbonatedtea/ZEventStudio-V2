@@ -291,6 +291,10 @@ fn render_quest_inline_details(
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                             let act_flag = q_clone.steps.iter().find(|s| s.name == "Ready").map(|s| s.next_flag.clone()).unwrap_or_else(|| format!("{}_Activated", q_clone.name));
                             let fin_flag = q_clone.steps.iter().find(|s| s.name == "Finish").map(|s| s.next_flag.clone()).unwrap_or_else(|| format!("{}_Finish", q_clone.name));
+                            let extra_flags: Vec<String> = q_clone.steps.iter()
+                                .filter(|s| s.name != "Ready" && s.name != "Finish")
+                                .map(|s| s.next_flag.clone())
+                                .collect();
                             let q_cfg = crate::model::quest::QuestScaffoldConfig {
                                 name: q_clone.name.clone(),
                                 quest_type: q_clone.quest_type,
@@ -303,6 +307,7 @@ fn render_quest_inline_details(
                                 activated_flag: act_flag,
                                 finish_flag: fin_flag,
                                 dependency_flag: q_clone.dependency_flag.clone().unwrap_or_default(),
+                                extra_flags,
                                 enable_indicator: false,
                                 indicator_actor: String::new(),
                                 indicator_pos: (0.0, 0.0, 0.0),

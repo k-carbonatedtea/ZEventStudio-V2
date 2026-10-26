@@ -179,6 +179,20 @@ pub fn handle_modal_key_event(event: &KeyDownEvent, state: &mut AppState, clipbo
                     QuestCreatorFocusField::ReadyFlag => QuestCreatorFocusField::ActivatedFlag,
                     QuestCreatorFocusField::ActivatedFlag => QuestCreatorFocusField::FinishFlag,
                     QuestCreatorFocusField::FinishFlag => QuestCreatorFocusField::DependencyFlag,
+                    QuestCreatorFocusField::DependencyFlag => {
+                        if !modal.extra_flags.is_empty() {
+                            QuestCreatorFocusField::ExtraFlag(0)
+                        } else {
+                            QuestCreatorFocusField::ReadyFlag
+                        }
+                    }
+                    QuestCreatorFocusField::ExtraFlag(idx) => {
+                        if idx + 1 < modal.extra_flags.len() {
+                            QuestCreatorFocusField::ExtraFlag(idx + 1)
+                        } else {
+                            QuestCreatorFocusField::ReadyFlag
+                        }
+                    }
                     _ => QuestCreatorFocusField::ReadyFlag,
                 },
                 crate::ui::state_types::QuestCreatorTab::Coordinates => match modal.focused_field {

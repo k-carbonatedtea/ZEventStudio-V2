@@ -89,6 +89,7 @@ impl AppState {
             activated_flag,
             finish_flag,
             dependency_flag: modal.dependency_flag.trim().to_string(),
+            extra_flags: modal.extra_flags.iter().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect(),
             enable_indicator: modal.enable_indicator,
             indicator_actor: if modal.indicator_actor.trim().is_empty() {
                 modal.orderer.trim().to_string()

@@ -124,6 +124,7 @@ pub struct QuestScaffoldConfig {
     pub activated_flag: String,
     pub finish_flag: String,
     pub dependency_flag: String,
+    pub extra_flags: Vec<String>,
     // 地图指示器与坐标设定
     pub enable_indicator: bool,
     pub indicator_actor: String,
@@ -154,6 +155,7 @@ impl Default for QuestScaffoldConfig {
             activated_flag: String::new(),
             finish_flag: String::new(),
             dependency_flag: String::new(),
+            extra_flags: Vec::new(),
             enable_indicator: false,
             indicator_actor: String::new(),
             indicator_pos: (0.0, 0.0, 0.0),

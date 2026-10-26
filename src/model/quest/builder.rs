@@ -166,7 +166,22 @@ fn build_quest_byml_entry(config: &QuestScaffoldConfig) -> Byml {
     fin_step.insert("UpdateStep".into(), Byml::Bool(true));
     fin_step.insert("AttentionOff".into(), Byml::Bool(false));
 
-    map.insert("Steps".into(), Byml::Array(vec![Byml::Map(ready_step), Byml::Map(fin_step)]));
+    let mut steps = vec![Byml::Map(ready_step)];
+    for (idx, flag) in config.extra_flags.iter().enumerate() {
+        let clean = flag.trim();
+        if !clean.is_empty() {
+            let mut step_map = roead::byml::Map::default();
+            step_map.insert("Name".into(), Byml::String(format!("Step{}", idx + 1).into()));
+            step_map.insert("MessageName".into(), Byml::String(format!("Step{}", idx + 1).into()));
+            step_map.insert("NextFlag".into(), Byml::String(clean.into()));
+            step_map.insert("UpdateStep".into(), Byml::Bool(true));
+            step_map.insert("AttentionOff".into(), Byml::Bool(false));
+            steps.push(Byml::Map(step_map));
+        }
+    }
+    steps.push(Byml::Map(fin_step));
+
+    map.insert("Steps".into(), Byml::Array(steps));
 
     Byml::Map(map)
 }
@@ -230,19 +245,44 @@ fn build_ql_msbt_bytes(config: &QuestScaffoldConfig) -> Result<Vec<u8>, String> 
     let desc_key = format!("QL_{}_Desc", config.name);
     let fin_key = format!("QL_{}_Finish", config.name);
 
-    let msyt_val = serde_json::json!({
-        "group_count": 3,
-        "entries": {
-            name_key: {
-                "contents": [config.display_title.clone()]
-            },
-            desc_key: {
-                "contents": [config.desc_text.clone()]
-            },
-            fin_key: {
-                "contents": [config.finish_text.clone()]
-            }
+    let mut entries = serde_json::Map::new();
+    entries.insert(
+        name_key,
+        serde_json::json!({
+            "contents": [config.display_title.clone()]
+        }),
+    );
+    entries.insert(
+        desc_key,
+        serde_json::json!({
+            "contents": [config.desc_text.clone()]
+        }),
+    );
+    entries.insert(
+        fin_key,
+        serde_json::json!({
+            "contents": [config.finish_text.clone()]
+        }),
+    );
+
+    for (idx, flag) in config.extra_flags.iter().enumerate() {
+        let clean = flag.trim();
+        if !clean.is_empty() {
+            let step_key = format!("QL_{}_Step{}", config.name, idx + 1);
+            let step_desc = format!("{} (阶段 {})", config.desc_text, idx + 1);
+            entries.insert(
+                step_key,
+                serde_json::json!({
+                    "contents": [step_desc]
+                }),
+            );
         }
+    }
+
+    let group_count = entries.len();
+    let msyt_val = serde_json::json!({
+        "group_count": group_count,
+        "entries": entries
     });
 
     let doc: msyt::Msyt = serde_json::from_value(msyt_val)

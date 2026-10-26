@@ -97,6 +97,12 @@ fn update_gamedata_flags(
             if !config.dependency_flag.is_empty() {
                 insert_or_replace_bgdata_entry(bool_arr, &config.dependency_flag, 0);
             }
+            for extra in &config.extra_flags {
+                let clean = extra.trim();
+                if !clean.is_empty() {
+                    insert_or_replace_bgdata_entry(bool_arr, clean, 0);
+                }
+            }
         }
     }
 
@@ -184,6 +190,14 @@ fn update_savedata_flags(
     update_single_saveformat(&mut sv_writer, "saveformat_0.bgsvdata", &fin_flag)?;
     if !config.dependency_flag.is_empty() {
         update_single_saveformat(&mut sv_writer, "saveformat_1.bgsvdata", &config.dependency_flag)?;
+    }
+    for (idx, extra) in config.extra_flags.iter().enumerate() {
+        let clean = extra.trim();
+        if !clean.is_empty() {
+            let slot = (idx + 2) % 8;
+            let format_name = format!("saveformat_{}.bgsvdata", slot);
+            let _ = update_single_saveformat(&mut sv_writer, &format_name, clean);
+        }
     }
 
     let new_sv_bytes = sv_writer.to_binary();
