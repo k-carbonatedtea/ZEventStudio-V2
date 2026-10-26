@@ -7,6 +7,7 @@ use roead::byml::Byml;
 use roead::sarc::Sarc;
 use roead::yaz0;
 
+use crate::model::GameLanguage;
 use crate::model::settings::GamePathSettings;
 use crate::ui::views::quest_map::markers_data::{
     get_default_hyrule_markers, HyruleMarker, HyruleMarkerKind,
@@ -15,6 +16,15 @@ use crate::ui::views::quest_map::markers_msbt::{
     extract_location_msbt_from_pack, parse_location_msbt,
 };
 use crate::ui::views::quest_map::markers_shops::resolve_shop_marker;
+
+/// 扫描过程中记录发现的各类语言包与松散地标文件路径
+#[derive(Default)]
+struct DiscoveredPacks {
+    target_packs: Vec<PathBuf>,
+    en_packs: Vec<PathBuf>,
+    loose_msbts: Vec<PathBuf>,
+}
+
 
 /// 从已配置的游戏路径与当前项目目录中自动提取海拉鲁地图标点（神庙、塔、驿站、城镇及自定义 Mod 标点）
 pub fn extract_hyrule_markers(
@@ -39,9 +49,8 @@ where
     for marker in get_default_hyrule_markers() {
         markers_map.insert(marker.id.to_string(), marker);
     }
-
-    let mut dict_zh: HashMap<String, String> = HashMap::new();
-    let mut dict_en: HashMap<String, String> = HashMap::new();
+    let target_lang = game_paths.map(|gp| gp.language).unwrap_or(GameLanguage::CNzh);
+    let mut discovered = DiscoveredPacks::default();
 
     // 2. 从已配置的游戏 Dump 路径中提取（严格优先使用当前所选平台）
     if let Some(gp) = game_paths {
@@ -50,55 +59,35 @@ where
 
         match gp.current_platform {
             crate::model::settings::PlatformType::Switch => {
-                if !gp.switch.game_dir.trim().is_empty() {
-                    primary_dirs.push(PathBuf::from(gp.switch.game_dir.trim()));
-                }
-                if !gp.switch.dlc_dir.trim().is_empty() {
-                    let dlc = gp.switch.dlc_dir.trim();
+                let sw = &gp.switch;
+                if !sw.game_dir.trim().is_empty() { primary_dirs.push(PathBuf::from(sw.game_dir.trim())); }
+                if !sw.dlc_dir.trim().is_empty() {
+                    let dlc = sw.dlc_dir.trim();
                     primary_dirs.push(PathBuf::from(dlc));
                     if dlc.contains("01007EF00011F001") {
                         primary_dirs.push(PathBuf::from(dlc.replace("01007EF00011F001", "01007EF00011E000")));
                     }
                 }
                 primary_dirs.push(PathBuf::from(r"C:\Game\BOTW\01007EF00011E000\romfs"));
-                if !gp.wiiu.update_dir.trim().is_empty() {
-                    fallback_dirs.push(PathBuf::from(gp.wiiu.update_dir.trim()));
-                }
-                if !gp.wiiu.game_dir.trim().is_empty() {
-                    fallback_dirs.push(PathBuf::from(gp.wiiu.game_dir.trim()));
-                }
+                if !gp.wiiu.update_dir.trim().is_empty() { fallback_dirs.push(PathBuf::from(gp.wiiu.update_dir.trim())); }
+                if !gp.wiiu.game_dir.trim().is_empty() { fallback_dirs.push(PathBuf::from(gp.wiiu.game_dir.trim())); }
             }
             crate::model::settings::PlatformType::WiiU => {
-                if !gp.wiiu.update_dir.trim().is_empty() {
-                    primary_dirs.push(PathBuf::from(gp.wiiu.update_dir.trim()));
-                }
-                if !gp.wiiu.game_dir.trim().is_empty() {
-                    primary_dirs.push(PathBuf::from(gp.wiiu.game_dir.trim()));
-                }
-                if !gp.switch.game_dir.trim().is_empty() {
-                    fallback_dirs.push(PathBuf::from(gp.switch.game_dir.trim()));
-                }
+                if !gp.wiiu.update_dir.trim().is_empty() { primary_dirs.push(PathBuf::from(gp.wiiu.update_dir.trim())); }
+                if !gp.wiiu.game_dir.trim().is_empty() { primary_dirs.push(PathBuf::from(gp.wiiu.game_dir.trim())); }
+                if !gp.switch.game_dir.trim().is_empty() { fallback_dirs.push(PathBuf::from(gp.switch.game_dir.trim())); }
             }
         }
 
-        // 先扫描当前平台有效目录
-        let mut scanned_any = false;
-        for dir in primary_dirs {
+        let search_dirs = if primary_dirs.iter().any(|d| d.exists()) {
+            primary_dirs
+        } else {
+            fallback_dirs
+        };
+        for dir in search_dirs {
             if dir.exists() {
-                scanned_any = true;
-                for marker in scan_static_markers_in_dir(&dir, false, 3, &mut dict_zh, &mut dict_en, &mut on_progress) {
+                for marker in scan_static_markers_in_dir(&dir, false, 3, target_lang, &mut discovered, &mut on_progress) {
                     merge_marker_into_map(&mut markers_map, marker);
-                }
-            }
-        }
-
-        // 仅当当前平台未能扫描到任何有效目录时，才使用备选平台
-        if !scanned_any {
-            for dir in fallback_dirs {
-                if dir.exists() {
-                    for marker in scan_static_markers_in_dir(&dir, false, 3, &mut dict_zh, &mut dict_en, &mut on_progress) {
-                        merge_marker_into_map(&mut markers_map, marker);
-                    }
                 }
             }
         }
@@ -110,23 +99,67 @@ where
         if proj_buf.exists() {
             let proj_name = proj_buf.file_name().and_then(|n| n.to_str()).unwrap_or("Project");
             on_progress(&format!("扫描项目自定义标点: {}", proj_name));
-            for marker in scan_static_markers_in_dir(&proj_buf, true, 4, &mut dict_zh, &mut dict_en, &mut on_progress) {
+            for marker in scan_static_markers_in_dir(&proj_buf, true, 4, target_lang, &mut discovered, &mut on_progress) {
                 merge_marker_into_map(&mut markers_map, marker);
             }
         }
     }
 
-    // 4. 多语言地名全量注入与润色 (使用官方 LocationMarker.msbt 注入官方中文名与英文名)
+    // 4. 根据软件设置的游戏语言提取地名包（缺失部分再从英文参考包中提取补充）
+    let mut dict_target: HashMap<String, String> = HashMap::new();
+    let mut dict_en: HashMap<String, String> = HashMap::new();
+
+    // 优先提取目标语言包 (如 Bootup_CNzh.pack)
+    for pack_path in &discovered.target_packs {
+        let name = pack_path.file_name().and_then(|n| n.to_str()).unwrap_or("Pack");
+        on_progress(&format!("提取{}地名包: {}", target_lang.display_name(), name));
+        if let Ok(bytes) = fs::read(pack_path) {
+            dict_target.extend(extract_location_msbt_from_pack(&bytes));
+        }
+    }
+
+    // 项目或 Mod 内松散 LocationMarker.msbt 注入目标字典
+    for msbt_path in &discovered.loose_msbts {
+        if let Ok(bytes) = fs::read(msbt_path) {
+            dict_target.extend(parse_location_msbt(&bytes));
+        }
+    }
+
+    // 检查是否有地标在目标语言包中缺失未翻译
+    let is_target_en = target_lang.is_english();
+    let has_missing_target = !is_target_en && markers_map.values().any(|m| {
+        !m.is_custom && m.kind != HyruleMarkerKind::Shop && !dict_target.contains_key(m.id.as_ref())
+    });
+
+    // 仅当目标语言缺少部分条目（或未找到目标包）时，才从英文参考包中提取补充！
+    if has_missing_target || (dict_target.is_empty() && !is_target_en) {
+        for pack_path in &discovered.en_packs {
+            let name = pack_path.file_name().and_then(|n| n.to_str()).unwrap_or("Pack");
+            on_progress(&format!("补充缺失地标 (从英文包提取): {}", name));
+            if let Ok(bytes) = fs::read(pack_path) {
+                dict_en.extend(extract_location_msbt_from_pack(&bytes));
+            }
+        }
+    }
+
+    // 5. 将翻译注入标点映射表 (优先使用目标语言，缺失条目自动使用英文填充)
     for marker in markers_map.values_mut() {
         if marker.kind == HyruleMarkerKind::Shop || marker.is_custom {
             continue;
         }
         let id_str = marker.id.as_ref();
-        if let Some(zh) = dict_zh.get(id_str) {
-            marker.name_zh = SharedString::from(zh.clone());
+        if let Some(target_name) = dict_target.get(id_str) {
+            marker.name_zh = SharedString::from(target_name.clone());
+        } else if let Some(en_name) = dict_en.get(id_str) {
+            marker.name_zh = SharedString::from(en_name.clone()); // 缺少部分从英文中提取补充
         }
-        if let Some(en) = dict_en.get(id_str) {
-            marker.name_en = SharedString::from(en.clone());
+
+        if let Some(en_name) = dict_en.get(id_str) {
+            marker.name_en = SharedString::from(en_name.clone());
+        } else if is_target_en {
+            if let Some(target_name) = dict_target.get(id_str) {
+                marker.name_en = SharedString::from(target_name.clone());
+            }
         }
     }
 
@@ -169,13 +202,13 @@ fn merge_marker_into_map(map: &mut HashMap<String, HyruleMarker>, new_marker: Hy
     }
 }
 
-/// 扫描指定目录下的 Static.smubin、Bootup.pack 及语言包
+/// 扫描指定目录下的 Static.smubin、Bootup.pack 及收集语言包路径
 fn scan_static_markers_in_dir<F>(
     root: &Path,
     is_custom: bool,
     max_depth: usize,
-    dict_zh: &mut HashMap<String, String>,
-    dict_en: &mut HashMap<String, String>,
+    target_lang: GameLanguage,
+    discovered: &mut DiscoveredPacks,
     on_progress: &mut F,
 ) -> Vec<HyruleMarker>
 where
@@ -183,6 +216,7 @@ where
 {
     let mut markers = Vec::new();
     let mut dirs_to_visit = vec![(root.to_path_buf(), 0)];
+    let (target_primary, target_fallback) = target_lang.bootup_pack_names();
 
     while let Some((curr, depth)) = dirs_to_visit.pop() {
         if depth > max_depth {
@@ -214,20 +248,17 @@ where
                         on_progress(&format!("解压 Yaz0: {}", display_path));
                         markers.extend(parse_markers_from_bootup_pack(&bytes, is_custom, on_progress));
                     }
-                } else if name.eq_ignore_ascii_case("Bootup_CNzh.pack") || name.eq_ignore_ascii_case("Bootup_TWzh.pack") {
-                    if let Ok(bytes) = fs::read(&path) {
-                        on_progress(&format!("提取地名语言包: {}", name));
-                        dict_zh.extend(extract_location_msbt_from_pack(&bytes));
-                    }
-                } else if name.eq_ignore_ascii_case("Bootup_USen.pack") || name.eq_ignore_ascii_case("Bootup_EUen.pack") {
-                    if let Ok(bytes) = fs::read(&path) {
-                        on_progress(&format!("提取英文地名包: {}", name));
-                        dict_en.extend(extract_location_msbt_from_pack(&bytes));
-                    }
-                } else if name.eq_ignore_ascii_case("LocationMarker.msbt") {
-                    if let Ok(bytes) = fs::read(&path) {
-                        dict_zh.extend(parse_location_msbt(&bytes));
-                    }
+                } else if (name.eq_ignore_ascii_case(target_primary)
+                    || target_fallback.is_some_and(|f| name.eq_ignore_ascii_case(f)))
+                    && !discovered.target_packs.contains(&path)
+                {
+                    discovered.target_packs.push(path);
+                } else if (name.eq_ignore_ascii_case("Bootup_USen.pack") || name.eq_ignore_ascii_case("Bootup_EUen.pack"))
+                    && !discovered.en_packs.contains(&path)
+                {
+                    discovered.en_packs.push(path);
+                } else if name.eq_ignore_ascii_case("LocationMarker.msbt") && !discovered.loose_msbts.contains(&path) {
+                    discovered.loose_msbts.push(path);
                 }
             }
         }
@@ -276,20 +307,9 @@ fn parse_location_markers_from_smubin(data: &[u8], is_custom: bool) -> Vec<Hyrul
         let Byml::Map(entry) = item else { continue };
 
         // 1. 提取标识 ID
-        let mid = entry.get("MessageID").and_then(|v| match v {
-            Byml::String(s) => Some(s.as_str()),
-            _ => None,
-        }).unwrap_or_default();
-
-        let save_flag = entry.get("SaveFlag").and_then(|v| match v {
-            Byml::String(s) => Some(s.as_str()),
-            _ => None,
-        }).unwrap_or_default();
-
-        let icon_str = entry.get("Icon").and_then(|v| match v {
-            Byml::String(s) => Some(s.as_str()),
-            _ => None,
-        }).unwrap_or_default();
+        let mid = entry.get("MessageID").and_then(|v| if let Byml::String(s) = v { Some(s.as_str()) } else { None }).unwrap_or_default();
+        let save_flag = entry.get("SaveFlag").and_then(|v| if let Byml::String(s) = v { Some(s.as_str()) } else { None }).unwrap_or_default();
+        let icon_str = entry.get("Icon").and_then(|v| if let Byml::String(s) = v { Some(s.as_str()) } else { None }).unwrap_or_default();
 
         // 提取世界坐标 (X, Z, Y)
         let (pos_x, pos_z, altitude) = if let Some(Byml::Map(t)) = entry.get("Translate") {

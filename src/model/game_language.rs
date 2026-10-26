@@ -56,6 +56,29 @@ impl GameLanguage {
         }
     }
 
+    /// 获取该语言对应的 Bootup_<Lang>.pack 候选文件名 (主包名, 备选回退包名)
+    pub const fn bootup_pack_names(&self) -> (&'static str, Option<&'static str>) {
+        match self {
+            Self::CNzh => ("Bootup_CNzh.pack", Some("Bootup_TWzh.pack")),
+            Self::TWzh => ("Bootup_TWzh.pack", Some("Bootup_CNzh.pack")),
+            Self::USen => ("Bootup_USen.pack", Some("Bootup_EUen.pack")),
+            Self::EUen => ("Bootup_EUen.pack", Some("Bootup_USen.pack")),
+            Self::JPja => ("Bootup_JPja.pack", None),
+            Self::KRko => ("Bootup_KRko.pack", None),
+            Self::EUfr => ("Bootup_EUfr.pack", Some("Bootup_USfr.pack")),
+            Self::EUde => ("Bootup_EUde.pack", None),
+            Self::EUes => ("Bootup_EUes.pack", Some("Bootup_USes.pack")),
+            Self::EUit => ("Bootup_EUit.pack", None),
+            Self::EUnl => ("Bootup_EUnl.pack", None),
+            Self::EUru => ("Bootup_EUru.pack", None),
+        }
+    }
+
+    /// 是否属于英语变体
+    pub const fn is_english(&self) -> bool {
+        matches!(self, Self::USen | Self::EUen)
+    }
+
     /// 获取所有支持的游戏语言列表
     pub const fn all() -> &'static [GameLanguage] {
         &[
@@ -74,3 +97,4 @@ impl GameLanguage {
         ]
     }
 }
+
