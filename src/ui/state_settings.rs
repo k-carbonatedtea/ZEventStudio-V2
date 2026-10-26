@@ -58,6 +58,8 @@ impl AppState {
     pub fn save_and_apply_settings(&mut self) {
         self.game_paths = self.settings_draft.clone();
         self.game_lang = self.game_paths.language;
+        crate::model::dialogue::DialogueCacheManager::global().clear();
+        self.update_node_sizes();
         self.invalidate_hyrule_markers_cache();
         if self.game_paths.current_platform == PlatformType::WiiU {
             self.target_engine = TargetEngine::BotW;
@@ -103,6 +105,8 @@ impl AppState {
         self.settings_draft = GamePathSettings::default();
         self.lang = crate::i18n::Language::Zh;
         self.game_lang = GameLanguage::CNzh;
+        crate::model::dialogue::DialogueCacheManager::global().clear();
+        self.update_node_sizes();
         self.show_welcome_on_startup = true;
         self.expand_all_params = false;
         self.grid_style = GridStyle::Dots;

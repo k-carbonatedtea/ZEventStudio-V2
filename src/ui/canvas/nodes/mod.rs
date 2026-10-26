@@ -1,6 +1,7 @@
 pub mod entry_card;
 pub mod event_card;
 pub mod socket;
+pub mod dialogue_bubble;
 
 use gpui::*;
 use entry_card::render_entry_card;

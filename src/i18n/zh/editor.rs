@@ -5,6 +5,11 @@ pub fn get_zh_editor(key: &str) -> Option<&'static str> {
         "node.parameters_label" => "参数属性 (Parameters):",
         "node.wait_join" => "等待并发分支汇合",
         "node.fork_count" => "分支数",
+        "node.dialogue_preview" => "对白文本预览",
+        "node.dialogue_source_project" => "项目",
+        "node.dialogue_source_dump" => "游戏 Dump",
+        "node.dialogue_not_found" => "未在项目中或游戏 Dump 中检索到对应语言对白文本",
+        "inspector.dialogue_preview" => "💬 对白内容预览",
         "edge.cut" => "✂ 剪断",
 
         // ---------------- 属性检查器 (Inspector) ----------------

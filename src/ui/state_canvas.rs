@@ -24,19 +24,57 @@ impl AppState {
                 node.size = (crate::model::node::calculate_entry_point_width(&node.title), 42.0);
                 continue;
             }
+            let has_dialogue = crate::model::extract_node_message_target(node).is_some();
+            let dialogue_item = if has_dialogue {
+                crate::model::resolve_node_dialogue(
+                    node,
+                    self.game_lang,
+                    self.project_path.as_deref(),
+                    &self.game_paths,
+                )
+            } else {
+                None
+            };
+
             if self.expand_all_params && !node.properties.is_empty() {
-                let height = 110.0 + 22.0 * (node.properties.len() as f32);
+                let estimated_lines = if let Some(ref item) = dialogue_item {
+                    let line_count = item.text.lines().count().max(1);
+                    let char_count = item.text.chars().count();
+                    ((char_count as f32 / 20.0).ceil() as usize).max(line_count).clamp(1, 6)
+                } else if has_dialogue {
+                    2
+                } else {
+                    0
+                };
+                let dialogue_extra = if has_dialogue { 48.0 + (estimated_lines as f32) * 20.0 } else { 0.0 };
+                let height = 110.0 + 22.0 * (node.properties.len() as f32) + dialogue_extra;
                 let mut max_len = node.title.len().max(node.subtitle.as_ref().map(|s| s.len()).unwrap_or(0));
                 for p in &node.properties {
                     max_len = max_len.max(p.key.len() + p.val.len() + 4);
                 }
-                node.size = (240.0f32.max(((max_len as f32) * 7.2 + 40.0).min(480.0)), height);
+                let base_w = if has_dialogue { 300.0f32 } else { 240.0f32 };
+                node.size = (base_w.max(((max_len as f32) * 7.2 + 40.0).min(520.0)), height);
             } else {
-                let hh = (node.extract_key_highlights().len() as f32) * 24.0;
+                let non_dialogue_hl = node
+                    .extract_key_highlights()
+                    .into_iter()
+                    .filter(|h| !has_dialogue || h.label != "对白")
+                    .count();
+                let hh = (non_dialogue_hl as f32) * 24.0;
+                let estimated_lines = if let Some(ref item) = dialogue_item {
+                    let line_count = item.text.lines().count().max(1);
+                    let char_count = item.text.chars().count();
+                    ((char_count as f32 / 20.0).ceil() as usize).max(line_count).clamp(1, 3)
+                } else if has_dialogue {
+                    2
+                } else {
+                    0
+                };
+                let dialogue_extra = if has_dialogue { 46.0 + (estimated_lines as f32) * 20.0 } else { 0.0 };
                 let (bw, bh) = match node.kind {
-                    NodeKind::Action | NodeKind::Switch => (240.0, 85.0 + hh),
-                    NodeKind::Query => (230.0, 85.0 + hh),
-                    NodeKind::SubFlow => (220.0, 85.0 + hh),
+                    NodeKind::Action | NodeKind::Switch => (if has_dialogue { 300.0 } else { 250.0 }, 85.0 + hh + dialogue_extra),
+                    NodeKind::Query => (if has_dialogue { 290.0 } else { 240.0 }, 85.0 + hh + dialogue_extra),
+                    NodeKind::SubFlow => (if has_dialogue { 280.0 } else { 230.0 }, 85.0 + hh + dialogue_extra),
                     NodeKind::Fork | NodeKind::Join => (210.0, 95.0),
                     NodeKind::Math => (200.0, 100.0),
                     NodeKind::Comment => (240.0, 120.0),

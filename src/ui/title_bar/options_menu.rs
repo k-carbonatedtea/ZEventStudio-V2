@@ -73,6 +73,8 @@ pub fn render_options_menu(state: &AppState, model: &Entity<AppState>) -> impl I
                                         st.game_lang = gl;
                                         st.game_paths.language = gl;
                                         st.settings_draft.language = gl;
+                                        crate::model::dialogue::DialogueCacheManager::global().clear();
+                                        st.update_node_sizes();
                                         let _ = st.game_paths.save_to_disk();
                                         cx.notify();
                                     });

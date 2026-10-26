@@ -24,7 +24,12 @@ pub fn render_event_card(
     let corner_radius = (8.0 * z).clamp(2.0, 12.0);
 
     let theme = node.actor_theme();
-    let highlights = node.extract_key_highlights();
+    let has_dialogue = crate::model::extract_node_message_target(node).is_some();
+    let highlights: Vec<KeyHighlight> = node
+        .extract_key_highlights()
+        .into_iter()
+        .filter(|hl| !has_dialogue || hl.label != "对白")
+        .collect();
 
     // 链路追踪 (Flow Tracing) O(1) 快速判定
     let (is_on_active_path, is_unrelated) = if let Some(path_set) = ctx.active_path_nodes {
@@ -225,7 +230,14 @@ pub fn render_event_card(
                     render_full_parameters(state, &node.properties, z)
                 } else {
                     render_smart_highlights(&highlights, z)
-                }),
+                })
+                // 4. 对白多语言文本预览 (按语言设置，优先项目，回退Dump)
+                .children(super::dialogue_bubble::render_dialogue_preview_card(
+                    state,
+                    node,
+                    z,
+                    ctx.expand_all,
+                )),
         )
         // 顶部输入引脚 (Input Sockets)
         .children(if z >= 0.32 {

@@ -5,6 +5,11 @@ pub fn get_en_editor(key: &str) -> Option<&'static str> {
         "node.parameters_label" => "Parameters:",
         "node.wait_join" => "Wait for parallel join",
         "node.fork_count" => "Forks",
+        "node.dialogue_preview" => "Dialogue Preview",
+        "node.dialogue_source_project" => "Project",
+        "node.dialogue_source_dump" => "Game Dump",
+        "node.dialogue_not_found" => "No matching dialogue text found in project or game dump",
+        "inspector.dialogue_preview" => "💬 Dialogue Preview",
         "edge.cut" => "✂ Cut",
 
         // ---------------- 属性检查器 (Inspector) ----------------
