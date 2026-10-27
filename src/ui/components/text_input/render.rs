@@ -3,12 +3,14 @@ use super::ime::render_blinking_cursor;
 use super::key::find_word_range_at;
 use crate::ui::state::AppState;
 
-/// 渲染具备字符级光标、鼠标划选与点击寻址的高级交互文本输入组件
+/// 渲染具备字符级光标、鼠标划选、IME 预输入与点击寻址的高级交互文本输入组件
+#[allow(clippy::too_many_arguments)]
 pub fn render_interactive_input_text(
     text: &str,
     is_focused: bool,
     cursor: usize,
     select_range: Option<(usize, usize)>,
+    marked_range: Option<(usize, usize)>,
     cursor_color: Hsla,
     text_color: Rgba,
     model: &Entity<AppState>,
@@ -25,6 +27,7 @@ pub fn render_interactive_input_text(
         }
 
         let is_selected = is_focused && select_range.is_some_and(|(s, e)| idx >= s && idx < e);
+        let is_marked = is_focused && marked_range.is_some_and(|(s, e)| idx >= s && idx < e);
 
         let mut ch_el = div()
             .text_color(text_color)
@@ -41,6 +44,7 @@ pub fn render_interactive_input_text(
                     let click_count = e.click_count;
                     let chs = chars_clone.clone();
                     model_char.update(cx, |st, cx| {
+                        st.text_input_marked_range = None;
                         if click_count >= 2 {
                             let (w_s, w_e) = find_word_range_at(&chs, idx);
                             st.text_input_select_anchor = Some(w_s);
@@ -65,6 +69,8 @@ pub fn render_interactive_input_text(
 
         if is_selected {
             ch_el = ch_el.bg(rgba(0x3B82F655)).rounded_xs();
+        } else if is_marked {
+            ch_el = ch_el.border_b_1().border_color(cursor_color);
         }
 
         elements.push(ch_el.into_any_element());
@@ -77,7 +83,7 @@ pub fn render_interactive_input_text(
     div().flex().items_center().children(elements)
 }
 
-/// 快速渲染单行输入框文本与光标 (自动拉取 AppState 主题与光标/选区状态)
+/// 快速渲染单行输入框文本与光标 (自动拉取 AppState 主题与光标/选区/IME组合态)
 pub fn render_input_text(
     text: &str,
     is_focused: bool,
@@ -90,6 +96,7 @@ pub fn render_input_text(
         is_focused,
         if is_focused { state.text_input_cursor } else { 0 },
         if is_focused { state.text_input_selection_range() } else { None },
+        if is_focused { state.text_input_marked_range } else { None },
         pal.primary_accent.into(),
         pal.text_primary,
         model,

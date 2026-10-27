@@ -217,10 +217,11 @@ pub struct AppState {
     pub msbt_new_entry_name: String,
     pub msbt_new_entry_focused: bool,
 
-    // 全局输入框统一光标、选区与拖拽状态
+    // 全局输入框统一光标、选区、拖拽与 IME 组合态 (Preedit/Marked Range)
     pub text_input_cursor: usize,
     pub text_input_select_anchor: Option<usize>,
     pub text_input_is_dragging: bool,
+    pub text_input_marked_range: Option<(usize, usize)>,
 }
 #[allow(dead_code)]
 impl AppState {

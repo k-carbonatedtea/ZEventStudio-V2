@@ -197,6 +197,7 @@ impl AppState {
             text_input_cursor: 0,
             text_input_select_anchor: None,
             text_input_is_dragging: false,
+            text_input_marked_range: None,
         };
 
         state.clean_invalid_recent_projects();

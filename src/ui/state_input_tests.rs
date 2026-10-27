@@ -111,4 +111,32 @@ mod tests {
         assert_eq!(state.active_text_input(), Some("MyCustomQues"));
         assert_eq!(state.text_input_cursor, "MyCustomQues".chars().count());
     }
+
+    #[test]
+    fn test_ime_preedit_composition_flow() {
+        let mut state = AppState::new();
+        state.global_search_focused = true;
+        assert_eq!(state.active_text_input(), Some(""));
+
+        // 1. 输入拼音 "w" (Preedit 组合态开始)
+        let (s, e) = state.replace_range_in_active_input((0, 0), "w");
+        state.text_input_marked_range = Some((s, e));
+        assert_eq!(state.global_search_query, "w");
+        assert_eq!(state.text_input_cursor, 1);
+        assert_eq!(state.text_input_marked_range, Some((0, 1)));
+
+        // 2. 追加拼音至 "wo" (更新组合态文本)
+        let (s2, e2) = state.replace_range_in_active_input((0, 1), "wo");
+        state.text_input_marked_range = Some((s2, e2));
+        assert_eq!(state.global_search_query, "wo");
+        assert_eq!(state.text_input_cursor, 2);
+        assert_eq!(state.text_input_marked_range, Some((0, 2)));
+
+        // 3. 用户确认候选词 "我" (Commit 组合态结束)
+        state.replace_range_in_active_input((0, 2), "我");
+        state.text_input_marked_range = None;
+        assert_eq!(state.global_search_query, "我");
+        assert_eq!(state.text_input_cursor, 1);
+        assert_eq!(state.text_input_marked_range, None);
+    }
 }

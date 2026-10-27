@@ -56,6 +56,7 @@ impl AppState {
         self.text_input_cursor = 0;
         self.text_input_select_anchor = None;
         self.text_input_is_dragging = false;
+        self.text_input_marked_range = None;
     }
 
     /// 获取当前激活的输入框文本内容切片
@@ -307,10 +308,17 @@ impl AppState {
     }
 
     /// 向当前聚焦的输入框插入文本 (支持中文 IME 提交、剪贴板粘贴等)
+    #[allow(dead_code)]
     pub fn insert_text_to_active_input(&mut self, text: &str) -> bool {
         let clean: String = text.chars().filter(|&c| c != '\r' && c != '\x08' && c != '\x1b').collect();
         if clean.is_empty() {
             return false;
+        }
+
+        // 若当前处于 IME 标记组合态，优先替换 marked_range
+        if let Some(m) = self.text_input_marked_range.take() {
+            self.replace_range_in_active_input(m, &clean);
+            return true;
         }
 
         let cursor = self.text_input_cursor;
@@ -321,5 +329,28 @@ impl AppState {
             crate::ui::components::splice_string_at(target, &mut cur, &mut anc, &clean);
             cur
         })
+    }
+
+    /// 替换当前激活输入框中指定字符区间的文本，并同步光标与选区
+    pub fn replace_range_in_active_input(&mut self, char_range: (usize, usize), new_text: &str) -> (usize, usize) {
+        let clean: String = new_text.chars().filter(|&c| c != '\r' && c != '\x08' && c != '\x1b').collect();
+        let new_len = clean.chars().count();
+        let start = char_range.0;
+        let end = char_range.1;
+
+        self.apply_to_active_input(|target| {
+            let mut chars: Vec<char> = target.chars().collect();
+            let total = chars.len();
+            let s = start.min(total);
+            let e = end.min(total).max(s);
+            chars.drain(s..e);
+            for (idx, ch) in clean.chars().enumerate() {
+                chars.insert(s + idx, ch);
+            }
+            *target = chars.into_iter().collect();
+            s + new_len
+        });
+
+        (start, start + new_len)
     }
 }

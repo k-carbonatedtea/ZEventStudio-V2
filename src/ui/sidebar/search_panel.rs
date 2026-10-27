@@ -16,10 +16,6 @@ pub fn render_search_panel(
     let whole_word = state.global_search_whole_word;
     let use_regex = state.global_search_use_regex;
     let show_filters = state.global_search_show_filters;
-
-    let model_input = model.clone();
-    let model_input_out = model.clone();
-
     let result_count = state.global_search_results.len();
 
     div()
@@ -43,72 +39,31 @@ pub fn render_search_panel(
                 .border_b_1()
                 .border_color(pal.panel_border)
 
-                // 搜索输入框
+                // 搜索输入框 (使用通用 TextInput 小组件)
                 .child(
-                    div()
-                        .w_full()
-                        .h(px(28.0))
-                        .px_2()
-                        .rounded_md()
-                        .bg(pal.app_bg)
-                        .border_1()
-                        .border_color(if is_focused {
-                            pal.primary_accent
-                        } else {
-                            pal.panel_border
-                        })
-                        .flex()
-                        .items_center()
-                        .justify_between()
-                        .cursor_text()
-                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                            model_input.update(cx, |st, cx| {
-                                st.clear_active_text_inputs();
-                                st.global_search_focused = true;
-                                st.text_input_cursor = st.global_search_query.chars().count();
-                                st.text_input_select_anchor = None;
-                                cx.notify();
-                            });
-                        })
-                        .on_mouse_down_out(move |_, _, cx| {
-                            model_input_out.update(cx, |st, cx| {
-                                if st.global_search_focused {
-                                    st.global_search_focused = false;
-                                    cx.notify();
-                                }
-                            });
-                        })
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_1p5()
-                                .flex_1()
-                                .overflow_hidden()
-                                .child(
-                                    div()
-                                        .text_size(px(11.0))
-                                        .text_color(pal.text_secondary)
-                                        .child("🔍"),
-                                )
-                                .child(if state.global_search_query.is_empty() && !is_focused {
-                                    div()
-                                        .text_size(px(11.0))
-                                        .text_color(pal.text_secondary)
-                                        .child(state.t("search.placeholder"))
-                                        .into_any_element()
-                                } else {
-                                    crate::ui::components::render_input_text(
-                                        &state.global_search_query,
-                                        is_focused,
-                                        state,
-                                        model,
-                                    )
-                                    .into_any_element()
-                                }),
-                        )
-                        // 右侧内嵌模式切换按钮组
-                        .child(render_search_mode_toggles(case_sensitive, whole_word, use_regex, model, &pal)),
+                    crate::ui::components::TextInput::new(
+                        "global_search_input",
+                        &state.global_search_query,
+                        is_focused,
+                        model.clone(),
+                    )
+                    .h(px(28.0))
+                    .bg(pal.app_bg)
+                    .cleanable(false)
+                    .placeholder(state.t("search.placeholder"))
+                    .prefix(
+                        div()
+                            .text_size(px(11.0))
+                            .text_color(pal.text_secondary)
+                            .child("🔍"),
+                    )
+                    .suffix(render_search_mode_toggles(case_sensitive, whole_word, use_regex, model, &pal))
+                    .on_focus(|st| {
+                        st.global_search_focused = true;
+                    })
+                    .on_blur(|st| {
+                        st.global_search_focused = false;
+                    }),
                 )
 
                 // 3. 高级筛选过滤器面板 (展开时展示包含/排除文件模式)
