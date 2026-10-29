@@ -25,6 +25,7 @@ pub enum AppWorkspaceTab {
     #[default]
     Welcome,
     Flowchart,
+    Timeline,
     CodeEditor,
     Actors,
     Events,

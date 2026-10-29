@@ -26,13 +26,67 @@ impl AppState {
             } else {
                 tab.graph.clone()
             };
+            let timeline_to_save = tab.timeline_state.as_ref().map(|ts| ts.timeline.clone());
             let file_type = tab.file_type.clone();
-            (tab.tab_kind, tab.file_path.clone(), file_type, code_info, graph_to_save)
+            (tab.tab_kind, tab.file_path.clone(), file_type, code_info, graph_to_save, timeline_to_save)
         };
 
-        let (tab_kind, file_path, _file_type, code_info, graph_to_save) = tab_info;
+        let (tab_kind, file_path, _file_type, code_info, graph_to_save, timeline_to_save) = tab_info;
 
         match tab_kind {
+            DocumentTabKind::Timeline => {
+                let target_timeline = match timeline_to_save {
+                    Some(tl) => tl,
+                    None => {
+                        self.toast = Some(Toast::error(self.t("toast.no_active_file")));
+                        return false;
+                    }
+                };
+
+                let mut evfl = revfl::evfl::EventFlow::new();
+                evfl.name = target_timeline.name.clone();
+                evfl.timeline = Some(target_timeline.clone());
+
+                let compile_res = crate::model::evfl::save_eventflow_to_bytes(&evfl);
+                match compile_res {
+                    Ok(bytes) => {
+                        let final_bytes = if crate::model::should_compress_yaz0(&file_path) {
+                            roead::yaz0::compress(&bytes)
+                        } else {
+                            bytes
+                        };
+                        match write_file_to_target(&file_path, &final_bytes) {
+                            Ok(_) => {
+                                if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
+                                    if let Some(ref mut ts) = tab.timeline_state {
+                                        ts.original_timeline = target_timeline.clone();
+                                    }
+                                    if let Some(ref mut code) = tab.code_state {
+                                        let json_text = serde_json::to_string_pretty(&evfl).unwrap_or_default();
+                                        code.content = json_text;
+                                        code.mark_saved();
+                                    }
+                                    tab.is_modified = false;
+                                    tab.last_disk_mtime = crate::model::document_tab::get_file_mtime(&file_path);
+                                }
+                                if self.git_is_repo {
+                                    self.refresh_git_status();
+                                }
+                                self.toast = Some(Toast::success(self.t("toast.save_success")));
+                                true
+                            }
+                            Err(e) => {
+                                self.toast = Some(Toast::error(format!("{}: {}", self.t("toast.save_failed"), e)));
+                                false
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        self.toast = Some(Toast::error(format!("{}: {}", self.t("toast.compile_failed"), e)));
+                        false
+                    }
+                }
+            }
             DocumentTabKind::Flowchart => {
                 let target_graph = match graph_to_save {
                     Some(g) => g,
@@ -177,6 +231,15 @@ impl AppState {
                     tab.is_modified = false;
                 }
                 DocumentTabKind::DiffViewer => {
+                    tab.is_modified = false;
+                }
+                DocumentTabKind::Timeline => {
+                    if let Some(ref mut tl_state) = tab.timeline_state {
+                        tl_state.timeline = tl_state.original_timeline.clone();
+                    }
+                    if let Some(ref mut code) = tab.code_state {
+                        code.revert();
+                    }
                     tab.is_modified = false;
                 }
             }

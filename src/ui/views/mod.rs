@@ -5,6 +5,7 @@ pub mod diff_viewer;
 pub mod event_manager;
 pub mod msbt_editor;
 pub mod quest_map;
+pub mod timeline_editor;
 pub mod welcome;
 
 pub use actor_manager::render_actor_manager_view;
@@ -14,4 +15,5 @@ pub use diff_viewer::render_diff_viewer_view;
 pub use event_manager::render_event_manager_view;
 pub use msbt_editor::render_msbt_bubble_editor;
 pub use quest_map::render_quest_map_view;
+pub use timeline_editor::render_timeline_editor_view;
 pub use welcome::render_welcome_view;

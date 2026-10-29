@@ -39,6 +39,15 @@ impl AppState {
                     DocumentTabKind::DiffViewer => {
                         tab.is_modified = false;
                     }
+                    DocumentTabKind::Timeline => {
+                        if let Some(ref mut tl_state) = tab.timeline_state {
+                            tl_state.timeline = tl_state.original_timeline.clone();
+                        }
+                        if let Some(ref mut code) = tab.code_state {
+                            code.revert();
+                        }
+                        tab.is_modified = false;
+                    }
                 }
                 self.toast = Some(Toast::info(self.t("toast.revert_success")));
             }
@@ -113,6 +122,29 @@ impl AppState {
                 }
             }
             DocumentTabKind::DiffViewer => {}
+            DocumentTabKind::Timeline => {
+                let bytes = crate::model::file_tree::read_file_from_path(&tab.file_path)?;
+                let decompressed = crate::model::file_converter::decompress_if_yaz0(&bytes);
+                let evfl = crate::model::evfl::load_eventflow_from_bytes(&decompressed)?;
+                if let Some(tl) = evfl.timeline {
+                    let mtime = crate::model::document_tab::get_file_mtime(&tab.file_path);
+                    if let Some(tab_mut) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
+                        if let Some(ref mut tl_state) = tab_mut.timeline_state {
+                            tl_state.timeline = tl.clone();
+                            tl_state.original_timeline = tl;
+                        }
+                        if let Ok((code_text, format, endian)) =
+                            crate::model::file_converter::parse_file_to_code(&bytes, &tab.file_path)
+                        {
+                            if let Some(ref mut code) = tab_mut.code_state {
+                                code.reload(code_text, format, endian);
+                            }
+                        }
+                        tab_mut.is_modified = false;
+                        tab_mut.last_disk_mtime = mtime;
+                    }
+                }
+            }
         }
         Ok(())
     }

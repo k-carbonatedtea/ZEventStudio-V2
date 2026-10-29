@@ -25,6 +25,7 @@ pub mod quest;
 pub mod search;
 pub mod subgraph;
 pub mod dialogue;
+pub mod timeline;
 
 #[allow(unused_imports)]
 pub use plugin::*;
@@ -55,3 +56,4 @@ pub use port::{Port, PortDirection};
 pub use sarc_writer::{copy_dir_all, delete_file_from_target, extract_sarc_to_dir, pack_dir_to_sarc_file, rename_file_in_target, write_file_to_target};
 #[allow(unused_imports)]
 pub use dialogue::{extract_node_message_target, resolve_node_dialogue, DialogueItem, DialogueSource};
+pub use timeline::*;

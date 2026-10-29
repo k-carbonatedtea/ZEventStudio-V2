@@ -131,6 +131,43 @@ mod tests {
     }
 
     #[test]
+    fn test_load_bfevtm() {
+        let bytes = include_bytes!("../../Demo103_0.bfevtm");
+        let evfl = load_eventflow_from_bytes(bytes).expect("Failed to load Demo103_0.bfevtm");
+        assert!(evfl.timeline.is_some());
+        let tl = evfl.timeline.as_ref().unwrap();
+        println!("Timeline: name={}, duration={}, actors={}, clips={}, oneshots={}, cuts={}",
+            tl.name, tl.duration, tl.actors.len(), tl.clips.len(), tl.oneshots.len(), tl.cuts.len());
+        for actor in &tl.actors {
+            println!("  Actor: name={}, actions={:?}", actor.identifier.name, actor.actions.iter().map(|a| &a.0).collect::<Vec<_>>());
+        }
+        for clip in &tl.clips {
+            println!("  Clip: start={}, duration={}, actor_idx={}, action_idx={}", clip.start_time, clip.duration, clip.actor.idx, clip.actor_action.idx);
+        }
+        for cut in &tl.cuts {
+            println!("  Cut: start={}, name={}", cut.start_time, cut.name);
+        }
+        assert!(!tl.actors.is_empty());
+
+        // Test roundtrip save
+        let saved_bytes = save_eventflow_to_bytes(&evfl).expect("Failed to save eventflow");
+        let reloaded = load_eventflow_from_bytes(&saved_bytes).expect("Failed to reload saved eventflow");
+        assert!(reloaded.timeline.is_some());
+        let reloaded_tl = reloaded.timeline.as_ref().unwrap();
+        assert_eq!(reloaded_tl.name, tl.name);
+        assert_eq!(reloaded_tl.clips.len(), tl.clips.len());
+
+        // Test Demo103_0_effect.bfevtm
+        let bytes_effect = include_bytes!("../../Demo103_0_effect.bfevtm");
+        let evfl_effect = load_eventflow_from_bytes(bytes_effect).expect("Failed to load Demo103_0_effect.bfevtm");
+        assert!(evfl_effect.timeline.is_some());
+        let saved_effect = save_eventflow_to_bytes(&evfl_effect).expect("Failed to save effect timeline");
+        let reloaded_effect = load_eventflow_from_bytes(&saved_effect).expect("Failed to reload effect timeline");
+        assert!(reloaded_effect.timeline.is_some());
+        assert_eq!(reloaded_effect.timeline.as_ref().unwrap().cuts.len(), 1);
+    }
+
+    #[test]
     fn test_load_bfevfl_invalid_bytes() {
         assert!(load_bfevfl_from_bytes(b"").is_err());
         assert!(load_bfevfl_from_bytes(b"INVALID_DATA_HEADER").is_err());

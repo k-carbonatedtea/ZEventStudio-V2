@@ -54,6 +54,23 @@ impl AppState {
                     }));
                 }
                 DocumentTabKind::DiffViewer => {}
+                DocumentTabKind::Timeline => {
+                    let json_content = if let Some(ref tl_state) = tab.timeline_state {
+                        serde_json::to_string_pretty(&tl_state.timeline).unwrap_or_default()
+                    } else if let Some(ref code) = tab.code_state {
+                        code.content.clone()
+                    } else {
+                        String::new()
+                    };
+                    return Ok(serde_json::json!({
+                        "status": "ok",
+                        "path": tab.file_path,
+                        "format": "bfevtm",
+                        "content": json_content,
+                        "is_open_in_tab": true,
+                        "is_modified": tab.is_modified,
+                    }));
+                }
             }
         }
 
@@ -173,6 +190,19 @@ impl AppState {
                         }
                     }
                     DocumentTabKind::DiffViewer => {}
+                    DocumentTabKind::Timeline => {
+                        if let Ok(timeline) = serde_json::from_str::<revfl::timeline::Timeline>(content) {
+                            if let Some(ref mut tl_state) = tab.timeline_state {
+                                tl_state.timeline = timeline.clone();
+                                tl_state.original_timeline = timeline;
+                            }
+                        }
+                        if let Some(ref mut code) = tab.code_state {
+                            code.content = content.to_string();
+                            code.mark_saved();
+                            code.version += 1;
+                        }
+                    }
                 }
             }
         }

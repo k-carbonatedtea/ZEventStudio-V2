@@ -6,6 +6,8 @@ use crate::model::Graph;
 pub enum DocumentTabKind {
     /// 交互式事件流程图
     Flowchart,
+    /// 交互式过场动画时间线
+    Timeline,
     /// 多格式通用代码编辑器
     CodeEditor,
     /// Git 代码双栏差异对比视图
@@ -89,6 +91,7 @@ pub struct OpenDocumentTab {
     pub tab_kind: DocumentTabKind,
     pub graph: Option<Graph>,
     pub original_graph: Option<Graph>, // 原始加载时的快照，用于精确比对是否被真正修改
+    pub timeline_state: Option<crate::model::TimelineDocumentState>,
     pub code_state: Option<CodeDocumentState>,
     pub diff_state: Option<DiffViewerTabState>,
     pub is_modified: bool,
@@ -114,6 +117,33 @@ impl OpenDocumentTab {
             tab_kind: DocumentTabKind::Flowchart,
             graph,
             original_graph,
+            timeline_state: None,
+            code_state: None,
+            diff_state: None,
+            is_modified: false,
+            last_disk_mtime,
+        }
+    }
+
+    /// 创建时间线类型的文档标签项
+    pub fn new_timeline(
+        id: String,
+        title: String,
+        file_path: String,
+        file_type: String,
+        timeline: revfl::timeline::Timeline,
+    ) -> Self {
+        let last_disk_mtime = get_file_mtime(&file_path);
+        let timeline_state = crate::model::TimelineDocumentState::new(timeline);
+        Self {
+            id,
+            title,
+            file_path,
+            file_type,
+            tab_kind: DocumentTabKind::Timeline,
+            graph: None,
+            original_graph: None,
+            timeline_state: Some(timeline_state),
             code_state: None,
             diff_state: None,
             is_modified: false,
@@ -138,6 +168,7 @@ impl OpenDocumentTab {
             tab_kind: DocumentTabKind::CodeEditor,
             graph: None,
             original_graph: None,
+            timeline_state: None,
             code_state: Some(code_state),
             diff_state: None,
             is_modified: false,
@@ -160,6 +191,7 @@ impl OpenDocumentTab {
             tab_kind: DocumentTabKind::DiffViewer,
             graph: None,
             original_graph: None,
+            timeline_state: None,
             code_state: None,
             diff_state: Some(diff_state),
             is_modified: false,
@@ -167,10 +199,13 @@ impl OpenDocumentTab {
         }
     }
 
-    /// 获取文件类型对应的精美图标 (💬 / ⚙️ / ⚡ / 📜 / {} / ≡ / 📦 / 📄 / ⇄)
+    /// 获取文件类型对应的精美图标 (💬 / ⚙️ / ⚡ / 🎬 / 📜 / {} / ≡ / 📦 / 📄 / ⇄)
     pub fn icon(&self) -> &'static str {
         if self.tab_kind == DocumentTabKind::DiffViewer {
             return "⇄";
+        }
+        if self.tab_kind == DocumentTabKind::Timeline {
+            return "🎬";
         }
         if let Some(ref code) = self.code_state {
             return code.format.icon();
@@ -180,6 +215,7 @@ impl OpenDocumentTab {
             "byml" | "bgyml" | "sbyml" | "aamp" | "bxml" | "baev" | "baiprog" | "sbaiprog" => "⚙️",
             "json" => "{}",
             "bfevfl" | "evfl" => "⚡",
+            "bfevtm" | "evtm" => "🎬",
             "yaml" | "yml" => "📜",
             "txt" | "log" => "≡",
             "sarc" | "pack" | "sbeventpack" | "sbactorpack" | "ssarc" => "📦",
@@ -201,6 +237,11 @@ impl OpenDocumentTab {
                     self.is_modified = is_graph_modified(curr, orig);
                 } else if let Some(curr) = &self.graph {
                     self.is_modified = !curr.nodes.is_empty() || !curr.edges.is_empty();
+                }
+            }
+            DocumentTabKind::Timeline => {
+                if let Some(ref ts) = self.timeline_state {
+                    self.is_modified = ts.is_modified();
                 }
             }
             DocumentTabKind::CodeEditor => {

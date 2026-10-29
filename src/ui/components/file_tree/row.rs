@@ -176,6 +176,8 @@ fn get_node_icon_by_name(name: &str, is_dir: bool, is_sarc: bool) -> &'static st
         let lower = name.to_lowercase();
         if lower.ends_with(".bfevfl") || lower.ends_with(".evfl") {
             "⚡"
+        } else if lower.ends_with(".bfevtm") || lower.ends_with(".evtm") {
+            "🎬"
         } else if lower.ends_with(".msbt") || lower.ends_with(".smsbt") {
             "💬"
         } else if lower.ends_with(".byml")

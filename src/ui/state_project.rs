@@ -142,10 +142,44 @@ impl AppState {
                     self.current_tab = AppWorkspaceTab::Flowchart;
                 }
             }
+            AppWorkspaceTab::Timeline => {
+                let is_tl_active = self.active_tab_id.as_deref()
+                    .and_then(|id| self.open_tabs.iter().find(|t| t.id == id))
+                    .is_some_and(|t| t.tab_kind == DocumentTabKind::Timeline);
+
+                if is_tl_active {
+                    self.current_tab = AppWorkspaceTab::Timeline;
+                } else if let Some(existing_tl) = self.open_tabs.iter().find(|t| t.tab_kind == DocumentTabKind::Timeline).cloned() {
+                    self.switch_document_tab(&existing_tl.id);
+                } else {
+                    self.current_tab = AppWorkspaceTab::Timeline;
+                }
+            }
             AppWorkspaceTab::CodeEditor => {
-                // 如果当前激活的标签页是事件流（拥有图或 BFEVFL 格式），确保加载原生 EventFlow 代码状态
+                // 如果当前激活的标签页是时间线或事件流，确保同步最新代码状态
                 if let Some(active_id) = self.active_tab_id.clone() {
                     if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == active_id) {
+                        if tab.tab_kind == DocumentTabKind::Timeline {
+                            if let Some(ref ts) = tab.timeline_state {
+                                let mut evfl = revfl::evfl::EventFlow::new();
+                                evfl.name = ts.timeline.name.clone();
+                                evfl.timeline = Some(ts.timeline.clone());
+                                let json_text = serde_json::to_string_pretty(&evfl).unwrap_or_default();
+                                if let Some(ref mut code) = tab.code_state {
+                                    code.content = json_text;
+                                } else {
+                                    tab.code_state = Some(crate::model::code_document::CodeDocumentState::new(
+                                        json_text,
+                                        crate::model::code_document::CodeFormat::Bfevtm,
+                                        crate::model::code_document::CodeEndian::Little,
+                                        tab.file_path.clone(),
+                                    ));
+                                }
+                            }
+                            self.current_tab = AppWorkspaceTab::CodeEditor;
+                            return;
+                        }
+
                         if tab.tab_kind == DocumentTabKind::Flowchart || tab.file_type == "bfevfl" || tab.graph.is_some() {
                             if tab.code_state.is_none() {
                                 let decompressed_res = crate::model::file_tree::read_file_from_path(&tab.file_path)
@@ -200,6 +234,7 @@ impl AppState {
                     DocumentTabKind::Flowchart => self.current_tab = AppWorkspaceTab::Flowchart,
                     DocumentTabKind::CodeEditor => self.current_tab = AppWorkspaceTab::CodeEditor,
                     DocumentTabKind::DiffViewer => self.current_tab = AppWorkspaceTab::DiffViewer,
+                    DocumentTabKind::Timeline => self.current_tab = AppWorkspaceTab::Timeline,
                 }
                 return;
             }
@@ -251,10 +286,77 @@ impl AppState {
             }
         };
 
-        // 1. 优先将 BFEVFL 打开为流程图模式，并同步生成原生 EventFlow 代码状态
+        let decompressed = crate::model::file_converter::decompress_if_yaz0(&bytes);
+
+        // 1. 优先将 BFEVTM 打开为时间线模式，并同步生成原生 EventFlow 代码状态
+        if lower_name.ends_with(".bfevtm") || lower_name.ends_with(".evtm") {
+            match crate::model::evfl::load_eventflow_from_bytes(&decompressed) {
+                Ok(evfl) => {
+                    let json_str = serde_json::to_string_pretty(&evfl).unwrap_or_default();
+                    if let Some(mut timeline) = evfl.timeline {
+                        if timeline.name.is_empty() {
+                            timeline.name = raw_name.trim_end_matches(".bfevtm").to_string();
+                        }
+                        let code_state = crate::model::code_document::CodeDocumentState::new(
+                            json_str,
+                            crate::model::code_document::CodeFormat::Bfevtm,
+                            crate::model::code_document::CodeEndian::Little,
+                            path.to_string(),
+                        );
+                        let new_id = uuid::Uuid::new_v4().to_string();
+                        let mut new_tab = OpenDocumentTab::new_timeline(
+                            new_id.clone(),
+                            raw_name.clone(),
+                            path.to_string(),
+                            "bfevtm".to_string(),
+                            timeline,
+                        );
+                        new_tab.code_state = Some(code_state);
+                        self.open_tabs.push(new_tab);
+                        self.active_tab_id = Some(new_id);
+                        self.current_tab = AppWorkspaceTab::Timeline;
+                        self.toast = Some(Toast::success(format!("{} {}", self.t("toast.file_loaded"), raw_name)));
+                        return;
+                    }
+                }
+                Err(err) => {
+                    self.toast = Some(Toast::error(format!("{} {}", self.t("toast.file_load_error"), err)));
+                    return;
+                }
+            }
+        }
+
+        // 2. 检查 BFEVFL 流程图或普通 BFEVFL 二进制文件
         if lower_name.ends_with(".bfevfl") || bytes.starts_with(b"BFEVFL") {
-            let decompressed = crate::model::file_converter::decompress_if_yaz0(&bytes);
             let evfl_res = crate::model::evfl::load_eventflow_from_bytes(&decompressed);
+
+            // 若二进制内包含 Timeline 而非 Flowchart，自动作为时间线打开
+            if let Ok(ref evfl) = evfl_res {
+                if evfl.flowchart.is_none() && evfl.timeline.is_some() {
+                    let timeline = evfl.timeline.clone().unwrap();
+                    let code_state = crate::model::code_document::CodeDocumentState::new(
+                        serde_json::to_string_pretty(evfl).unwrap_or_default(),
+                        crate::model::code_document::CodeFormat::Bfevtm,
+                        crate::model::code_document::CodeEndian::Little,
+                        path.to_string(),
+                    );
+                    let new_id = uuid::Uuid::new_v4().to_string();
+                    let mut new_tab = OpenDocumentTab::new_timeline(
+                        new_id.clone(),
+                        raw_name.clone(),
+                        path.to_string(),
+                        "bfevtm".to_string(),
+                        timeline,
+                    );
+                    new_tab.code_state = Some(code_state);
+                    self.open_tabs.push(new_tab);
+                    self.active_tab_id = Some(new_id);
+                    self.current_tab = AppWorkspaceTab::Timeline;
+                    self.toast = Some(Toast::success(format!("{} {}", self.t("toast.file_loaded"), raw_name)));
+                    return;
+                }
+            }
+
             let graph_res = crate::model::evfl::load_bfevfl_from_bytes(&decompressed);
 
             match graph_res {

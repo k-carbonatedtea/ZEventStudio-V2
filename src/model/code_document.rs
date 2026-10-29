@@ -11,6 +11,8 @@ pub enum CodeFormat {
     Msbt,
     /// 事件流定义文件 (BFEVFL -> JSON/YAML 源码)
     Bfevfl,
+    /// 动画时间线定义文件 (BFEVTM -> JSON 源码)
+    Bfevtm,
     /// 标准 JSON 数据
     Json,
     /// 标准 YAML 数据
@@ -29,6 +31,7 @@ impl CodeFormat {
             CodeFormat::Byml => "BYML (YAML)",
             CodeFormat::Msbt => "MSBT (MSYT)",
             CodeFormat::Bfevfl => "BFEVFL (JSON)",
+            CodeFormat::Bfevtm => "BFEVTM (JSON)",
             CodeFormat::Json => "JSON",
             CodeFormat::Yaml => "YAML",
             CodeFormat::Text => "PLAIN TEXT",
@@ -40,17 +43,18 @@ impl CodeFormat {
     pub fn language_id(&self) -> &'static str {
         match self {
             CodeFormat::Aamp | CodeFormat::Byml | CodeFormat::Msbt | CodeFormat::Yaml => "yaml",
-            CodeFormat::Bfevfl | CodeFormat::Json => "json",
+            CodeFormat::Bfevfl | CodeFormat::Bfevtm | CodeFormat::Json => "json",
             CodeFormat::Text | CodeFormat::Generic => "text",
         }
     }
 
-    /// 获取代表该格式的展示图标 (如 💬, ⚙️, 📜, ⚡)
+    /// 获取代表该格式的展示图标 (如 💬, ⚙️, 📜, ⚡, 🎬)
     pub fn icon(&self) -> &'static str {
         match self {
             CodeFormat::Msbt => "💬",
             CodeFormat::Byml | CodeFormat::Aamp => "⚙️",
             CodeFormat::Bfevfl => "⚡",
+            CodeFormat::Bfevtm => "🎬",
             CodeFormat::Json => "{}",
             CodeFormat::Yaml => "📜",
             CodeFormat::Text => "≡",

@@ -6,7 +6,7 @@ fn node_matches_filter_type(node: &FileNode, filter_type: FileFilterType, state:
         FileFilterType::All => true,
         FileFilterType::EventFlow => {
             let lower = node.name.to_lowercase();
-            lower.ends_with(".bfevfl") || lower.ends_with(".evfl")
+            lower.ends_with(".bfevfl") || lower.ends_with(".evfl") || lower.ends_with(".bfevtm") || lower.ends_with(".evtm")
         }
         FileFilterType::Msbt => {
             let lower = node.name.to_lowercase();

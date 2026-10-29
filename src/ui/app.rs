@@ -12,7 +12,7 @@ use crate::ui::toolbar::render_toolbar;
 use crate::ui::views::{
     render_actor_manager_view, render_code_editor_view,
     render_diff_viewer_view, render_event_manager_view,
-    render_quest_map_view, render_welcome_view,
+    render_quest_map_view, render_timeline_editor_view, render_welcome_view,
 };
 
 pub struct AppView {
@@ -94,10 +94,23 @@ impl Render for AppView {
             self.last_fps_update = now;
         }
 
-        // 默认极速性能模式调度：活跃窗口高刷新流畅渲染，或文本框激活（光标动画），或正在提取地图标点（旋转动画）
+        // 推进时间线回放游标
+        let is_timeline_playing = self.model.read(cx).active_timeline_state().is_some_and(|ts| ts.is_playing);
+        if is_timeline_playing {
+            self.model.update(cx, |st, cx| {
+                if let Some(ts) = st.active_timeline_state_mut() {
+                    if ts.is_playing {
+                        ts.advance_frame(elapsed);
+                        cx.notify();
+                    }
+                }
+            });
+        }
+
+        // 默认极速性能模式调度：活跃窗口高刷新流畅渲染，或文本框激活（光标动画），或正在提取地图标点（旋转动画），或时间线回放
         let has_active_field = self.model.read(cx).has_active_text_input();
         let is_extracting_markers = self.model.read(cx).quest_map_is_extracting_markers;
-        if is_active || has_active_field || is_extracting_markers {
+        if is_active || has_active_field || is_extracting_markers || is_timeline_playing {
             cx.on_next_frame(window, |_, _, cx| {
                 cx.notify();
             });
@@ -227,6 +240,19 @@ impl Render for AppView {
                     return;
                 }
 
+                if event.keystroke.key == "space"
+                    && !model_key.read(cx).has_active_text_input()
+                    && model_key.read(cx).current_tab == AppWorkspaceTab::Timeline
+                {
+                    model_key.update(cx, |st, cx| {
+                        if let Some(ts) = st.active_timeline_state_mut() {
+                            ts.toggle_play();
+                            cx.notify();
+                        }
+                    });
+                    return;
+                }
+
                 let clipboard = if event.keystroke.modifiers.control && event.keystroke.key.eq_ignore_ascii_case("v") {
                     cx.read_from_clipboard().and_then(|item| item.text())
                 } else {
@@ -267,6 +293,19 @@ impl Render for AppView {
                                     &self.model,
                                     render_flow_canvas(state, &self.model),
                                     Some(render_inspector(state, &self.model).into_any_element()),
+                                )
+                                .into_any_element()
+                            }
+                        }
+                        AppWorkspaceTab::Timeline => {
+                            if state.open_tabs.is_empty() {
+                                render_welcome_view(state, &self.model).into_any_element()
+                            } else {
+                                wrap_sidebar_workspace(
+                                    state,
+                                    &self.model,
+                                    render_timeline_editor_view(state, &self.model),
+                                    None,
                                 )
                                 .into_any_element()
                             }

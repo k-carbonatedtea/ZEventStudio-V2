@@ -154,17 +154,20 @@ pub fn parse_file_to_code(
         return Ok((yaml_text, CodeFormat::Msbt, endian));
     }
 
-    // 4. BFEVFL 事件流格式识别 (Magic: "BFEVFL" 或扩展名 .bfevfl)
+    // 4. BFEVFL / BFEVTM 事件流与时间线格式识别 (Magic: "BFEVFL" 或扩展名 .bfevfl / .bfevtm)
     if (decompressed.len() >= 6 && &decompressed[0..6] == b"BFEVFL")
         || lower_path.ends_with(".bfevfl")
+        || lower_path.ends_with(".bfevtm")
     {
         match crate::model::evfl::load_eventflow_from_bytes(&decompressed) {
             Ok(evfl) => {
+                let is_timeline = evfl.timeline.is_some() || lower_path.ends_with(".bfevtm");
+                let format = if is_timeline { CodeFormat::Bfevtm } else { CodeFormat::Bfevfl };
                 let json_text = serde_json::to_string_pretty(&evfl)
-                    .map_err(|e| format!("格式化 BFEVFL JSON 失败: {:?}", e))?;
-                return Ok((json_text, CodeFormat::Bfevfl, CodeEndian::Little));
+                    .map_err(|e| format!("格式化 EventFlow JSON 失败: {:?}", e))?;
+                return Ok((json_text, format, CodeEndian::Little));
             }
-            Err(e) => return Err(format!("解析 BFEVFL 失败: {}", e)),
+            Err(e) => return Err(format!("解析 BFEVFL/BFEVTM 失败: {}", e)),
         }
     }
 
@@ -231,16 +234,22 @@ pub fn compile_code_to_bytes(
                 .into_msbt_bytes(msyt_endian)
                 .map_err(|e| format!("编译 MSBT 字节流失败: {:?}", e))?
         }
-        CodeFormat::Bfevfl => {
-            // 优先解析原生 EventFlow 结构并编译为官方 BFEVFL 二进制字节流；若为旧版 Graph 则兼容降级
+        CodeFormat::Bfevfl | CodeFormat::Bfevtm => {
+            // 优先解析原生 EventFlow 结构并编译为官方 BFEVFL/BFEVTM 二进制字节流；若为直接 Timeline 或旧版 Graph 则兼容降级
             if let Ok(evfl) = serde_json::from_str::<revfl::evfl::EventFlow>(text) {
                 crate::model::evfl::save_eventflow_to_bytes(&evfl)
-                    .map_err(|e| format!("编译 BFEVFL 失败: {}", e))?
+                    .map_err(|e| format!("编译 BFEVFL/BFEVTM 失败: {}", e))?
+            } else if let Ok(tl) = serde_json::from_str::<revfl::timeline::Timeline>(text) {
+                let mut evfl = revfl::evfl::EventFlow::new();
+                evfl.name = tl.name.clone();
+                evfl.timeline = Some(tl);
+                crate::model::evfl::save_eventflow_to_bytes(&evfl)
+                    .map_err(|e| format!("编译 BFEVTM 失败: {}", e))?
             } else if let Ok(graph) = serde_json::from_str::<crate::model::Graph>(text) {
                 crate::model::evfl::save_bfevfl_to_bytes(&graph)
                     .map_err(|e| format!("编译 BFEVFL 失败: {}", e))?
             } else {
-                return Err("BFEVFL JSON 语法错误: 无法反序列化为 EventFlow 或 Graph 结构".to_string());
+                return Err("BFEVFL/BFEVTM JSON 语法错误: 无法反序列化为 EventFlow 或 Timeline 结构".to_string());
             }
         }
         CodeFormat::Json | CodeFormat::Yaml | CodeFormat::Text | CodeFormat::Generic => {

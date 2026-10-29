@@ -32,6 +32,9 @@ impl AppState {
                         self.load_file_by_path(&target_tab.file_path);
                     }
                 }
+                DocumentTabKind::Timeline => {
+                    self.current_tab = AppWorkspaceTab::Timeline;
+                }
                 DocumentTabKind::CodeEditor => {
                     self.current_tab = AppWorkspaceTab::CodeEditor;
                 }
@@ -55,6 +58,30 @@ impl AppState {
             .as_deref()
             .and_then(|id| self.open_tabs.iter().find(|t| t.id == id))
             .is_some_and(|t| t.tab_kind == DocumentTabKind::Flowchart)
+    }
+
+    /// 判断当前激活的文档标签页是否为 BFEVTM 时间线
+    #[allow(dead_code)]
+    pub fn is_active_timeline(&self) -> bool {
+        if self.current_tab == AppWorkspaceTab::Welcome {
+            return false;
+        }
+        self.active_tab_id
+            .as_deref()
+            .and_then(|id| self.open_tabs.iter().find(|t| t.id == id))
+            .is_some_and(|t| t.tab_kind == DocumentTabKind::Timeline)
+    }
+
+    /// 获取当前激活文档标签页的时间线编辑状态
+    pub fn active_timeline_state(&self) -> Option<&crate::model::TimelineDocumentState> {
+        let active_id = self.active_tab_id.as_deref()?;
+        self.open_tabs.iter().find(|t| t.id == active_id)?.timeline_state.as_ref()
+    }
+
+    /// 获取当前激活文档标签页的时间线可变编辑状态
+    pub fn active_timeline_state_mut(&mut self) -> Option<&mut crate::model::TimelineDocumentState> {
+        let active_id = self.active_tab_id.as_deref()?;
+        self.open_tabs.iter_mut().find(|t| t.id == active_id)?.timeline_state.as_mut()
     }
 
     /// 请求关闭指定文档标签页（检查未保存修改，有修改则弹出保存确认提示框）
@@ -203,6 +230,10 @@ impl AppState {
                         DocumentTabKind::DiffViewer => {
                             self.graph = Graph::new("EventFlow");
                             self.current_tab = AppWorkspaceTab::DiffViewer;
+                        }
+                        DocumentTabKind::Timeline => {
+                            self.graph = Graph::new("EventFlow");
+                            self.current_tab = AppWorkspaceTab::Timeline;
                         }
                     }
                 } else {
