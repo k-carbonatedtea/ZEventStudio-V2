@@ -1,8 +1,8 @@
 //! 全局文件与项目外部拖拽视觉反馈与动态波纹动画蒙层组件 (Animated Drag & Drop Overlay)
 
-use crate::ui::state::AppState;
-use gpui::*;
 use std::time::{SystemTime, UNIX_EPOCH};
+use gpui::*;
+use crate::ui::state::AppState;
 
 /// 渲染全局外部文件拖拽悬浮提示层（包含呼吸光晕、悬浮浮动与粒子波纹动画）
 pub fn render_drag_drop_overlay(state: &AppState) -> impl IntoElement {
@@ -72,7 +72,11 @@ pub fn render_drag_drop_overlay(state: &AppState) -> impl IntoElement {
                         .bg(rgba(0x00d2ff1f))
                         .border_2()
                         .border_color(halo_border)
-                        .child(div().text_size(px(40.0)).child("📥")),
+                        .child(
+                            div()
+                                .text_size(px(40.0))
+                                .child("📥"),
+                        ),
                 )
                 // 文本标题与副标题
                 .child(
@@ -102,41 +106,11 @@ pub fn render_drag_drop_overlay(state: &AppState) -> impl IntoElement {
                         .items_center()
                         .gap_2()
                         .mt_2()
-                        .child(render_animated_badge(
-                            "BFEVFL",
-                            0,
-                            time_sec,
-                            rgba(0x00d2ff33),
-                            rgba(0x00d2ffcc),
-                        ))
-                        .child(render_animated_badge(
-                            "BFEVTM",
-                            1,
-                            time_sec,
-                            rgba(0xffa50033),
-                            rgba(0xffa500cc),
-                        ))
-                        .child(render_animated_badge(
-                            "BFRES",
-                            2,
-                            time_sec,
-                            rgba(0x9d4edd33),
-                            rgba(0x9d4eddcc),
-                        ))
-                        .child(render_animated_badge(
-                            "PACK / SARC",
-                            3,
-                            time_sec,
-                            rgba(0x2ec4b633),
-                            rgba(0x2ec4b6cc),
-                        ))
-                        .child(render_animated_badge(
-                            "MOD DIR",
-                            4,
-                            time_sec,
-                            rgba(0x3a86ff33),
-                            rgba(0x3a86ffcc),
-                        )),
+                        .child(render_animated_badge("BFEVFL", 0, time_sec, rgba(0x00d2ff33), rgba(0x00d2ffcc)))
+                        .child(render_animated_badge("BFEVTM", 1, time_sec, rgba(0xffa50033), rgba(0xffa500cc)))
+                        .child(render_animated_badge("BFRES", 2, time_sec, rgba(0x9d4edd33), rgba(0x9d4eddcc)))
+                        .child(render_animated_badge("PACK / SARC", 3, time_sec, rgba(0x2ec4b633), rgba(0x2ec4b6cc)))
+                        .child(render_animated_badge("MOD DIR", 4, time_sec, rgba(0x3a86ff33), rgba(0x3a86ffcc))),
                 ),
         )
 }
