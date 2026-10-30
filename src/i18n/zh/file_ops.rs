@@ -34,6 +34,12 @@ pub fn get_zh_file_ops(key: &str) -> Option<&'static str> {
         "toast.file_not_found" => "目标文件或路径不存在",
         "toast.explorer_open_failed" => "打开系统文件资源管理器失败",
 
+        // ---------------- 拖拽文件与项目 (Drag and Drop) ----------------
+        "drop.overlay_title" => "释放以打开文件或项目",
+        "drop.overlay_hint" => "支持打开 BotW 事件流 (.bfevfl)、时间线 (.bfevtm)、模型 (.sbfres)、封包 (.pack/.sarc) 或 Mod 项目目录",
+        "welcome.drag_drop_title" => "拖拽文件或项目至此处",
+        "welcome.drag_drop_hint" => "支持直接将文件或 Mod 目录拖入窗口任意位置打开",
+
         _ => return None,
     };
     Some(text)

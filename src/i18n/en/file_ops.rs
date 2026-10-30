@@ -34,6 +34,12 @@ pub fn get_en_file_ops(key: &str) -> Option<&'static str> {
         "toast.file_not_found" => "Target file or path does not exist",
         "toast.explorer_open_failed" => "Failed to open File Explorer",
 
+        // ---------------- Drag and Drop Files & Projects ----------------
+        "drop.overlay_title" => "Drop to open file or project",
+        "drop.overlay_hint" => "Supports BotW event flows (.bfevfl), timelines (.bfevtm), models (.sbfres), packages (.pack/.sarc), or Mod directories",
+        "welcome.drag_drop_title" => "Drag & drop files or projects here",
+        "welcome.drag_drop_hint" => "Drag and drop any supported file or Mod folder anywhere in the window to open",
+
         _ => return None,
     };
     Some(text)

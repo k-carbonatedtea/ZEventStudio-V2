@@ -135,6 +135,50 @@ fn render_start_actions_section(
         .child(render_link_action("🗂️", state.t("empty.openMod"), None, state, move |cx| {
             pick_and_load_mod_folder(&model_folder, cx);
         }))
+        .child(
+            div()
+                .mt_2()
+                .p_3()
+                .rounded_lg()
+                .border_1()
+                .border_color(pal.panel_border)
+                .bg(pal.card_surface)
+                .hover(move |s| s.border_color(pal.primary_accent).bg(pal.card_hover))
+                .cursor_pointer()
+                .on_mouse_down(MouseButton::Left, {
+                    let model_drag_click = model.clone();
+                    move |_event, _window, cx| {
+                        pick_and_load_file(&model_drag_click, cx);
+                    }
+                })
+                .flex()
+                .items_center()
+                .gap_3()
+                .child(
+                    div()
+                        .text_size(px(22.0))
+                        .child("📥"),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_0p5()
+                        .child(
+                            div()
+                                .text_size(px(12.0))
+                                .font_weight(FontWeight::BOLD)
+                                .text_color(pal.text_primary)
+                                .child(state.t("welcome.drag_drop_title")),
+                        )
+                        .child(
+                            div()
+                                .text_size(px(11.0))
+                                .text_color(pal.text_secondary)
+                                .child(state.t("welcome.drag_drop_hint")),
+                        ),
+                ),
+        )
 }
 
 fn render_link_action<F>(

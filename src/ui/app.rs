@@ -1,20 +1,12 @@
 use gpui::*;
 use gpui_component::input::EditorState;
 use std::time::Instant;
-use crate::ui::app_layout::{wrap_fullscreen_tab, wrap_sidebar_workspace};
-use crate::ui::canvas::render_flow_canvas;
+use crate::ui::app_layout::render_workspace_tab_content;
 use crate::ui::components::render_toast;
-use crate::ui::inspector::render_inspector;
 use crate::ui::key_handler::handle_global_key_event;
 use crate::ui::render_title_bar;
 use crate::ui::state::{AppState, AppWorkspaceTab};
 use crate::ui::toolbar::render_toolbar;
-use crate::ui::views::{
-    render_actor_manager_view, render_code_editor_view,
-    render_diff_viewer_view, render_event_manager_view,
-    render_model_preview_view, render_quest_map_view,
-    render_timeline_editor_view, render_welcome_view,
-};
 
 pub struct AppView {
     pub model: Entity<AppState>,
@@ -108,10 +100,11 @@ impl Render for AppView {
             });
         }
 
-        // 默认极速性能模式调度：活跃窗口高刷新流畅渲染，或文本框激活（光标动画），或正在提取地图标点（旋转动画），或时间线回放
+        // 默认极速性能模式调度：活跃窗口高刷新流畅渲染，或文本框激活（光标动画），或正在提取地图标点（旋转动画），或时间线回放，或外部文件拖拽交互动画
         let has_active_field = self.model.read(cx).has_active_text_input();
         let is_extracting_markers = self.model.read(cx).quest_map_is_extracting_markers;
-        if is_active || has_active_field || is_extracting_markers || is_timeline_playing {
+        let is_dragging = cx.has_active_drag();
+        if is_active || has_active_field || is_extracting_markers || is_timeline_playing || is_dragging {
             cx.on_next_frame(window, |_, _, cx| {
                 cx.notify();
             });
@@ -182,6 +175,7 @@ impl Render for AppView {
 
         div()
             .id("app_root_view")
+            .group("app_root_drop_target")
             .track_focus(&self.focus_handle)
             .flex()
             .flex_col()
@@ -189,6 +183,20 @@ impl Render for AppView {
             .bg(state.theme().app_bg)
             .font_family(".SystemUIFont")
             .text_color(state.theme().text_primary)
+            // 外部文件与项目拖拽悬停视觉反馈 (深海青蓝微光边框)
+            .drag_over::<ExternalPaths>(|style, _, _, _| {
+                style
+                    .border_2()
+                    .border_color(rgba(0x00d2ff88))
+            })
+            // 外部文件与项目拖拽释放处理
+            .on_drop(cx.listener(|this, external_paths: &ExternalPaths, _window, cx| {
+                let paths = external_paths.paths().to_vec();
+                this.model.update(cx, |st, cx| {
+                    st.open_dropped_paths(&paths);
+                    cx.notify();
+                });
+            }))
             // 挂载全局 IME 桥接 Element (在 paint 阶段注册 handle_input，激活 Windows 原生中文输入法)
             .child(crate::ui::components::ImeInputBridge::new(self.model.clone(), self.focus_handle.clone()))
             // 侧边栏与弹窗拖拽调宽全局鼠标移动监听
@@ -283,76 +291,12 @@ impl Render for AppView {
                     .flex_1()
                     .size_full()
                     .overflow_hidden()
-                    .child(match current_tab {
-                        AppWorkspaceTab::Welcome => render_welcome_view(state, &self.model).into_any_element(),
-                        AppWorkspaceTab::Flowchart => {
-                            if state.open_tabs.is_empty() {
-                                render_welcome_view(state, &self.model).into_any_element()
-                            } else {
-                                wrap_sidebar_workspace(
-                                    state,
-                                    &self.model,
-                                    render_flow_canvas(state, &self.model),
-                                    Some(render_inspector(state, &self.model).into_any_element()),
-                                )
-                                .into_any_element()
-                            }
-                        }
-                        AppWorkspaceTab::Timeline => {
-                            if state.open_tabs.is_empty() {
-                                render_welcome_view(state, &self.model).into_any_element()
-                            } else {
-                                wrap_sidebar_workspace(
-                                    state,
-                                    &self.model,
-                                    render_timeline_editor_view(state, &self.model),
-                                    None,
-                                )
-                                .into_any_element()
-                            }
-                        }
-                        AppWorkspaceTab::CodeEditor => {
-                            if state.open_tabs.is_empty() {
-                                render_welcome_view(state, &self.model).into_any_element()
-                            } else {
-                                wrap_sidebar_workspace(
-                                    state,
-                                    &self.model,
-                                    render_code_editor_view(
-                                        state,
-                                        &self.model,
-                                        self.code_editor.as_ref(),
-                                        self.msbt_bubble_editor.as_ref(),
-                                    ),
-                                    None,
-                                )
-                                .into_any_element()
-                            }
-                        }
-                        AppWorkspaceTab::DiffViewer => wrap_sidebar_workspace(
-                            state,
-                            &self.model,
-                            render_diff_viewer_view(state, &self.model),
-                            None,
-                        )
-                        .into_any_element(),
-                        AppWorkspaceTab::Actors => wrap_fullscreen_tab(state, &self.model, render_actor_manager_view(state, &self.model)).into_any_element(),
-                        AppWorkspaceTab::Events => wrap_fullscreen_tab(state, &self.model, render_event_manager_view(state, &self.model)).into_any_element(),
-                        AppWorkspaceTab::Quests => wrap_sidebar_workspace(
-                            state,
-                            &self.model,
-                            render_quest_map_view(state, &self.model),
-                            None,
-                        )
-                        .into_any_element(),
-                        AppWorkspaceTab::ModelPreview => wrap_sidebar_workspace(
-                            state,
-                            &self.model,
-                            render_model_preview_view(state, &self.model),
-                            None,
-                        )
-                        .into_any_element(),
-                    }),
+                    .child(render_workspace_tab_content(
+                        state,
+                        &self.model,
+                        self.code_editor.as_ref(),
+                        self.msbt_bubble_editor.as_ref(),
+                    )),
             )
             // Floating Toast notification
             .children(visible_toast.map(|t| {
@@ -364,6 +308,8 @@ impl Render for AppView {
             }))
             // 全局浮动模态框与上下文菜单图层
             .children(crate::ui::app_modals::render_app_modals_and_menus(state, &self.model))
+            // 全局外部文件拖拽悬浮提示层 (Drag & Drop Overlay)
+            .child(crate::ui::app_drop_overlay::render_drag_drop_overlay(state))
     }
 }
 

@@ -2,8 +2,18 @@ use gpui::*;
 use crate::ui::sidebar::render_sidebar;
 use crate::ui::state::AppState;
 use crate::ui::views::render_bottom_tabs;
+use gpui_component::input::EditorState;
+use crate::ui::canvas::render_flow_canvas;
+use crate::ui::inspector::render_inspector;
+use crate::ui::state::AppWorkspaceTab;
+use crate::ui::views::{
+    render_actor_manager_view, render_code_editor_view,
+    render_diff_viewer_view, render_event_manager_view,
+    render_model_preview_view, render_quest_map_view,
+    render_timeline_editor_view, render_welcome_view,
+};
 
-/// 包装带侧边栏和顶部文档标签栏的主工作区布局
+/// 鍖呰甯︿晶杈规爮鍜岄《閮ㄦ枃妗ｆ爣绛炬爮鐨勪富宸ヤ綔鍖哄竷灞€
 pub fn wrap_sidebar_workspace(
     state: &AppState,
     model: &Entity<AppState>,
@@ -60,7 +70,7 @@ pub fn wrap_sidebar_workspace(
         )
 }
 
-/// 包装全屏单视图工作区布局 (包含底部模式切换菜单栏)
+/// 鍖呰鍏ㄥ睆鍗曡鍥惧伐浣滃尯甯冨眬 (鍖呭惈搴曢儴妯″紡鍒囨崲鑿滃崟鏍?
 pub fn wrap_fullscreen_tab(
     state: &AppState,
     model: &Entity<AppState>,
@@ -79,4 +89,87 @@ pub fn wrap_fullscreen_tab(
                 .child(body),
         )
         .child(render_bottom_tabs(state, model))
+}
+
+/// 鏍规嵁褰撳墠閫変腑鐨勫伐浣滃尯鏍囩椤垫覆鏌撳搴旂殑鐣岄潰涓讳綋
+pub fn render_workspace_tab_content(
+    state: &AppState,
+    model: &Entity<AppState>,
+    code_editor: Option<&Entity<EditorState>>,
+    msbt_bubble_editor: Option<&Entity<EditorState>>,
+) -> impl IntoElement {
+    match state.current_tab {
+        AppWorkspaceTab::Welcome => render_welcome_view(state, model).into_any_element(),
+        AppWorkspaceTab::Flowchart => {
+            if state.open_tabs.is_empty() {
+                render_welcome_view(state, model).into_any_element()
+            } else {
+                wrap_sidebar_workspace(
+                    state,
+                    model,
+                    render_flow_canvas(state, model),
+                    Some(render_inspector(state, model).into_any_element()),
+                )
+                .into_any_element()
+            }
+        }
+        AppWorkspaceTab::Timeline => {
+            if state.open_tabs.is_empty() {
+                render_welcome_view(state, model).into_any_element()
+            } else {
+                wrap_sidebar_workspace(
+                    state,
+                    model,
+                    render_timeline_editor_view(state, model),
+                    None,
+                )
+                .into_any_element()
+            }
+        }
+        AppWorkspaceTab::CodeEditor => {
+            if state.open_tabs.is_empty() {
+                render_welcome_view(state, model).into_any_element()
+            } else {
+                wrap_sidebar_workspace(
+                    state,
+                    model,
+                    render_code_editor_view(
+                        state,
+                        model,
+                        code_editor,
+                        msbt_bubble_editor,
+                    ),
+                    None,
+                )
+                .into_any_element()
+            }
+        }
+        AppWorkspaceTab::DiffViewer => wrap_sidebar_workspace(
+            state,
+            model,
+            render_diff_viewer_view(state, model),
+            None,
+        )
+        .into_any_element(),
+        AppWorkspaceTab::Actors => {
+            wrap_fullscreen_tab(state, model, render_actor_manager_view(state, model)).into_any_element()
+        }
+        AppWorkspaceTab::Events => {
+            wrap_fullscreen_tab(state, model, render_event_manager_view(state, model)).into_any_element()
+        }
+        AppWorkspaceTab::Quests => wrap_sidebar_workspace(
+            state,
+            model,
+            render_quest_map_view(state, model),
+            None,
+        )
+        .into_any_element(),
+        AppWorkspaceTab::ModelPreview => wrap_sidebar_workspace(
+            state,
+            model,
+            render_model_preview_view(state, model),
+            None,
+        )
+        .into_any_element(),
+    }
 }
