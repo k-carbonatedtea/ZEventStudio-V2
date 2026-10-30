@@ -1,9 +1,7 @@
 //! 3D 模型视口 GPU/Canvas 路径投影渲染器
 
-use super::gizmos::{
-    compute_normal, draw_axes, draw_bounding_box, draw_ground_grid, draw_points_fast,
-    get_material_color,
-};
+use super::gizmos::{draw_axes, draw_bounding_box, draw_ground_grid, draw_points_fast};
+use super::rasterizer::rasterize_scene;
 use crate::model::model_preview::{ModelDocumentState, RenderMode};
 use gpui::*;
 
@@ -74,11 +72,7 @@ fn draw_model_meshes(
     view_h: f32,
     window: &mut Window,
 ) {
-    let camera = &state.camera;
     let mode = state.render_mode;
-
-    // 定向平行主光源 (从右上方斜前方照射)
-    let light_dir = [0.577, 0.707, 0.408];
 
     // 1. 线框模式 / 点云模式快速批量绘制
     if mode == RenderMode::Wireframe {
@@ -92,132 +86,20 @@ fn draw_model_meshes(
     }
 
     // 2. 实体着色模式 (Shaded) 或 线框叠加着色模式 (ShadedWireframe)
-    // 收集所有有效可见的三角面并进行屏幕空间背面剔除与深度排序 (Painter's Algorithm)
-    let mut visible_triangles = Vec::new();
-
-    for (mesh_idx, mesh) in state.meshes.iter().enumerate() {
-        if let Some(item) = state.mesh_items.get(mesh_idx) {
-            if !item.visible {
-                continue;
-            }
-        }
-
-        let is_selected = state.selected_mesh_idx == Some(mesh_idx);
-        let base_color = get_material_color(
-            mesh.material_name.as_deref().unwrap_or(""),
-            mesh_idx,
-            is_selected,
+    // 采用高精度带 Z-Buffer 软光栅化渲染，彻底消除前后层叠穿透并实现平滑法线光照
+    if let Some(render_image) = rasterize_scene(state, view_w, view_h) {
+        let img_bounds = Bounds {
+            origin: point(px(orig_x), px(orig_y)),
+            size: size(px(view_w), px(view_h)),
+        };
+        let _ = window.paint_image(
+            img_bounds,
+            img_bounds,
+            Corners::default(),
+            render_image,
+            0,
+            false,
         );
-        let v_len = mesh.positions.len();
-        let uv_len = mesh.uvs.len();
-
-        // 检索子网格绑定的主纹理贴图
-        let bound_tex = mesh
-            .texture_name
-            .as_deref()
-            .and_then(|tn| state.textures.get(tn))
-            .or_else(|| {
-                mesh.material_name
-                    .as_deref()
-                    .and_then(|mn| state.textures.get(mn))
-            });
-
-        for chunk in mesh.indices.chunks_exact(3) {
-            let i0 = chunk[0] as usize;
-            let i1 = chunk[1] as usize;
-            let i2 = chunk[2] as usize;
-
-            if i0 >= v_len || i1 >= v_len || i2 >= v_len {
-                continue;
-            }
-
-            let p0 = [
-                mesh.positions[i0].x,
-                mesh.positions[i0].y,
-                mesh.positions[i0].z,
-            ];
-            let p1 = [
-                mesh.positions[i1].x,
-                mesh.positions[i1].y,
-                mesh.positions[i1].z,
-            ];
-            let p2 = [
-                mesh.positions[i2].x,
-                mesh.positions[i2].y,
-                mesh.positions[i2].z,
-            ];
-
-            if let (Some((s0, z0)), Some((s1, z1)), Some((s2, z2))) = (
-                camera.project_point(p0, view_w, view_h),
-                camera.project_point(p1, view_w, view_h),
-                camera.project_point(p2, view_w, view_h),
-            ) {
-                // 屏幕空间背面剔除 (Backface Culling)
-                let cross = (s1[0] - s0[0]) * (s2[1] - s0[1]) - (s1[1] - s0[1]) * (s2[0] - s0[0]);
-                if cross <= 0.0 {
-                    continue;
-                }
-
-                // 计算面法线与平行光照强度 (Directional Lighting)
-                let face_normal = compute_normal(p0, p1, p2);
-                let diffuse = (face_normal[0] * light_dir[0]
-                    + face_normal[1] * light_dir[1]
-                    + face_normal[2] * light_dir[2])
-                    .max(0.0);
-                let intensity = (0.28f32 + diffuse * 0.72f32).clamp(0.18, 1.0);
-
-                // 优先从材质纹理贴图采样，无贴图时降级为材质底色
-                let shaded_color = if let Some(tex) = bound_tex {
-                    if i0 < uv_len && i1 < uv_len && i2 < uv_len {
-                        let mid_u = (mesh.uvs[i0].x + mesh.uvs[i1].x + mesh.uvs[i2].x) / 3.0;
-                        let mid_v = (mesh.uvs[i0].y + mesh.uvs[i1].y + mesh.uvs[i2].y) / 3.0;
-                        let sampled = tex.sample_uv(mid_u, mid_v);
-                        hsla(
-                            sampled.h,
-                            sampled.s,
-                            (sampled.l * intensity).clamp(0.05, 0.98),
-                            sampled.a,
-                        )
-                    } else {
-                        hsla(
-                            base_color.h,
-                            base_color.s,
-                            (base_color.l * intensity).clamp(0.08, 0.95),
-                            base_color.a,
-                        )
-                    }
-                } else {
-                    hsla(
-                        base_color.h,
-                        base_color.s,
-                        (base_color.l * intensity).clamp(0.08, 0.95),
-                        base_color.a,
-                    )
-                };
-
-                let avg_depth = (z0 + z1 + z2) / 3.0;
-                visible_triangles.push((avg_depth, s0, s1, s2, shaded_color));
-            }
-        }
-    }
-
-    // 按平均深度从远至近排序 (画家算法)
-    visible_triangles
-        .sort_unstable_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-
-    // 批量分块绘制实体三角面 (每个小批次绘制 64 面以均衡 GPU 提交效率与图元混合)
-    let chunk_size = 64;
-    for chunk in visible_triangles.chunks(chunk_size) {
-        for &(_, s0, s1, s2, color) in chunk {
-            let mut tri_path = PathBuilder::fill();
-            tri_path.move_to(point(px(orig_x + s0[0]), px(orig_y + s0[1])));
-            tri_path.line_to(point(px(orig_x + s1[0]), px(orig_y + s1[1])));
-            tri_path.line_to(point(px(orig_x + s2[0]), px(orig_y + s2[1])));
-            tri_path.close();
-            if let Ok(p) = tri_path.build() {
-                window.paint_path(p, color);
-            }
-        }
     }
 
     // 若开启叠加线框模式，在实体上方追加渲染半透明矢量线框

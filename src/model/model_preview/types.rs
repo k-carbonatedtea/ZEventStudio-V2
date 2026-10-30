@@ -69,7 +69,34 @@ pub struct RgbaTexture {
 }
 
 impl RgbaTexture {
+    /// 基于 UV 坐标采样原始 RGBA8 像素值 [R, G, B, A]
+    #[inline(always)]
+    pub fn sample_rgba_raw(&self, u: f32, v: f32) -> [u8; 4] {
+        if self.width == 0 || self.height == 0 || self.rgba.is_empty() {
+            return [180, 180, 180, 255];
+        }
+
+        let u_wrap = u.rem_euclid(1.0);
+        let v_wrap = v.rem_euclid(1.0);
+
+        let px = (u_wrap * (self.width - 1) as f32) as usize;
+        let py = (v_wrap * (self.height - 1) as f32) as usize;
+
+        let idx = (py * self.width as usize + px) * 4;
+        if idx + 4 <= self.rgba.len() {
+            [
+                self.rgba[idx],
+                self.rgba[idx + 1],
+                self.rgba[idx + 2],
+                self.rgba[idx + 3],
+            ]
+        } else {
+            [180, 180, 180, 255]
+        }
+    }
+
     /// 基于 UV 坐标 (0.0..1.0) 执行双线性/邻近采样，返回 gpui::Hsla 颜色
+    #[allow(dead_code)]
     pub fn sample_uv(&self, u: f32, v: f32) -> gpui::Hsla {
         if self.width == 0 || self.height == 0 || self.rgba.is_empty() {
             return gpui::hsla(0.0, 0.0, 0.5, 1.0);

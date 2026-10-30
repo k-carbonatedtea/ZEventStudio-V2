@@ -33,13 +33,14 @@ pub fn load_companion_textures(
         .and_then(|f| f.to_str())
         .unwrap_or_default();
 
-    // 提取模型文件主干名 (例如 "Item_Conductor.sbfres" -> "Item_Conductor")
+    // 提取模型文件主干名 (使用 strip_suffix 避免字符集误伤)
     let stem = file_name
-        .trim_end_matches(".sbfres")
-        .trim_end_matches(".bfres");
+        .strip_suffix(".sbfres")
+        .or_else(|| file_name.strip_suffix(".bfres"))
+        .unwrap_or(file_name);
 
-    // 候选的配套纹理文件名称列表 (与 Switch-Toolbox 规范完全对齐)
-    let candidates = [
+    // 候选的配套纹理文件名称列表 (包含专用纹理包与 Link/Armor 通用基础贴图包)
+    let mut candidates = vec![
         format!("{}.Tex.sbfres", stem),
         format!("{}.Tex1.sbfres", stem),
         format!("{}.Tex2.sbfres", stem),
@@ -47,6 +48,13 @@ pub fn load_companion_textures(
         format!("{}.Tex1.bfres", stem),
         format!("{}.Tex2.bfres", stem),
     ];
+
+    // 若当前为服装/盔甲模型，追加探测主角基础身体贴图包
+    if stem.starts_with("Armor_") || stem.starts_with("Npc_") {
+        candidates.push("Link.Tex.sbfres".to_string());
+        candidates.push("Link.Tex1.sbfres".to_string());
+        candidates.push("Armor_Default.Tex.sbfres".to_string());
+    }
 
     for candidate_name in &candidates {
         let candidate_path = parent_dir.join(candidate_name);

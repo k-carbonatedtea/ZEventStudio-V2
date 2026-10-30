@@ -2,6 +2,7 @@
 
 pub mod gizmos;
 pub mod mesh_sidebar;
+pub mod rasterizer;
 pub mod renderer;
 pub mod stats_hud;
 pub mod toolbar;

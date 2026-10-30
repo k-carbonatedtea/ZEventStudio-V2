@@ -3882,6 +3882,7 @@ dependencies = [
  "gpui-component",
  "gpui-kit-assets",
  "gpui_platform",
+ "image 0.25.10",
  "msyt",
  "rayon",
  "rbfres-library",
