@@ -144,6 +144,7 @@ pub fn draw_bounding_box(
 }
 
 /// 计算三点构成的面三角形单位法线向量
+#[allow(dead_code)]
 pub fn compute_normal(p0: [f32; 3], p1: [f32; 3], p2: [f32; 3]) -> [f32; 3] {
     let v01 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
     let v02 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];

@@ -10,7 +10,11 @@ use std::path::Path;
 use std::sync::Arc;
 
 /// 自动探测并加载模型的内嵌纹理与配套纹理包 (.Tex.sbfres / .Tex1.sbfres / .bntx)
-pub fn load_companion_textures(file_path: &str, bfres: &BfresFile, state: &mut ModelDocumentState) {
+pub fn load_companion_textures(
+    file_path: &str,
+    bfres: &BfresFile,
+    state: &mut ModelDocumentState,
+) {
     // 1. 尝试从模型自身的外部文件字典 (ExternalFiles) 提取内嵌的 BNTX
     extract_bntx_from_bfres(bfres, state);
 
@@ -72,8 +76,7 @@ fn extract_innermost_sarc_bytes(archive_bytes: &[u8], intermediates: &[&str]) ->
         let sarc = roead::sarc::Sarc::new(&decomp).ok()?;
         let norm = intermediate.replace('\\', "/");
         let found = sarc.files().find(|f| {
-            f.name()
-                .is_some_and(|name| name == *intermediate || name.replace('\\', "/") == norm)
+            f.name().is_some_and(|name| name == *intermediate || name.replace('\\', "/") == norm)
         })?;
         current = found.data().to_vec();
     }
@@ -82,10 +85,7 @@ fn extract_innermost_sarc_bytes(archive_bytes: &[u8], intermediates: &[&str]) ->
 
 /// 从 SARC 归档封包内部加载关联的配套纹理
 fn load_sarc_companion_textures(virtual_path: &str, state: &mut ModelDocumentState) {
-    let parts: Vec<&str> = virtual_path
-        .trim_start_matches("SARC:")
-        .split("//")
-        .collect();
+    let parts: Vec<&str> = virtual_path.trim_start_matches("SARC:").split("//").collect();
     if parts.len() < 2 {
         return;
     }
@@ -96,9 +96,7 @@ fn load_sarc_companion_textures(virtual_path: &str, state: &mut ModelDocumentSta
         return;
     };
 
-    let Some(inner_sarc_bytes) =
-        extract_innermost_sarc_bytes(&archive_bytes, &parts[1..parts.len() - 1])
-    else {
+    let Some(inner_sarc_bytes) = extract_innermost_sarc_bytes(&archive_bytes, &parts[1..parts.len() - 1]) else {
         return;
     };
 
@@ -207,11 +205,7 @@ fn load_romfs_fallback_textures(state: &mut ModelDocumentState) {
 
     for game_model_dir in &fallback_dirs {
         if game_model_dir.exists() {
-            for candidate_name in &[
-                "Link.Tex.sbfres",
-                "Link.Tex1.sbfres",
-                "Armor_Default.Tex.sbfres",
-            ] {
+            for candidate_name in &["Link.Tex.sbfres", "Link.Tex1.sbfres", "Armor_Default.Tex.sbfres"] {
                 let candidate_path = game_model_dir.join(candidate_name);
                 load_tex_file_if_exists(&candidate_path, state);
             }
@@ -316,18 +310,11 @@ mod tests {
         }
         let virtual_path = format!("SARC:{}//Model/DgnMrgPrt_Dungeon085.sbfres", pack_path);
         let bfres = BfresFile::default();
-        let mut state =
-            ModelDocumentState::from_bfres(&virtual_path, "DgnMrgPrt_Dungeon085.sbfres", &bfres);
+        let mut state = ModelDocumentState::from_bfres(&virtual_path, "DgnMrgPrt_Dungeon085.sbfres", &bfres);
         load_companion_textures(&virtual_path, &bfres, &mut state);
 
-        assert!(
-            !state.textures.is_empty(),
-            "Dungeon085 companion textures should be loaded from SARC!"
-        );
-        println!(
-            "Loaded textures count from Dungeon085: {}",
-            state.textures.len()
-        );
+        assert!(!state.textures.is_empty(), "Dungeon085 companion textures should be loaded from SARC!");
+        println!("Loaded textures count from Dungeon085: {}", state.textures.len());
         assert!(state.textures.contains_key("CmnTex_Cdun_MonyoLine_B_Alb"));
     }
 }

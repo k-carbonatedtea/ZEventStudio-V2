@@ -117,7 +117,7 @@ fn draw_wireframe_fast(
     view_h: f32,
     window: &mut Window,
 ) {
-    let camera = &state.camera;
+    let projector = state.camera.projector(view_w, view_h);
     let mut stroke_path = PathBuilder::stroke(px(1.0));
     let mut line_count = 0;
 
@@ -128,37 +128,35 @@ fn draw_wireframe_fast(
             }
         }
 
-        let v_len = mesh.positions.len();
-        for chunk in mesh.indices.chunks_exact(3) {
-            let i0 = chunk[0] as usize;
-            let i1 = chunk[1] as usize;
-            let i2 = chunk[2] as usize;
+        let b_min = [
+            mesh.bounding_box.min().x,
+            mesh.bounding_box.min().y,
+            mesh.bounding_box.min().z,
+        ];
+        let b_max = [
+            mesh.bounding_box.max().x,
+            mesh.bounding_box.max().y,
+            mesh.bounding_box.max().z,
+        ];
+        if projector.is_aabb_outside(b_min, b_max, view_w, view_h) {
+            continue;
+        }
 
+        let v_len = mesh.positions.len();
+        let mut proj_verts: Vec<Option<([f32; 2], f32)>> = Vec::with_capacity(v_len);
+        for p in &mesh.positions {
+            proj_verts.push(projector.project([p.x, p.y, p.z]));
+        }
+
+        for chunk in mesh.indices.chunks_exact(3) {
+            let (i0, i1, i2) = (chunk[0] as usize, chunk[1] as usize, chunk[2] as usize);
             if i0 >= v_len || i1 >= v_len || i2 >= v_len {
                 continue;
             }
 
-            let p0 = [
-                mesh.positions[i0].x,
-                mesh.positions[i0].y,
-                mesh.positions[i0].z,
-            ];
-            let p1 = [
-                mesh.positions[i1].x,
-                mesh.positions[i1].y,
-                mesh.positions[i1].z,
-            ];
-            let p2 = [
-                mesh.positions[i2].x,
-                mesh.positions[i2].y,
-                mesh.positions[i2].z,
-            ];
-
-            if let (Some((s0, _)), Some((s1, _)), Some((s2, _))) = (
-                camera.project_point(p0, view_w, view_h),
-                camera.project_point(p1, view_w, view_h),
-                camera.project_point(p2, view_w, view_h),
-            ) {
+            if let (Some((s0, _)), Some((s1, _)), Some((s2, _))) =
+                (proj_verts[i0], proj_verts[i1], proj_verts[i2])
+            {
                 stroke_path.move_to(point(px(orig_x + s0[0]), px(orig_y + s0[1])));
                 stroke_path.line_to(point(px(orig_x + s1[0]), px(orig_y + s1[1])));
                 stroke_path.line_to(point(px(orig_x + s2[0]), px(orig_y + s2[1])));
@@ -184,7 +182,7 @@ fn draw_wireframe_overlay(
     view_h: f32,
     window: &mut Window,
 ) {
-    let camera = &state.camera;
+    let projector = state.camera.projector(view_w, view_h);
     let mut stroke_path = PathBuilder::stroke(px(0.8));
     let mut line_count = 0;
 
@@ -195,38 +193,35 @@ fn draw_wireframe_overlay(
             }
         }
 
-        let v_len = mesh.positions.len();
-        for chunk in mesh.indices.chunks_exact(3) {
-            let i0 = chunk[0] as usize;
-            let i1 = chunk[1] as usize;
-            let i2 = chunk[2] as usize;
+        let b_min = [
+            mesh.bounding_box.min().x,
+            mesh.bounding_box.min().y,
+            mesh.bounding_box.min().z,
+        ];
+        let b_max = [
+            mesh.bounding_box.max().x,
+            mesh.bounding_box.max().y,
+            mesh.bounding_box.max().z,
+        ];
+        if projector.is_aabb_outside(b_min, b_max, view_w, view_h) {
+            continue;
+        }
 
+        let v_len = mesh.positions.len();
+        let mut proj_verts: Vec<Option<([f32; 2], f32)>> = Vec::with_capacity(v_len);
+        for p in &mesh.positions {
+            proj_verts.push(projector.project([p.x, p.y, p.z]));
+        }
+
+        for chunk in mesh.indices.chunks_exact(3) {
+            let (i0, i1, i2) = (chunk[0] as usize, chunk[1] as usize, chunk[2] as usize);
             if i0 >= v_len || i1 >= v_len || i2 >= v_len {
                 continue;
             }
 
-            let p0 = [
-                mesh.positions[i0].x,
-                mesh.positions[i0].y,
-                mesh.positions[i0].z,
-            ];
-            let p1 = [
-                mesh.positions[i1].x,
-                mesh.positions[i1].y,
-                mesh.positions[i1].z,
-            ];
-            let p2 = [
-                mesh.positions[i2].x,
-                mesh.positions[i2].y,
-                mesh.positions[i2].z,
-            ];
-
-            if let (Some((s0, _)), Some((s1, _)), Some((s2, _))) = (
-                camera.project_point(p0, view_w, view_h),
-                camera.project_point(p1, view_w, view_h),
-                camera.project_point(p2, view_w, view_h),
-            ) {
-                // 绘制非退化三角面叠加精细线框
+            if let (Some((s0, _)), Some((s1, _)), Some((s2, _))) =
+                (proj_verts[i0], proj_verts[i1], proj_verts[i2])
+            {
                 let cross = (s1[0] - s0[0]) * (s2[1] - s0[1]) - (s1[1] - s0[1]) * (s2[0] - s0[0]);
                 if cross.abs() > 0.001 {
                     stroke_path.move_to(point(px(orig_x + s0[0]), px(orig_y + s0[1])));
@@ -245,4 +240,3 @@ fn draw_wireframe_overlay(
         }
     }
 }
-

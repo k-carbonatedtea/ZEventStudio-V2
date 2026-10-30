@@ -4,7 +4,7 @@ pub mod camera;
 pub mod texture_loader;
 pub mod types;
 
-pub use camera::{OrbitCamera, PreviewPresetView};
+pub use camera::{FastCameraProjector, OrbitCamera, PreviewPresetView};
 pub use texture_loader::load_companion_textures;
 pub use types::{PreviewMeshItem, RenderMode, RgbaTexture};
 
@@ -19,8 +19,8 @@ pub struct ModelDocumentState {
     pub model_name: String,
     /// 平台格式标识：true 为 Switch NX 64位格式，false 为 Wii U Cafe 32位格式
     pub is_switch: bool,
-    /// 从 BFRES 模型字典中提炼抽取的几何网格列表
-    pub meshes: Vec<ExtractedMesh>,
+    /// 从 BFRES 模型字典中提炼抽取的几何网格列表 (使用 Arc 避免 UI 重绘高频深拷贝数十万顶点)
+    pub meshes: std::sync::Arc<Vec<ExtractedMesh>>,
     /// 已加载解码的标准 RGBA8 纹理字典 (纹理名 -> RgbaTexture)
     pub textures: std::collections::HashMap<String, std::sync::Arc<RgbaTexture>>,
     /// 子网格 UI 条目元数据列表 (管理显隐与统计)
@@ -122,7 +122,7 @@ impl ModelDocumentState {
             file_path: file_path.to_string(),
             model_name,
             is_switch,
-            meshes,
+            meshes: std::sync::Arc::new(meshes),
             textures: std::collections::HashMap::new(),
             mesh_items,
             total_vertices,

@@ -187,6 +187,44 @@ pub fn render_model_preview_view(state: &AppState, model: &Entity<AppState>) -> 
                                         });
                                     }
                                 })
+                                .on_mouse_up_out(MouseButton::Left, {
+                                    let m = model.clone();
+                                    let t = tab_id.clone();
+                                    move |_, _, cx| {
+                                        let t_id = t.clone();
+                                        m.update(cx, |st, cx| {
+                                            if let Some(tab) =
+                                                st.open_tabs.iter_mut().find(|x| x.id == t_id)
+                                            {
+                                                if let Some(ref mut ms) = tab.model_state {
+                                                    if ms.is_orbiting {
+                                                        ms.is_orbiting = false;
+                                                        cx.notify();
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    }
+                                })
+                                .on_mouse_up_out(MouseButton::Right, {
+                                    let m = model.clone();
+                                    let t = tab_id.clone();
+                                    move |_, _, cx| {
+                                        let t_id = t.clone();
+                                        m.update(cx, |st, cx| {
+                                            if let Some(tab) =
+                                                st.open_tabs.iter_mut().find(|x| x.id == t_id)
+                                            {
+                                                if let Some(ref mut ms) = tab.model_state {
+                                                    if ms.is_panning {
+                                                        ms.is_panning = false;
+                                                        cx.notify();
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    }
+                                })
                                 // 滚轮缩放摄像机距离
                                 .on_scroll(move |event, _, cx| {
                                     let t = tid_scroll.clone();

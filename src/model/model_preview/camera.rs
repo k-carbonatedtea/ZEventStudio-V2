@@ -184,6 +184,25 @@ impl OrbitCamera {
         (right, up, forward)
     }
 
+    /// 构建预计算快速视口投影器 (消除每个顶点的三角函数与矩阵重复求值)
+    pub fn projector(&self, viewport_w: f32, viewport_h: f32) -> FastCameraProjector {
+        let eye = self.compute_eye();
+        let (right, up, forward) = self.compute_basis();
+        let tan_half_fov = (self.fov * 0.5).tan().max(0.001);
+        let scale = (viewport_h.max(1.0) * 0.5) / tan_half_fov;
+
+        FastCameraProjector {
+            eye,
+            forward,
+            right,
+            up,
+            center_x: viewport_w * 0.5,
+            center_y: viewport_h * 0.5,
+            scale,
+            near_z: 0.02,
+        }
+    }
+
     /// 将 3D 世界坐标单点透视投影至 2D 视口像素坐标
     /// 返回 `Some(([screen_x, screen_y], depth_z))`，若点位于相机近平面后方则返回 `None`
     pub fn project_point(
@@ -192,33 +211,87 @@ impl OrbitCamera {
         viewport_w: f32,
         viewport_h: f32,
     ) -> Option<([f32; 2], f32)> {
-        let eye = self.compute_eye();
-        let (right, up, forward) = self.compute_basis();
+        self.projector(viewport_w, viewport_h).project(point)
+    }
+}
 
-        let delta = [point[0] - eye[0], point[1] - eye[1], point[2] - eye[2]];
+/// 预计算的快速摄像机视口透视投影器
+#[derive(Debug, Clone, Copy)]
+pub struct FastCameraProjector {
+    pub eye: [f32; 3],
+    pub forward: [f32; 3],
+    pub right: [f32; 3],
+    pub up: [f32; 3],
+    pub center_x: f32,
+    pub center_y: f32,
+    pub scale: f32,
+    pub near_z: f32,
+}
 
-        // 转换至摄像机视图坐标系
-        let cam_x = dot_vec3(delta, right);
-        let cam_y = dot_vec3(delta, up);
-        let cam_z = dot_vec3(delta, forward);
+impl FastCameraProjector {
+    /// 将 3D 世界坐标单点快速投影至 2D 视口像素坐标
+    #[inline(always)]
+    pub fn project(&self, p: [f32; 3]) -> Option<([f32; 2], f32)> {
+        let dx = p[0] - self.eye[0];
+        let dy = p[1] - self.eye[1];
+        let dz = p[2] - self.eye[2];
 
-        // 近平面剔除 (Near Plane Culling)
-        if cam_z <= 0.02 {
+        let cam_z = dx * self.forward[0] + dy * self.forward[1] + dz * self.forward[2];
+        if cam_z <= self.near_z {
             return None;
         }
 
-        let tan_half_fov = (self.fov * 0.5).tan();
-        let aspect = (viewport_w / viewport_h.max(1.0)).max(0.1);
+        let inv_z = 1.0 / cam_z;
+        let cam_x = dx * self.right[0] + dy * self.right[1] + dz * self.right[2];
+        let cam_y = dx * self.up[0] + dy * self.up[1] + dz * self.up[2];
 
-        // 归一化设备坐标 (NDC)
-        let ndc_x = cam_x / (cam_z * tan_half_fov * aspect);
-        let ndc_y = cam_y / (cam_z * tan_half_fov);
+        let sx = self.center_x + cam_x * inv_z * self.scale;
+        let sy = self.center_y - cam_y * inv_z * self.scale;
 
-        // 视口像素坐标映射
-        let screen_x = (ndc_x + 1.0) * 0.5 * viewport_w;
-        let screen_y = (1.0 - ndc_y) * 0.5 * viewport_h;
+        Some(([sx, sy], cam_z))
+    }
 
-        Some(([screen_x, screen_y], cam_z))
+    /// 快速测试 3D 轴对齐包围盒是否完全位于视锥外 (用于子网格整块剔除)
+    pub fn is_aabb_outside(&self, min: [f32; 3], max: [f32; 3], view_w: f32, view_h: f32) -> bool {
+        let corners = [
+            [min[0], min[1], min[2]],
+            [max[0], min[1], min[2]],
+            [min[0], max[1], min[2]],
+            [max[0], max[1], min[2]],
+            [min[0], min[1], max[2]],
+            [max[0], min[1], max[2]],
+            [min[0], max[1], max[2]],
+            [max[0], max[1], max[2]],
+        ];
+
+        let mut all_behind = true;
+        let mut all_left = true;
+        let mut all_right = true;
+        let mut all_above = true;
+        let mut all_below = true;
+
+        for corner in &corners {
+            let dx = corner[0] - self.eye[0];
+            let dy = corner[1] - self.eye[1];
+            let dz = corner[2] - self.eye[2];
+            let cam_z = dx * self.forward[0] + dy * self.forward[1] + dz * self.forward[2];
+
+            if cam_z > self.near_z {
+                all_behind = false;
+                let inv_z = 1.0 / cam_z;
+                let cam_x = dx * self.right[0] + dy * self.right[1] + dz * self.right[2];
+                let cam_y = dx * self.up[0] + dy * self.up[1] + dz * self.up[2];
+                let sx = self.center_x + cam_x * inv_z * self.scale;
+                let sy = self.center_y - cam_y * inv_z * self.scale;
+
+                if sx >= 0.0 { all_left = false; }
+                if sx <= view_w { all_right = false; }
+                if sy >= 0.0 { all_above = false; }
+                if sy <= view_h { all_below = false; }
+            }
+        }
+
+        all_behind || all_left || all_right || all_above || all_below
     }
 }
 
@@ -230,11 +303,6 @@ fn normalize_vec3(vector: [f32; 3]) -> [f32; 3] {
     } else {
         [vector[0] / length, vector[1] / length, vector[2] / length]
     }
-}
-
-/// 三维向量点积
-fn dot_vec3(left: [f32; 3], right: [f32; 3]) -> f32 {
-    left[0] * right[0] + left[1] * right[1] + left[2] * right[2]
 }
 
 /// 三维向量叉积
