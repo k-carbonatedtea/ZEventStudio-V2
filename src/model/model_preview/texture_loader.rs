@@ -58,19 +58,54 @@ pub fn load_companion_textures(
 
     for candidate_name in &candidates {
         let candidate_path = parent_dir.join(candidate_name);
-        if candidate_path.exists() {
-            if let Ok(bytes) = fs::read(&candidate_path) {
-                let decomp = if bytes.len() >= 4 && &bytes[0..4] == b"Yaz0" {
-                    roead::yaz0::decompress(&bytes).unwrap_or(bytes)
-                } else {
-                    bytes
-                };
+        load_tex_file_if_exists(&candidate_path, state);
+    }
 
-                if let Ok(tex_bfres) = BfresFile::from_bytes(&decomp) {
-                    extract_bntx_from_bfres(&tex_bfres, state);
+    // 若当前为服装/盔甲模型且缺少通用贴图，追加探测用户配置的游戏原版 Model 目录
+    if stem.starts_with("Armor_") || stem.starts_with("Npc_") {
+        let settings = crate::model::settings::GamePathSettings::load_from_disk();
+        let fallback_dirs = [
+            Path::new(&settings.switch.game_dir).join("Model"),
+            Path::new(&settings.wiiu.game_dir).join("Model"),
+            Path::new(&settings.wiiu.update_dir).join("Model"),
+        ];
+
+        for game_model_dir in &fallback_dirs {
+            if game_model_dir.exists() {
+                for candidate_name in &["Link.Tex.sbfres", "Link.Tex1.sbfres", "Armor_Default.Tex.sbfres"] {
+                    let candidate_path = game_model_dir.join(candidate_name);
+                    load_tex_file_if_exists(&candidate_path, state);
                 }
             }
         }
+    }
+}
+
+/// 探测并加载指定路径的纹理资源文件 (支持 Yaz0 压缩、BFRES 归档与纯 BNTX)
+fn load_tex_file_if_exists(file_path: &Path, state: &mut ModelDocumentState) {
+    if !file_path.exists() {
+        return;
+    }
+    let Ok(bytes) = fs::read(file_path) else {
+        return;
+    };
+    let decomp = if bytes.len() >= 4 && &bytes[0..4] == b"Yaz0" {
+        roead::yaz0::decompress(&bytes).unwrap_or(bytes)
+    } else {
+        bytes
+    };
+
+    // 尝试直接作为 BNTX 解码
+    if decomp.len() >= 4 && &decomp[0..4] == b"BNTX" {
+        if let Ok(bntx) = BntxFile::from_bytes(&decomp) {
+            decode_and_insert_bntx(bntx, state);
+            return;
+        }
+    }
+
+    // 尝试作为 BFRES 归档解包其内部外部文件
+    if let Ok(tex_bfres) = BfresFile::from_bytes(&decomp) {
+        extract_bntx_from_bfres(&tex_bfres, state);
     }
 }
 
@@ -84,18 +119,23 @@ fn extract_bntx_from_bfres(bfres: &BfresFile, state: &mut ModelDocumentState) {
         // 识别魔数为 "BNTX" 的纹理封包
         if &ext_file.data[0..4] == b"BNTX" {
             if let Ok(bntx) = BntxFile::from_bytes(&ext_file.data) {
-                for tex in bntx.textures {
-                    let rgba = tex.decode_rgba();
-                    if !rgba.is_empty() {
-                        let rgba_tex = RgbaTexture {
-                            width: tex.width,
-                            height: tex.height,
-                            rgba: Arc::new(rgba),
-                        };
-                        state.textures.insert(tex.name.clone(), Arc::new(rgba_tex));
-                    }
-                }
+                decode_and_insert_bntx(bntx, state);
             }
+        }
+    }
+}
+
+/// 解码 BNTX 文件中的所有纹理切片并插入模型文档纹理池
+fn decode_and_insert_bntx(bntx: BntxFile, state: &mut ModelDocumentState) {
+    for tex in bntx.textures {
+        let rgba = tex.decode_rgba();
+        if !rgba.is_empty() {
+            let rgba_tex = RgbaTexture {
+                width: tex.width,
+                height: tex.height,
+                rgba: Arc::new(rgba),
+            };
+            state.textures.insert(tex.name.clone(), Arc::new(rgba_tex));
         }
     }
 }

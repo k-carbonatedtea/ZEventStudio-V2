@@ -102,15 +102,25 @@ fn resolve_texture<'a>(
     state: &'a ModelDocumentState,
     mesh: &ExtractedMesh,
 ) -> Option<&'a RgbaTexture> {
-    mesh.texture_name
-        .as_deref()
-        .and_then(|tn| state.textures.get(tn))
-        .or_else(|| {
-            mesh.material_name
-                .as_deref()
-                .and_then(|mn| state.textures.get(mn))
-        })
-        .map(|arc| &**arc)
+    // 1. 优先尝试主漫反射贴图名称
+    if let Some(tn) = mesh.texture_name.as_deref() {
+        if let Some(tex) = state.textures.get(tn) {
+            return Some(&**tex);
+        }
+    }
+    // 2. 依次匹配材质全部候选贴图清单 (挑选首个已在内存中解码成功的纹理)
+    for ref_name in &mesh.texture_refs {
+        if let Some(tex) = state.textures.get(ref_name) {
+            return Some(&**tex);
+        }
+    }
+    // 3. 尝试材质自身标识名
+    if let Some(mn) = mesh.material_name.as_deref() {
+        if let Some(tex) = state.textures.get(mn) {
+            return Some(&**tex);
+        }
+    }
+    None
 }
 
 /// 对单个子网格的所有三角面进行光栅化投影
@@ -132,6 +142,7 @@ fn rasterize_mesh(
     let v_len = mesh.positions.len();
     let norm_len = mesh.normals.len();
     let uv_len = mesh.uvs.len();
+    let is_alpha_cutout = mesh.is_alpha_cutout();
 
     for chunk in mesh.indices.chunks_exact(3) {
         let (i0, i1, i2) = (chunk[0] as usize, chunk[1] as usize, chunk[2] as usize);
@@ -151,15 +162,17 @@ fn rasterize_mesh(
             continue;
         };
 
-        // GPUI 屏幕空间背面剔除 (注意屏幕坐标 Y 轴向下，正面三角形 cross < 0)
+        // 面积退化三角形过滤 (消除零面积面引发的除零错误，同时支持双面材质渲染)
         let denom = (s1[0] - s0[0]) * (s2[1] - s0[1]) - (s1[1] - s0[1]) * (s2[0] - s0[0]);
-        if denom >= -0.001 {
+        if denom.abs() < 0.001 {
             continue;
         }
 
-        let int0 = calc_lighting(mesh, i0, norm_len, p0, p1, p2, sun_norm);
-        let int1 = calc_lighting(mesh, i1, norm_len, p0, p1, p2, sun_norm);
-        let int2 = calc_lighting(mesh, i2, norm_len, p0, p1, p2, sun_norm);
+        let is_back_facing = denom > 0.0;
+
+        let int0 = calc_lighting(mesh, i0, norm_len, p0, p1, p2, sun_norm, is_back_facing);
+        let int1 = calc_lighting(mesh, i1, norm_len, p0, p1, p2, sun_norm, is_back_facing);
+        let int2 = calc_lighting(mesh, i2, norm_len, p0, p1, p2, sun_norm, is_back_facing);
 
         let uv0 = if i0 < uv_len { [mesh.uvs[i0].x, mesh.uvs[i0].y] } else { [0.0, 0.0] };
         let uv1 = if i1 < uv_len { [mesh.uvs[i1].x, mesh.uvs[i1].y] } else { [0.0, 0.0] };
@@ -170,13 +183,14 @@ fn rasterize_mesh(
         let v2 = RasterVertex { screen: s2, inv_z: 1.0 / z2, intensity: int2, uv: uv2 };
 
         rasterize_triangle(
-            v0, v1, v2, denom, texture, base_color, buf_w, buf_h, color_buf, depth_buf,
+            v0, v1, v2, denom, texture, base_color, buf_w, buf_h, is_alpha_cutout, color_buf, depth_buf,
         );
     }
 }
 
-/// 计算顶点的平滑光照强度 (Half-Lambert Nintendo 光照模型)
+/// 计算顶点的平滑光照强度 (Half-Lambert Nintendo 光照模型，支持背面法线翻转双面照明)
 #[inline]
+#[allow(clippy::too_many_arguments)]
 fn calc_lighting(
     mesh: &ExtractedMesh,
     idx: usize,
@@ -185,12 +199,19 @@ fn calc_lighting(
     p1: [f32; 3],
     p2: [f32; 3],
     sun_norm: [f32; 3],
+    is_back_facing: bool,
 ) -> f32 {
-    let norm = if idx < norm_len {
+    let mut norm = if idx < norm_len {
         [mesh.normals[idx].x, mesh.normals[idx].y, mesh.normals[idx].z]
     } else {
         super::gizmos::compute_normal(p0, p1, p2)
     };
+
+    if is_back_facing {
+        norm[0] = -norm[0];
+        norm[1] = -norm[1];
+        norm[2] = -norm[2];
+    }
 
     let dot = norm[0] * sun_norm[0] + norm[1] * sun_norm[1] + norm[2] * sun_norm[2];
     let half_lambert = dot * 0.5 + 0.5;
@@ -208,6 +229,7 @@ fn rasterize_triangle(
     base_color: [u8; 4],
     buf_w: u32,
     buf_h: u32,
+    is_alpha_cutout: bool,
     color_buf: &mut [u8],
     depth_buf: &mut [f32],
 ) {
@@ -265,8 +287,9 @@ fn rasterize_triangle(
                 (base_color[0], base_color[1], base_color[2], base_color[3])
             };
 
-            // Alpha 镂空测试：透明像素不阻挡背景且不写入深度
-            if a < 25 {
+            // 仅对睫毛、半透明镂空等特定子网格执行 Alpha 镂空丢弃；
+            // 实体不透明材质即使在 BC1 贴图中携带 a=0 亦完整着色，与 Switch Toolbox 渲染完全对齐
+            if is_alpha_cutout && a < 25 {
                 continue;
             }
 
@@ -277,7 +300,7 @@ fn rasterize_triangle(
             color_buf[out_idx] = ((b as f32 * intensity) as u32).min(255) as u8;
             color_buf[out_idx + 1] = ((g as f32 * intensity) as u32).min(255) as u8;
             color_buf[out_idx + 2] = ((r as f32 * intensity) as u32).min(255) as u8;
-            color_buf[out_idx + 3] = a;
+            color_buf[out_idx + 3] = if is_alpha_cutout { a } else { 255 };
         }
     }
 }

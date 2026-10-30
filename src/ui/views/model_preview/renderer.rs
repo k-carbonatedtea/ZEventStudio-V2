@@ -226,9 +226,9 @@ fn draw_wireframe_overlay(
                 camera.project_point(p1, view_w, view_h),
                 camera.project_point(p2, view_w, view_h),
             ) {
-                // 仅对正面朝向的面绘制叠加线框
+                // 绘制非退化三角面叠加精细线框
                 let cross = (s1[0] - s0[0]) * (s2[1] - s0[1]) - (s1[1] - s0[1]) * (s2[0] - s0[0]);
-                if cross > 0.0 {
+                if cross.abs() > 0.001 {
                     stroke_path.move_to(point(px(orig_x + s0[0]), px(orig_y + s0[1])));
                     stroke_path.line_to(point(px(orig_x + s1[0]), px(orig_y + s1[1])));
                     stroke_path.line_to(point(px(orig_x + s2[0]), px(orig_y + s2[1])));
