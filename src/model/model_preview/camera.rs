@@ -251,8 +251,8 @@ impl FastCameraProjector {
         Some(([sx, sy], cam_z))
     }
 
-    /// 快速测试 3D 轴对齐包围盒是否完全位于视锥外 (用于子网格整块剔除)
-    pub fn is_aabb_outside(&self, min: [f32; 3], max: [f32; 3], view_w: f32, view_h: f32) -> bool {
+    /// 快速测试 3D 轴对齐包围盒是否完全位于近平面后方 (仅在 8 个顶点全部在相机身后时剔除)
+    pub fn is_all_behind_camera(&self, min: [f32; 3], max: [f32; 3]) -> bool {
         let corners = [
             [min[0], min[1], min[2]],
             [max[0], min[1], min[2]],
@@ -264,34 +264,13 @@ impl FastCameraProjector {
             [max[0], max[1], max[2]],
         ];
 
-        let mut all_behind = true;
-        let mut all_left = true;
-        let mut all_right = true;
-        let mut all_above = true;
-        let mut all_below = true;
-
-        for corner in &corners {
+        corners.iter().all(|corner| {
             let dx = corner[0] - self.eye[0];
             let dy = corner[1] - self.eye[1];
             let dz = corner[2] - self.eye[2];
             let cam_z = dx * self.forward[0] + dy * self.forward[1] + dz * self.forward[2];
-
-            if cam_z > self.near_z {
-                all_behind = false;
-                let inv_z = 1.0 / cam_z;
-                let cam_x = dx * self.right[0] + dy * self.right[1] + dz * self.right[2];
-                let cam_y = dx * self.up[0] + dy * self.up[1] + dz * self.up[2];
-                let sx = self.center_x + cam_x * inv_z * self.scale;
-                let sy = self.center_y - cam_y * inv_z * self.scale;
-
-                if sx >= 0.0 { all_left = false; }
-                if sx <= view_w { all_right = false; }
-                if sy >= 0.0 { all_above = false; }
-                if sy <= view_h { all_below = false; }
-            }
-        }
-
-        all_behind || all_left || all_right || all_above || all_below
+            cam_z <= self.near_z
+        })
     }
 }
 

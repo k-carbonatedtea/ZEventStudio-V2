@@ -23,6 +23,9 @@ regex = "1"
 botw-map = { path = "../botw-map" }
 rbfres-library = { path = "../RBfresLibrary" }
 image = { version = "0.25", default-features = false }
+vulkano = "0.35"
+naga = { version = "30", features = ["wgsl-in", "spv-out"] }
+bytemuck = { version = "1", features = ["derive"] }
 
 [profile.release]
 opt-level = 3

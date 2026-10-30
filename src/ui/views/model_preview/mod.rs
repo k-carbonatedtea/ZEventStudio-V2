@@ -6,6 +6,7 @@ pub mod rasterizer;
 pub mod renderer;
 pub mod stats_hud;
 pub mod toolbar;
+pub mod vulkan_renderer;
 
 use crate::ui::state::AppState;
 use gpui::*;

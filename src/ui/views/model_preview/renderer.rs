@@ -2,6 +2,7 @@
 
 use super::gizmos::{draw_axes, draw_bounding_box, draw_ground_grid, draw_points_fast};
 use super::rasterizer::rasterize_scene;
+use super::vulkan_renderer::render_vulkan_scene;
 use crate::model::model_preview::{ModelDocumentState, RenderMode};
 use gpui::*;
 
@@ -86,8 +87,15 @@ fn draw_model_meshes(
     }
 
     // 2. 实体着色模式 (Shaded) 或 线框叠加着色模式 (ShadedWireframe)
-    // 采用高精度带 Z-Buffer 软光栅化渲染，彻底消除前后层叠穿透并实现平滑法线光照
-    if let Some(render_image) = rasterize_scene(state, view_w, view_h) {
+    // 采用 Vulkano 原生 Vulkan GPU 硬件渲染管线，支持硬件纹理双线性采样与物理级深度测试
+    let scale_factor = window.scale_factor();
+    let phys_w = (view_w * scale_factor).round();
+    let phys_h = (view_h * scale_factor).round();
+
+    let render_image = render_vulkan_scene(state, phys_w, phys_h)
+        .or_else(|| rasterize_scene(state, phys_w, phys_h));
+
+    if let Some(render_image) = render_image {
         let img_bounds = Bounds {
             origin: point(px(orig_x), px(orig_y)),
             size: size(px(view_w), px(view_h)),
@@ -128,17 +136,9 @@ fn draw_wireframe_fast(
             }
         }
 
-        let b_min = [
-            mesh.bounding_box.min().x,
-            mesh.bounding_box.min().y,
-            mesh.bounding_box.min().z,
-        ];
-        let b_max = [
-            mesh.bounding_box.max().x,
-            mesh.bounding_box.max().y,
-            mesh.bounding_box.max().z,
-        ];
-        if projector.is_aabb_outside(b_min, b_max, view_w, view_h) {
+        let b_min = [mesh.bounding_box.min().x, mesh.bounding_box.min().y, mesh.bounding_box.min().z];
+        let b_max = [mesh.bounding_box.max().x, mesh.bounding_box.max().y, mesh.bounding_box.max().z];
+        if projector.is_all_behind_camera(b_min, b_max) {
             continue;
         }
 
@@ -193,17 +193,9 @@ fn draw_wireframe_overlay(
             }
         }
 
-        let b_min = [
-            mesh.bounding_box.min().x,
-            mesh.bounding_box.min().y,
-            mesh.bounding_box.min().z,
-        ];
-        let b_max = [
-            mesh.bounding_box.max().x,
-            mesh.bounding_box.max().y,
-            mesh.bounding_box.max().z,
-        ];
-        if projector.is_aabb_outside(b_min, b_max, view_w, view_h) {
+        let b_min = [mesh.bounding_box.min().x, mesh.bounding_box.min().y, mesh.bounding_box.min().z];
+        let b_max = [mesh.bounding_box.max().x, mesh.bounding_box.max().y, mesh.bounding_box.max().z];
+        if projector.is_all_behind_camera(b_min, b_max) {
             continue;
         }
 
@@ -240,3 +232,4 @@ fn draw_wireframe_overlay(
         }
     }
 }
+

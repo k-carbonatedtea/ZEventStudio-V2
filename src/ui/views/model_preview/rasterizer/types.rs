@@ -18,7 +18,6 @@ pub struct RenderCacheKey {
     pub render_mode: RenderMode,
     pub selected_mesh_idx: Option<usize>,
     pub visibility_hash: u64,
-    pub is_interactive: bool,
 }
 
 pub struct CachedImage {

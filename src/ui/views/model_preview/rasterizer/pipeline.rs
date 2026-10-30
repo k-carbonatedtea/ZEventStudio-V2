@@ -66,7 +66,7 @@ pub fn rasterize_triangle_in_band(
                     + w1 * tri.uv1[1] * tri.inv_z1
                     + w2 * tri.uv2[1] * tri.inv_z2)
                     * z;
-                let c = tex.sample_rgba_raw(u, v);
+                let c = tex.sample_bilinear(u, v);
                 (c[0], c[1], c[2], c[3])
             } else {
                 (base_color[0], base_color[1], base_color[2], base_color[3])

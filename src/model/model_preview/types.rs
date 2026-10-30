@@ -101,6 +101,75 @@ impl RgbaTexture {
         }
     }
 
+    /// 基于 UV 坐标执行高保真双线性插值采样 (Bilinear Texture Filtering，消除马赛克与噪点)
+    #[inline(always)]
+    pub fn sample_bilinear(&self, u: f32, v: f32) -> [u8; 4] {
+        if self.width <= 1 || self.height <= 1 || self.rgba.is_empty() {
+            return self.sample_rgba_raw(u, v);
+        }
+
+        let mut u_frac = u.fract();
+        if u_frac < 0.0 {
+            u_frac += 1.0;
+        }
+        let mut v_frac = v.fract();
+        if v_frac < 0.0 {
+            v_frac += 1.0;
+        }
+
+        let w_u32 = self.width;
+        let h_u32 = self.height;
+        let w_usize = w_u32 as usize;
+
+        let fx = u_frac * (w_u32 - 1) as f32;
+        let fy = v_frac * (h_u32 - 1) as f32;
+
+        let x0 = fx as usize;
+        let y0 = fy as usize;
+        let x1 = (x0 + 1).min(w_usize - 1);
+        let y1 = (y0 + 1).min(h_u32 as usize - 1);
+
+        let wx = fx - x0 as f32;
+        let wy = fy - y0 as f32;
+
+        let w00 = ((1.0 - wx) * (1.0 - wy) * 256.0) as u32;
+        let w10 = (wx * (1.0 - wy) * 256.0) as u32;
+        let w01 = ((1.0 - wx) * wy * 256.0) as u32;
+        let w11 = 256u32.saturating_sub(w00 + w10 + w01);
+
+        let idx00 = (y0 * w_usize + x0) * 4;
+        let idx10 = (y0 * w_usize + x1) * 4;
+        let idx01 = (y1 * w_usize + x0) * 4;
+        let idx11 = (y1 * w_usize + x1) * 4;
+
+        let data = &self.rgba;
+        if idx11 + 4 <= data.len() {
+            let r = (data[idx00] as u32 * w00
+                + data[idx10] as u32 * w10
+                + data[idx01] as u32 * w01
+                + data[idx11] as u32 * w11)
+                >> 8;
+            let g = (data[idx00 + 1] as u32 * w00
+                + data[idx10 + 1] as u32 * w10
+                + data[idx01 + 1] as u32 * w01
+                + data[idx11 + 1] as u32 * w11)
+                >> 8;
+            let b = (data[idx00 + 2] as u32 * w00
+                + data[idx10 + 2] as u32 * w10
+                + data[idx01 + 2] as u32 * w01
+                + data[idx11 + 2] as u32 * w11)
+                >> 8;
+            let a = (data[idx00 + 3] as u32 * w00
+                + data[idx10 + 3] as u32 * w10
+                + data[idx01 + 3] as u32 * w01
+                + data[idx11 + 3] as u32 * w11)
+                >> 8;
+            [r as u8, g as u8, b as u8, a as u8]
+        } else {
+            self.sample_rgba_raw(u, v)
+        }
+    }
+
     /// 基于 UV 坐标 (0.0..1.0) 执行双线性/邻近采样，返回 gpui::Hsla 颜色
     #[allow(dead_code)]
     pub fn sample_uv(&self, u: f32, v: f32) -> gpui::Hsla {

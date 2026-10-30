@@ -22,7 +22,7 @@ pub fn prepare_mesh_batch<'a>(
 
     let b_min = [mesh.bounding_box.min().x, mesh.bounding_box.min().y, mesh.bounding_box.min().z];
     let b_max = [mesh.bounding_box.max().x, mesh.bounding_box.max().y, mesh.bounding_box.max().z];
-    if projector.is_aabb_outside(b_min, b_max, buf_w as f32, buf_h as f32) {
+    if projector.is_all_behind_camera(b_min, b_max) {
         return None;
     }
 

@@ -4,6 +4,7 @@ pub mod camera;
 pub mod texture_loader;
 pub mod types;
 
+#[allow(unused_imports)]
 pub use camera::{FastCameraProjector, OrbitCamera, PreviewPresetView};
 pub use texture_loader::load_companion_textures;
 pub use types::{PreviewMeshItem, RenderMode, RgbaTexture};

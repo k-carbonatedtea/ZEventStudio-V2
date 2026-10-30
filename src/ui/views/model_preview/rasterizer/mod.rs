@@ -17,20 +17,17 @@ const BAND_HEIGHT: u32 = 32;
 
 static RENDER_CACHE: Mutex<Option<CachedImage>> = Mutex::new(None);
 
-/// 执行 3D 场景软光栅化渲染，输出带 Z-Buffer 的高质量 RGBA 图像
+/// 执行 3D 场景软光栅化渲染，输出带 Z-Buffer 的高质量 RGBA 图像 (100% 全分辨率超清原生渲染)
 pub fn rasterize_scene(
     state: &ModelDocumentState,
     view_w: f32,
     view_h: f32,
 ) -> Option<Arc<RenderImage>> {
-    let is_interactive = state.is_orbiting || state.is_panning;
-    let scale: f32 = if is_interactive { 0.5 } else { 1.0 };
+    let target_w = (view_w.round() as u32).clamp(16, 2560);
+    let target_h = (view_h.round() as u32).clamp(16, 1600);
 
-    let target_w = ((view_w * scale).round() as u32).clamp(16, 2560);
-    let target_h = ((view_h * scale).round() as u32).clamp(16, 1600);
-
-    // 1. 检查静态渲染缓存 (画面未变动直接瞬时返回)
-    let cache_key = compute_cache_key(state, target_w, target_h, is_interactive);
+    // 1. 检查静态渲染缓存 (画面未变动直接瞬时返回，零画质损失)
+    let cache_key = compute_cache_key(state, target_w, target_h);
     if let Ok(guard) = RENDER_CACHE.lock() {
         if let Some(ref cached) = *guard {
             if cached.key == cache_key {
@@ -118,7 +115,6 @@ fn compute_cache_key(
     state: &ModelDocumentState,
     target_w: u32,
     target_h: u32,
-    is_interactive: bool,
 ) -> RenderCacheKey {
     let mut vis_hash = 0u64;
     for (i, item) in state.mesh_items.iter().enumerate() {
@@ -143,7 +139,34 @@ fn compute_cache_key(
         render_mode: state.render_mode,
         selected_mesh_idx: state.selected_mesh_idx,
         visibility_hash: vis_hash,
-        is_interactive,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+    use rbfres_library::BfresFile;
+
+    #[test]
+    fn test_full_res_rasterize_dungeon085() {
+        let pack_path = r"C:\Game\BOTW\01007EF00011E000\romfs\Pack\Dungeon085.pack";
+        if !Path::new(pack_path).exists() {
+            return;
+        }
+        let virtual_path = format!("SARC:{}//Model/DgnMrgPrt_Dungeon085.sbfres", pack_path);
+        let Ok(bytes) = crate::model::file_tree::read_file_from_path(&virtual_path) else { return; };
+        let decomp = crate::model::file_converter::decompress_if_yaz0(&bytes);
+        let Ok(bfres) = BfresFile::from_bytes(&decomp) else { return; };
+        let mut state = ModelDocumentState::from_bfres(&virtual_path, "DgnMrgPrt_Dungeon085.sbfres", &bfres);
+        crate::model::model_preview::load_companion_textures(&virtual_path, &bfres, &mut state);
+
+        let start = std::time::Instant::now();
+        let image = rasterize_scene(&state, 1280.0, 720.0);
+        let elapsed = start.elapsed();
+        println!(">>> 200,000 Triangles Native 720p Render Time: {:?}", elapsed);
+
+        assert!(image.is_some(), "Rasterized image should be produced");
     }
 }
 
