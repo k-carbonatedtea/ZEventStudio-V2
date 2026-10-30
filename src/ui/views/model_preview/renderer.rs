@@ -5,6 +5,9 @@ use super::rasterizer::rasterize_scene;
 use super::vulkan_renderer::render_vulkan_scene;
 use crate::model::model_preview::{ModelDocumentState, RenderMode};
 use gpui::*;
+use std::sync::{Arc, Mutex};
+
+static LAST_PAINTED_FRAME: Mutex<Option<Arc<RenderImage>>> = Mutex::new(None);
 
 /// 渲染 3D 模型完整视口画布 (包含地面参考网格、坐标轴、模型实体/线框及包围盒)
 pub fn draw_model_viewport(
@@ -95,7 +98,7 @@ fn draw_model_meshes(
     let render_image = render_vulkan_scene(state, phys_w, phys_h)
         .or_else(|| rasterize_scene(state, phys_w, phys_h));
 
-    if let Some(render_image) = render_image {
+    if let Some(new_img) = render_image {
         let img_bounds = Bounds {
             origin: point(px(orig_x), px(orig_y)),
             size: size(px(view_w), px(view_h)),
@@ -104,10 +107,20 @@ fn draw_model_meshes(
             img_bounds,
             img_bounds,
             Corners::default(),
-            render_image,
+            new_img.clone(),
             0,
             false,
         );
+
+        // 核心显存与内存回收防泄漏机制：
+        // 显式从 GPUI DirectX 11 Atlas 中剔除释放上一帧旧图像瓦片，防止连续旋转时 Atlas 堆叠累计纹理至数十 GB
+        if let Ok(mut guard) = LAST_PAINTED_FRAME.lock() {
+            if let Some(old_img) = guard.replace(new_img) {
+                if old_img.id != guard.as_ref().map(|g| g.id).unwrap_or(old_img.id) {
+                    let _ = window.drop_image(old_img);
+                }
+            }
+        }
     }
 
     // 若开启叠加线框模式，在实体上方追加渲染半透明矢量线框

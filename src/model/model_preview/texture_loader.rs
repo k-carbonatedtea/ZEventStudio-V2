@@ -317,4 +317,38 @@ mod tests {
         println!("Loaded textures count from Dungeon085: {}", state.textures.len());
         assert!(state.textures.contains_key("CmnTex_Cdun_MonyoLine_B_Alb"));
     }
+
+    #[test]
+    fn test_inspect_dungeon085() {
+        let pack_path = r"C:\Game\BOTW\01007EF00011E000\romfs\Pack\Dungeon085.pack";
+        if !Path::new(pack_path).exists() {
+            return;
+        }
+        let virtual_path = format!("SARC:{}//Model/DgnMrgPrt_Dungeon085.sbfres", pack_path);
+        let archive_bytes = fs::read(pack_path).unwrap();
+        let sarc_bytes = if &archive_bytes[0..4] == b"Yaz0" {
+            roead::yaz0::decompress(&archive_bytes).unwrap()
+        } else {
+            archive_bytes
+        };
+        let sarc = roead::sarc::Sarc::new(&sarc_bytes).unwrap();
+        let bfres_file = sarc.files().find(|f| f.name() == Some("Model/DgnMrgPrt_Dungeon085.sbfres")).unwrap();
+        let decomp = if &bfres_file.data()[0..4] == b"Yaz0" {
+            roead::yaz0::decompress(bfres_file.data()).unwrap()
+        } else {
+            bfres_file.data().to_vec()
+        };
+        let bfres = BfresFile::from_bytes(&decomp).unwrap();
+        let mut state = ModelDocumentState::from_bfres(&virtual_path, "DgnMrgPrt_Dungeon085.sbfres", &bfres);
+        load_companion_textures(&virtual_path, &bfres, &mut state);
+
+        println!("Dungeon085 meshes count: {}", state.meshes.len());
+        println!("Dungeon085 loaded textures count: {}", state.textures.len());
+        for (i, m) in state.meshes.iter().enumerate() {
+            let has_tex = m.texture_name.as_deref().and_then(|n| state.textures.get(n)).is_some()
+                || m.texture_refs.iter().any(|r| state.textures.get(r).is_some());
+            println!("Mesh #{}: name={:?}, mat={:?}, tex_name={:?}, tex_refs={:?}, has_tex={}",
+                i, m.name, m.material_name, m.texture_name, m.texture_refs, has_tex);
+        }
+    }
 }

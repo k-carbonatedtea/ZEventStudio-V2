@@ -17,14 +17,11 @@ use std::sync::{Arc, Mutex};
 use target::RenderTargetBundle;
 use textures::GpuTextureManager;
 use types::{GpuUniforms, Mat4, VulkanCacheKey};
-use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage};
 use vulkano::command_buffer::{
     AutoCommandBufferBuilder, CommandBufferUsage, CopyImageToBufferInfo, PrimaryCommandBufferAbstract,
     RenderPassBeginInfo, SubpassBeginInfo, SubpassContents,
 };
-use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::image::view::ImageView;
-use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter};
 use vulkano::pipeline::graphics::viewport::Viewport;
 use vulkano::pipeline::Pipeline;
 use vulkano::pipeline::PipelineBindPoint;
@@ -230,33 +227,8 @@ fn draw_scene_meshes(
             ],
         };
 
-        let ubo = Buffer::from_data(
-            ctx.memory_allocator.clone(),
-            BufferCreateInfo {
-                usage: BufferUsage::UNIFORM_BUFFER,
-                ..Default::default()
-            },
-            AllocationCreateInfo {
-                memory_type_filter: MemoryTypeFilter::PREFER_HOST
-                    | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
-                ..Default::default()
-            },
-            uniforms,
-        )
-        .ok()?;
-
-        let set_layout = engine.pipeline.pipeline.layout().set_layouts().first()?.clone();
-        let descriptor_set = DescriptorSet::new(
-            ctx.descriptor_set_allocator.clone(),
-            set_layout,
-            [
-                WriteDescriptorSet::buffer(0, ubo),
-                WriteDescriptorSet::image_view(1, tex_view),
-                WriteDescriptorSet::sampler(2, engine.pipeline.sampler.clone()),
-            ],
-            [],
-        )
-        .ok()?;
+        geom.update_uniforms(uniforms)?;
+        let descriptor_set = geom.get_or_create_descriptor_set(ctx, &engine.pipeline, tex_view)?;
 
         builder
             .bind_descriptor_sets(
