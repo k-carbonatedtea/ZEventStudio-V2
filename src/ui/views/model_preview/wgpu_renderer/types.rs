@@ -1,6 +1,4 @@
-//! Vulkan 渲染器核心数据类型与数学结构体
-
-use vulkano::buffer::BufferContents;
+//! WGPU 3D 渲染器核心数据类型与数学结构体
 
 /// 4x4 单精度浮点列主序矩阵 (用于顶点着色器变换)
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -19,14 +17,14 @@ impl Mat4 {
         ])
     }
 
-    /// 右手坐标系透视投影矩阵 (对齐 Vulkan 深度范围 [0.0, 1.0])
+    /// 右手坐标系透视投影矩阵 (对齐 WGPU/WebGPU 深度范围 [0.0, 1.0] 与 Y-Up 坐标系)
     pub fn perspective_rh(fov_y: f32, aspect: f32, near: f32, far: f32) -> Self {
         let f = 1.0 / (fov_y * 0.5).tan().max(0.001);
         let range = near - far;
 
         Self([
             f / aspect.max(0.001), 0.0, 0.0, 0.0,
-            0.0, -f, 0.0, 0.0, // Vulkan Y-down flip: 将 Y 轴反转，匹配屏幕向下坐标系
+            0.0, f, 0.0, 0.0,
             0.0, 0.0, far / range, -1.0,
             0.0, 0.0, (near * far) / range, 0.0,
         ])
@@ -77,7 +75,7 @@ impl Mat4 {
 }
 
 /// GPU 顶点输入数据格式
-#[derive(Clone, Copy, Debug, BufferContents, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 #[repr(C)]
 pub struct GpuVertex {
     /// 顶点模型局部 3D 坐标
@@ -89,7 +87,7 @@ pub struct GpuVertex {
 }
 
 /// GPU 常量 Uniform 缓冲结构体 (对齐 16 字节边界)
-#[derive(Clone, Copy, Debug, BufferContents, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 #[repr(C)]
 pub struct GpuUniforms {
     /// 模型-视图-投影综合变换矩阵 (MVP)
@@ -104,7 +102,7 @@ pub struct GpuUniforms {
 
 /// 静态渲染缓存键 (用于视口未变动时瞬时返回画面)
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct VulkanCacheKey {
+pub struct WgpuCacheKey {
     pub model_path: String,
     pub yaw_bits: u32,
     pub pitch_bits: u32,
@@ -141,3 +139,4 @@ fn normalize(v: [f32; 3]) -> [f32; 3] {
         [v[0] / len, v[1] / len, v[2] / len]
     }
 }
+

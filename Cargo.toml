@@ -23,8 +23,7 @@ regex = "1"
 botw-map = { path = "../botw-map" }
 rbfres-library = { path = "../RBfresLibrary" }
 image = { version = "0.25", default-features = false }
-vulkano = "0.35"
-naga = { version = "30", features = ["wgsl-in", "spv-out"] }
+wgpu = { git = "https://github.com/gfx-rs/wgpu", rev = "3b3506ea31154edc04de64debda0e780cba2639c" }
 bytemuck = { version = "1", features = ["derive"] }
 
 [profile.release]

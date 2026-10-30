@@ -1,10 +1,6 @@
-//! Vulkan 着色器模块与 WGSL/SPIR-V 动态编译
+//! WGPU 着色器模块定义与 WGSL 加载
 
-use std::sync::Arc;
-use vulkano::device::Device;
-use vulkano::shader::{ShaderModule, ShaderModuleCreateInfo};
-
-const SHADER_WGSL: &str = r#"
+pub const SHADER_WGSL: &str = r#"
 struct Uniforms {
     mvp: mat4x4<f32>,
     sun_dir: vec4<f32>,
@@ -77,53 +73,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 }
 "#;
 
-/// 编译 WGSL 并构建 Vulkan ShaderModule
-pub fn create_shader_module(device: Arc<Device>) -> Option<Arc<ShaderModule>> {
-    let module = match naga::front::wgsl::parse_str(SHADER_WGSL) {
-        Ok(m) => m,
-        Err(err) => {
-            eprintln!("[Vulkan] WGSL 解析失败: {err:?}");
-            return None;
-        }
-    };
-
-    let mut validator = naga::valid::Validator::new(
-        naga::valid::ValidationFlags::all(),
-        naga::valid::Capabilities::empty(),
-    );
-    let info = match validator.validate(&module) {
-        Ok(i) => i,
-        Err(err) => {
-            eprintln!("[Vulkan] Naga 校验着色器失败: {err:?}");
-            return None;
-        }
-    };
-
-    let spv = match naga::back::spv::write_vec(
-        &module,
-        &info,
-        &naga::back::spv::Options {
-            lang_version: (1, 0),
-            flags: naga::back::spv::WriterFlags::empty(),
-            ..Default::default()
-        },
-        None,
-    ) {
-        Ok(s) => s,
-        Err(err) => {
-            eprintln!("[Vulkan] Naga 生成 SPIR-V 字节码失败: {err:?}");
-            return None;
-        }
-    };
-
-    // SAFETY: Naga 已对 SPIR-V 实施全面语义与格式校验
-    unsafe {
-        match ShaderModule::new(device, ShaderModuleCreateInfo::new(&spv)) {
-            Ok(shader) => Some(shader),
-            Err(err) => {
-                eprintln!("[Vulkan] 创建 ShaderModule 失败: {err:?}");
-                None
-            }
-        }
-    }
+/// 创建 WGPU 原生 WGSL 着色器模块
+pub fn create_shader_module(device: &wgpu::Device) -> wgpu::ShaderModule {
+    device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("ZEvent Model Shader"),
+        source: wgpu::ShaderSource::Wgsl(SHADER_WGSL.into()),
+    })
 }
+

@@ -2,7 +2,7 @@
 
 use super::gizmos::{draw_axes, draw_bounding_box, draw_ground_grid, draw_points_fast};
 use super::rasterizer::rasterize_scene;
-use super::vulkan_renderer::render_vulkan_scene;
+use super::wgpu_renderer::render_wgpu_scene;
 use crate::model::model_preview::{ModelDocumentState, RenderMode};
 use gpui::*;
 use std::sync::{Arc, Mutex};
@@ -90,12 +90,12 @@ fn draw_model_meshes(
     }
 
     // 2. 实体着色模式 (Shaded) 或 线框叠加着色模式 (ShadedWireframe)
-    // 采用 Vulkano 原生 Vulkan GPU 硬件渲染管线，支持硬件纹理双线性采样与物理级深度测试
+    // 采用 WGPU 跨平台 GPU 硬件渲染管线，支持硬件纹理双线性采样与物理级深度测试
     let scale_factor = window.scale_factor();
     let phys_w = (view_w * scale_factor).round();
     let phys_h = (view_h * scale_factor).round();
 
-    let render_image = render_vulkan_scene(state, phys_w, phys_h)
+    let render_image = render_wgpu_scene(state, phys_w, phys_h)
         .or_else(|| rasterize_scene(state, phys_w, phys_h));
 
     if let Some(new_img) = render_image {
