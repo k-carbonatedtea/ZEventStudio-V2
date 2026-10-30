@@ -173,6 +173,7 @@ impl AppState {
                 }
             }
             DocumentTabKind::DiffViewer => true,
+            DocumentTabKind::ModelPreview => true,
         }
     }
 
@@ -231,6 +232,9 @@ impl AppState {
                     tab.is_modified = false;
                 }
                 DocumentTabKind::DiffViewer => {
+                    tab.is_modified = false;
+                }
+                DocumentTabKind::ModelPreview => {
                     tab.is_modified = false;
                 }
                 DocumentTabKind::Timeline => {

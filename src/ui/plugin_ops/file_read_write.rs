@@ -54,6 +54,23 @@ impl AppState {
                     }));
                 }
                 DocumentTabKind::DiffViewer => {}
+                DocumentTabKind::ModelPreview => {
+                    let (name, v_count, t_count) = if let Some(ref ms) = tab.model_state {
+                        (ms.model_name.clone(), ms.total_vertices, ms.total_triangles)
+                    } else {
+                        (String::new(), 0, 0)
+                    };
+                    return Ok(serde_json::json!({
+                        "status": "ok",
+                        "path": tab.file_path,
+                        "format": "bfres",
+                        "model_name": name,
+                        "vertices": v_count,
+                        "triangles": t_count,
+                        "is_open_in_tab": true,
+                        "is_modified": tab.is_modified,
+                    }));
+                }
                 DocumentTabKind::Timeline => {
                     let json_content = if let Some(ref tl_state) = tab.timeline_state {
                         serde_json::to_string_pretty(&tl_state.timeline).unwrap_or_default()
@@ -190,6 +207,7 @@ impl AppState {
                         }
                     }
                     DocumentTabKind::DiffViewer => {}
+                    DocumentTabKind::ModelPreview => {}
                     DocumentTabKind::Timeline => {
                         if let Ok(timeline) = serde_json::from_str::<revfl::timeline::Timeline>(content) {
                             if let Some(ref mut tl_state) = tab.timeline_state {

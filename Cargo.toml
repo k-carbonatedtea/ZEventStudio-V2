@@ -21,6 +21,7 @@ serde_yaml = "0.9"
 msyt = { git = "https://github.com/NiceneNerd/msyt", tag = "v1.3.0" }
 regex = "1"
 botw-map = { path = "../botw-map" }
+rbfres-library = { path = "../RBfresLibrary" }
 
 [profile.release]
 opt-level = 3

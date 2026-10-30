@@ -2,7 +2,7 @@ use gpui::*;
 use gpui_component::input::EditorState;
 use std::time::Instant;
 use crate::ui::app_layout::{wrap_fullscreen_tab, wrap_sidebar_workspace};
-use crate::ui::canvas::{render_flow_canvas, render_node_editor_modal};
+use crate::ui::canvas::render_flow_canvas;
 use crate::ui::components::render_toast;
 use crate::ui::inspector::render_inspector;
 use crate::ui::key_handler::handle_global_key_event;
@@ -12,7 +12,8 @@ use crate::ui::toolbar::render_toolbar;
 use crate::ui::views::{
     render_actor_manager_view, render_code_editor_view,
     render_diff_viewer_view, render_event_manager_view,
-    render_quest_map_view, render_timeline_editor_view, render_welcome_view,
+    render_model_preview_view, render_quest_map_view,
+    render_timeline_editor_view, render_welcome_view,
 };
 
 pub struct AppView {
@@ -344,6 +345,13 @@ impl Render for AppView {
                             None,
                         )
                         .into_any_element(),
+                        AppWorkspaceTab::ModelPreview => wrap_sidebar_workspace(
+                            state,
+                            &self.model,
+                            render_model_preview_view(state, &self.model),
+                            None,
+                        )
+                        .into_any_element(),
                     }),
             )
             // Floating Toast notification
@@ -354,47 +362,8 @@ impl Render for AppView {
                     .right_4()
                     .child(render_toast(t))
             }))
-            // 标签页右键上下文菜单
-            .children(state.tab_context_menu.as_ref().map(|(tid, pos)| {
-                crate::ui::render_tab_context_menu(state, tid, *pos, &self.model)
-            }))
-            // Git 提交记录右键上下文菜单
-            .children(state.file_tree_context_menu.as_ref().map(|menu| {
-                crate::ui::sidebar::render_file_tree_context_menu(state, menu, &self.model)
-            }))
-            .children(state.rename_modal.as_ref().map(|modal| {
-                crate::ui::sidebar::render_rename_modal(state, modal, &self.model)
-            }))
-            .children(state.delete_confirm_modal.as_ref().map(|modal| {
-                crate::ui::sidebar::render_delete_confirm_modal(state, modal, &self.model)
-            }))
-            .children(state.git_commit_context_menu.as_ref().map(|(hash, pos)| {
-                crate::ui::sidebar::render_commit_context_menu(state, hash, *pos, &self.model)
-            }))
-            // 节点属性与分支编辑模态框
-            .children((state.active_node_editor_modal.is_some()).then(|| {
-                render_node_editor_modal(state, &self.model)
-            }))
-            // 未保存修改关闭确认模态框
-            .children((state.unsaved_changes_modal.is_some()).then(|| {
-                crate::ui::render_unsaved_changes_modal(state, &self.model)
-            }))
-            // 首选项与系统设置模态框
-            .children(state.settings_modal_open.then(|| {
-                crate::ui::render_settings_modal(state, &self.model)
-            }))
-            // Git 代码修改与差异对比模态框
-            .children((state.active_diff_modal.is_some()).then(|| {
-                crate::ui::sidebar::render_git_diff_modal(state, &self.model)
-            }))
-            // 新建与编辑任务向导模态框
-            .children(state.quest_creator_modal.as_ref().map(|modal| {
-                crate::ui::sidebar::render_quest_creator_modal(modal, state, &self.model)
-            }))
-            // 任务原始数据与拓扑查看模态框
-            .children(state.quest_raw_data_modal.as_ref().map(|modal| {
-                crate::ui::sidebar::render_quest_raw_data_modal(modal, state, &self.model)
-            }))
+            // 全局浮动模态框与上下文菜单图层
+            .children(crate::ui::app_modals::render_app_modals_and_menus(state, &self.model))
     }
 }
 

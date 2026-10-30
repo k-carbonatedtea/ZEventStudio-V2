@@ -12,6 +12,8 @@ pub enum DocumentTabKind {
     CodeEditor,
     /// Git 代码双栏差异对比视图
     DiffViewer,
+    /// 3D 模型与网格预览视图
+    ModelPreview,
 }
 
 /// 封包内子文件的代码差异项
@@ -94,6 +96,7 @@ pub struct OpenDocumentTab {
     pub timeline_state: Option<crate::model::TimelineDocumentState>,
     pub code_state: Option<CodeDocumentState>,
     pub diff_state: Option<DiffViewerTabState>,
+    pub model_state: Option<crate::model::ModelDocumentState>,
     pub is_modified: bool,
     pub last_disk_mtime: Option<std::time::SystemTime>,
 }
@@ -120,6 +123,7 @@ impl OpenDocumentTab {
             timeline_state: None,
             code_state: None,
             diff_state: None,
+            model_state: None,
             is_modified: false,
             last_disk_mtime,
         }
@@ -146,6 +150,7 @@ impl OpenDocumentTab {
             timeline_state: Some(timeline_state),
             code_state: None,
             diff_state: None,
+            model_state: None,
             is_modified: false,
             last_disk_mtime,
         }
@@ -171,6 +176,7 @@ impl OpenDocumentTab {
             timeline_state: None,
             code_state: Some(code_state),
             diff_state: None,
+            model_state: None,
             is_modified: false,
             last_disk_mtime,
         }
@@ -194,12 +200,39 @@ impl OpenDocumentTab {
             timeline_state: None,
             code_state: None,
             diff_state: Some(diff_state),
+            model_state: None,
             is_modified: false,
             last_disk_mtime: None,
         }
     }
 
-    /// 获取文件类型对应的精美图标 (💬 / ⚙️ / ⚡ / 🎬 / 📜 / {} / ≡ / 📦 / 📄 / ⇄)
+    /// 创建 3D 模型预览类型的文档标签项
+    pub fn new_model(
+        id: String,
+        title: String,
+        file_path: String,
+        file_type: String,
+        model_state: crate::model::ModelDocumentState,
+    ) -> Self {
+        let last_disk_mtime = get_file_mtime(&file_path);
+        Self {
+            id,
+            title,
+            file_path,
+            file_type,
+            tab_kind: DocumentTabKind::ModelPreview,
+            graph: None,
+            original_graph: None,
+            timeline_state: None,
+            code_state: None,
+            diff_state: None,
+            model_state: Some(model_state),
+            is_modified: false,
+            last_disk_mtime,
+        }
+    }
+
+    /// 获取文件类型对应的精美图标 (💬 / ⚙️ / ⚡ / 🎬 / 📜 / {} / ≡ / 📦 / 📄 / ⇄ / 🧊)
     pub fn icon(&self) -> &'static str {
         if self.tab_kind == DocumentTabKind::DiffViewer {
             return "⇄";
@@ -207,10 +240,14 @@ impl OpenDocumentTab {
         if self.tab_kind == DocumentTabKind::Timeline {
             return "🎬";
         }
+        if self.tab_kind == DocumentTabKind::ModelPreview {
+            return "🧊";
+        }
         if let Some(ref code) = self.code_state {
             return code.format.icon();
         }
         match self.file_type.to_lowercase().as_str() {
+            "bfres" | "sbfres" | "fres" => "🧊",
             "msbt" | "smsbt" => "💬",
             "byml" | "bgyml" | "sbyml" | "aamp" | "bxml" | "baev" | "baiprog" | "sbaiprog" => "⚙️",
             "json" => "{}",
@@ -250,6 +287,9 @@ impl OpenDocumentTab {
                 }
             }
             DocumentTabKind::DiffViewer => {
+                self.is_modified = false;
+            }
+            DocumentTabKind::ModelPreview => {
                 self.is_modified = false;
             }
         }

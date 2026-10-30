@@ -3884,6 +3884,7 @@ dependencies = [
  "gpui_platform",
  "msyt",
  "rayon",
+ "rbfres-library",
  "regex",
  "revfl",
  "rfd",
@@ -5192,6 +5193,19 @@ checksum = "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
+]
+
+[[package]]
+name = "rbfres-library"
+version = "0.1.0"
+dependencies = [
+ "bitflags 2.13.1",
+ "byteorder",
+ "roead",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "wiiu_swizzle",
 ]
 
 [[package]]

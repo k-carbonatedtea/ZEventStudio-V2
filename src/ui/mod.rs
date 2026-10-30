@@ -1,6 +1,7 @@
 pub mod app;
 pub mod app_editor_sync;
 pub mod app_layout;
+pub mod app_modals;
 pub mod canvas;
 pub mod components;
 pub mod inspector;
@@ -13,6 +14,7 @@ pub mod state_canvas;
 pub mod state_diff;
 pub mod state_editor;
 pub mod state_file_ops;
+pub mod state_file_loader;
 pub mod state_node_editor;
 pub mod state_autofill;
 pub mod state_git;

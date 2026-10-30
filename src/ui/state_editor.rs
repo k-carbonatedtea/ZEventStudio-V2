@@ -39,6 +39,9 @@ impl AppState {
                     DocumentTabKind::DiffViewer => {
                         tab.is_modified = false;
                     }
+                    DocumentTabKind::ModelPreview => {
+                        tab.is_modified = false;
+                    }
                     DocumentTabKind::Timeline => {
                         if let Some(ref mut tl_state) = tab.timeline_state {
                             tl_state.timeline = tl_state.original_timeline.clone();
@@ -122,6 +125,19 @@ impl AppState {
                 }
             }
             DocumentTabKind::DiffViewer => {}
+            DocumentTabKind::ModelPreview => {
+                let bytes = crate::model::file_tree::read_file_from_path(&tab.file_path)?;
+                let decompressed = crate::model::file_converter::decompress_if_yaz0(&bytes);
+                let bfres = rbfres_library::BfresFile::from_bytes(&decompressed).map_err(|e| e.to_string())?;
+                let mtime = crate::model::document_tab::get_file_mtime(&tab.file_path);
+                if let Some(tab_mut) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
+                    let mut new_state = crate::model::ModelDocumentState::from_bfres(&tab.file_path, &tab.title, &bfres);
+                    crate::model::model_preview::load_companion_textures(&tab.file_path, &bfres, &mut new_state);
+                    tab_mut.model_state = Some(new_state);
+                    tab_mut.is_modified = false;
+                    tab_mut.last_disk_mtime = mtime;
+                }
+            }
             DocumentTabKind::Timeline => {
                 let bytes = crate::model::file_tree::read_file_from_path(&tab.file_path)?;
                 let decompressed = crate::model::file_converter::decompress_if_yaz0(&bytes);

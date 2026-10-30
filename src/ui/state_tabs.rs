@@ -41,6 +41,9 @@ impl AppState {
                 DocumentTabKind::DiffViewer => {
                     self.current_tab = AppWorkspaceTab::DiffViewer;
                 }
+                DocumentTabKind::ModelPreview => {
+                    self.current_tab = AppWorkspaceTab::ModelPreview;
+                }
             }
 
             if self.active_activity_tab == crate::ui::state::ActivityBarTab::Explorer {
@@ -234,6 +237,10 @@ impl AppState {
                         DocumentTabKind::Timeline => {
                             self.graph = Graph::new("EventFlow");
                             self.current_tab = AppWorkspaceTab::Timeline;
+                        }
+                        DocumentTabKind::ModelPreview => {
+                            self.graph = Graph::new("EventFlow");
+                            self.current_tab = AppWorkspaceTab::ModelPreview;
                         }
                     }
                 } else {

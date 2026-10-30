@@ -31,6 +31,7 @@ pub enum AppWorkspaceTab {
     Events,
     DiffViewer,
     Quests,
+    ModelPreview,
 }
 
 #[allow(dead_code)]
