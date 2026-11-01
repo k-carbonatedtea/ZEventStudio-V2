@@ -41,11 +41,13 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
                                     window,
                                 );
                                 *painted_camera.lock().unwrap() =
-                                    Some(frame.map.scene.camera.clone());
-                                draw_area_outlines(&frame.map, bounds, window);
-                                draw_selection(&frame.map, bounds, window);
+                                    Some(snapshot.scene.camera.clone());
+                                if snapshot.show_hidden_perspective {
+                                    draw_area_outlines(&snapshot, bounds, window);
+                                }
+                                draw_selection(&snapshot, bounds, window);
                                 draw_links(
-                                    &frame.map,
+                                    &snapshot,
                                     snapshot.show_links,
                                     snapshot.selected_links_only,
                                     bounds,
@@ -96,17 +98,21 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
     let tid = id.to_string();
     let r = rect.clone();
     view = view.on_mouse_move(move |e, _, cx| {
+        let mut visual_changed = false;
         m.update(cx, |st, cx| {
             st.update_map(&tid, |map| {
                 let pos = (f32::from(e.position.x), f32::from(e.position.y));
                 let dx = pos.0 - map.last_mouse.0;
                 let dy = pos.1 - map.last_mouse.1;
                 let rect = *r.lock().unwrap();
-                if map.orbiting {
+                let moved = dx != 0.0 || dy != 0.0;
+                if map.orbiting && moved {
                     map.scene.camera.orbit(dx, dy);
-                } else if map.panning {
+                    visual_changed = true;
+                } else if map.panning && moved {
                     map.scene.camera.pan(dx, dy, rect[3]);
-                } else if map.dragging {
+                    visual_changed = true;
+                } else if map.dragging && moved {
                     if let Some(index) = map.selected {
                         let mut transform = Transform::from_actor(&map.file.actors()[index]);
                         if let (Some(a), Some(b)) = (
@@ -123,13 +129,19 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
                             map.file.set_transform(index, transform)?;
                             map.rebuild_instances();
                             map.drag_changed = true;
+                            visual_changed = true;
                         }
                     }
                 }
                 map.last_mouse = pos;
                 Ok(())
             });
-            cx.notify();
+            // Updating the hover position is needed for the next drag, but does
+            // not change anything painted. Avoid rebuilding the whole editor
+            // while the pointer merely passes over the viewport.
+            if visual_changed {
+                cx.notify();
+            }
         });
     });
     for button in [MouseButton::Left, MouseButton::Right, MouseButton::Middle] {
@@ -316,12 +328,20 @@ fn draw_area_outlines(map: &MapDocumentState, bounds: Bounds<Pixels>, window: &m
         .projector(bounds.size.width.into(), bounds.size.height.into());
     let ox = f32::from(bounds.origin.x);
     let oy = f32::from(bounds.origin.y);
-    let mut path = PathBuilder::stroke(px(1.2));
+    let mut path = PathBuilder::stroke(px(0.85));
     let mut selected_path = PathBuilder::stroke(px(2.0));
     let mut count = 0;
     let mut selected_count = 0;
-    let mut draw_one = |reference: crate::model::map_editor::ActorRef, actor: &roead::byml::Byml| {
-        if !map.assets.area_actors.contains(uking_library::map::actor_name(actor))
+    let mut detail_count = 0usize;
+    const MIN_OUTLINE_SIZE: f32 = 28.0;
+    const MAX_OUTLINES: usize = 192;
+    let selected_reference = map.selected_ref();
+    let mut draw_one = |reference: crate::model::map_editor::ActorRef,
+                        actor: &roead::byml::Byml| {
+        if !map
+            .assets
+            .area_actors
+            .contains(uking_library::map::actor_name(actor))
             || !map.object_visible(reference)
         {
             return;
@@ -338,26 +358,116 @@ fn draw_area_outlines(map: &MapDocumentState, bounds: Bounds<Pixels>, window: &m
             [-1., 1., 1.],
         ]
         .map(|p| t.point(p));
-        let selected = map.selected_ref() == Some(reference);
-        let target = if selected { &mut selected_path } else { &mut path };
-        for (a, b) in [
-            (0, 1),
-            (1, 2),
-            (2, 3),
-            (3, 0),
-            (4, 5),
-            (5, 6),
-            (6, 7),
-            (7, 4),
-            (0, 4),
-            (1, 5),
-            (2, 6),
-            (3, 7),
-        ] {
-            if let (Some((a, _)), Some((b, _))) = (projector.project(corners[a]), projector.project(corners[b])) {
+        let selected = selected_reference == Some(reference);
+        let projected = corners.map(|corner| projector.project(corner));
+        if !selected {
+            let Some((first, _)) = projected.iter().flatten().next() else {
+                return;
+            };
+            let (mut min_x, mut max_x) = (first[0], first[0]);
+            let (mut min_y, mut max_y) = (first[1], first[1]);
+            for (screen, _) in projected.iter().flatten().skip(1) {
+                min_x = min_x.min(screen[0]);
+                max_x = max_x.max(screen[0]);
+                min_y = min_y.min(screen[1]);
+                max_y = max_y.max(screen[1]);
+            }
+            if (max_x - min_x).max(max_y - min_y) < MIN_OUTLINE_SIZE || detail_count >= MAX_OUTLINES
+            {
+                return;
+            }
+            detail_count += 1;
+        }
+        let target = if selected {
+            &mut selected_path
+        } else {
+            &mut path
+        };
+        let mut add_segment = |a: [f32; 3], b: [f32; 3]| {
+            if let (Some((a, _)), Some((b, _))) = (projector.project(a), projector.project(b)) {
                 target.move_to(point(px(ox + a[0]), px(oy + a[1])));
                 target.line_to(point(px(ox + b[0]), px(oy + b[1])));
-                if selected { selected_count += 1; } else { count += 1; }
+                if selected {
+                    selected_count += 1;
+                } else {
+                    count += 1;
+                }
+            }
+        };
+        let shape = actor
+            .as_map()
+            .ok()
+            .and_then(|m| m.get("!Parameters"))
+            .and_then(|p| p.as_map().ok())
+            .and_then(|p| p.get("Shape"))
+            .and_then(|v| v.as_string().ok())
+            .map(|v| v.as_str())
+            .unwrap_or("Box");
+        match shape {
+            "Sphere" => {
+                const SEGMENTS: usize = 12;
+                for axis in 0..3 {
+                    let mut ring = [[0.; 3]; SEGMENTS + 1];
+                    for (index, point) in ring.iter_mut().enumerate() {
+                        let angle = index as f32 / SEGMENTS as f32 * std::f32::consts::TAU;
+                        let (sin, cos) = angle.sin_cos();
+                        *point = match axis {
+                            0 => [0., cos, sin],
+                            1 => [cos, 0., sin],
+                            _ => [cos, sin, 0.],
+                        };
+                        *point = t.point(*point);
+                    }
+                    for pair in ring.windows(2) {
+                        add_segment(pair[0], pair[1]);
+                    }
+                }
+            }
+            "Cylinder" => {
+                const SEGMENTS: usize = 12;
+                let mut top = [[0.; 3]; SEGMENTS + 1];
+                let mut bottom = [[0.; 3]; SEGMENTS + 1];
+                for index in 0..=SEGMENTS {
+                    let angle = index as f32 / SEGMENTS as f32 * std::f32::consts::TAU;
+                    let (sin, cos) = angle.sin_cos();
+                    top[index] = t.point([cos, 1., sin]);
+                    bottom[index] = t.point([cos, -1., sin]);
+                }
+                for pair in top.windows(2) {
+                    add_segment(pair[0], pair[1]);
+                }
+                for pair in bottom.windows(2) {
+                    add_segment(pair[0], pair[1]);
+                }
+                for index in [0, SEGMENTS / 4, SEGMENTS / 2, SEGMENTS * 3 / 4] {
+                    add_segment(top[index], bottom[index]);
+                }
+            }
+            _ => {
+                for (a, b) in [
+                    (0, 1),
+                    (1, 2),
+                    (2, 3),
+                    (3, 0),
+                    (4, 5),
+                    (5, 6),
+                    (6, 7),
+                    (7, 4),
+                    (0, 4),
+                    (1, 5),
+                    (2, 6),
+                    (3, 7),
+                ] {
+                    if let (Some((a, _)), Some((b, _))) = (projected[a], projected[b]) {
+                        target.move_to(point(px(ox + a[0]), px(oy + a[1])));
+                        target.line_to(point(px(ox + b[0]), px(oy + b[1])));
+                        if selected {
+                            selected_count += 1;
+                        } else {
+                            count += 1;
+                        }
+                    }
+                }
             }
         }
     };
@@ -368,10 +478,14 @@ fn draw_area_outlines(map: &MapDocumentState, bounds: Bounds<Pixels>, window: &m
         draw_one(crate::model::map_editor::ActorRef::Context(i), actor);
     }
     if count > 0 {
-        if let Ok(path) = path.build() { window.paint_path(path, rgb(0x111820)); }
+        if let Ok(path) = path.build() {
+            window.paint_path(path, rgba(0x11182088));
+        }
     }
     if selected_count > 0 {
-        if let Ok(path) = selected_path.build() { window.paint_path(path, rgb(0x63DCCB)); }
+        if let Ok(path) = selected_path.build() {
+            window.paint_path(path, rgb(0x63DCCB));
+        }
     }
 }
 
@@ -385,78 +499,82 @@ fn draw_links(
     if !show {
         return;
     }
+    let selected = map.selected_ref();
+    if selected_only && selected.is_none() {
+        return;
+    }
     let projector = map
         .scene
         .camera
         .projector(bounds.size.width.into(), bounds.size.height.into());
     let ox = f32::from(bounds.origin.x);
     let oy = f32::from(bounds.origin.y);
-    for selected in [false, true] {
-        let mut path = PathBuilder::stroke(px(if selected { 2. } else { 1. }));
-        let mut count = 0;
-        for link in map.links.iter() {
-            let connected = map
-                .selected_ref()
-                .is_some_and(|r| link.source == r || link.target == Some(r));
-            if connected != selected || (selected_only && !connected) {
-                continue;
-            }
-            if !map.object_visible(link.source)
-                || link.target.is_some_and(|r| !map.object_visible(r))
-            {
-                continue;
-            }
-            if !map.show_context
-                && (matches!(link.source, crate::model::map_editor::ActorRef::Context(_))
-                    || matches!(
-                        link.target,
-                        Some(crate::model::map_editor::ActorRef::Context(_))
-                    ))
-            {
-                continue;
-            }
-            let Some(to) = link.to else {
-                continue;
-            };
-            let (Some((a, _)), Some((b, _))) =
-                (projector.project(link.from), projector.project(to))
-            else {
-                continue;
-            };
-            let [ax, ay] = [ox + a[0], oy + a[1]];
-            let [bx, by] = [ox + b[0], oy + b[1]];
-            path.move_to(point(px(ax), px(ay)));
-            path.line_to(point(px(bx), px(by)));
-            let dx = bx - ax;
-            let dy = by - ay;
-            let len = dx.hypot(dy);
-            if len > 12. {
-                let size = 7.;
-                let ux = dx / len;
-                let uy = dy / len;
-                path.move_to(point(
-                    px(bx - size * ux + size * 0.45 * uy),
-                    px(by - size * uy - size * 0.45 * ux),
-                ));
-                path.line_to(point(px(bx), px(by)));
-                path.line_to(point(
-                    px(bx - size * ux - size * 0.45 * uy),
-                    px(by - size * uy + size * 0.45 * ux),
-                ));
-            }
-            count += 1;
+    let mut normal_path = PathBuilder::stroke(px(1.));
+    let mut selected_path = PathBuilder::stroke(px(2.));
+    let mut source_points = PathBuilder::fill();
+    let mut target_points = PathBuilder::fill();
+    let mut normal_count = 0;
+    let mut selected_count = 0;
+    for link in map.links.iter() {
+        let connected = selected.is_some_and(|r| link.source == r || link.target == Some(r));
+        if selected_only && !connected {
+            continue;
         }
-        if count > 0 {
-            if let Ok(path) = path.build() {
-                window.paint_path(
-                    path,
-                    if selected {
-                        rgba(0xF2C46EFF)
-                    } else {
-                        rgba(0x7B9CA699)
-                    },
-                );
+        if !map.object_visible(link.source) || link.target.is_some_and(|r| !map.object_visible(r)) {
+            continue;
+        }
+        if !map.show_context
+            && (matches!(link.source, crate::model::map_editor::ActorRef::Context(_))
+                || matches!(
+                    link.target,
+                    Some(crate::model::map_editor::ActorRef::Context(_))
+                ))
+        {
+            continue;
+        }
+        let Some(to) = link.to else {
+            continue;
+        };
+        let (Some((a, _)), Some((b, _))) = (projector.project(link.from), projector.project(to))
+        else {
+            continue;
+        };
+        let [ax, ay] = [ox + a[0], oy + a[1]];
+        let [bx, by] = [ox + b[0], oy + b[1]];
+        let path = if connected {
+            selected_count += 1;
+            &mut selected_path
+        } else {
+            normal_count += 1;
+            &mut normal_path
+        };
+        path.move_to(point(px(ax), px(ay)));
+        path.line_to(point(px(bx), px(by)));
+        if connected {
+            let size = 6.;
+            for (builder, x, y) in [(&mut source_points, ax, ay), (&mut target_points, bx, by)] {
+                builder.move_to(point(px(x - size * 0.5), px(y - size * 0.5)));
+                builder.line_to(point(px(x + size * 0.5), px(y - size * 0.5)));
+                builder.line_to(point(px(x + size * 0.5), px(y + size * 0.5)));
+                builder.line_to(point(px(x - size * 0.5), px(y + size * 0.5)));
+                builder.close();
             }
+        }
+    }
+    if normal_count > 0 {
+        if let Ok(path) = normal_path.build() {
+            window.paint_path(path, rgba(0x6E9AA655));
+        }
+    }
+    if selected_count > 0 {
+        if let Ok(path) = selected_path.build() {
+            window.paint_path(path, rgba(0x58A6FFDD));
+        }
+        if let Ok(path) = source_points.build() {
+            window.paint_path(path, rgba(0x58A6FFFF));
+        }
+        if let Ok(path) = target_points.build() {
+            window.paint_path(path, rgba(0xF2C46FFF));
         }
     }
 }

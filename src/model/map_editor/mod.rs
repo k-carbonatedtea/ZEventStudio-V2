@@ -64,6 +64,7 @@ pub struct MapDocumentState {
     pub show_water: bool,
     pub show_models: bool,
     pub show_tags: bool,
+    pub show_hidden_perspective: bool,
     pub show_map_models: bool,
     pub show_context: bool,
     pub show_links: bool,
@@ -133,10 +134,12 @@ impl MapDocumentState {
             show_water: true,
             show_models: true,
             show_tags: true,
+            show_hidden_perspective: false,
             show_map_models: true,
             show_context: true,
             show_links: true,
-            selected_links_only: false,
+            // Keep the initial map view readable; the toolbar can enable all links.
+            selected_links_only: true,
             hidden_objects: Arc::new(HashSet::new()),
             links: Arc::new(Vec::new()),
             collapsed_sections: [

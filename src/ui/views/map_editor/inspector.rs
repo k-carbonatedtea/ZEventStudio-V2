@@ -19,6 +19,21 @@ pub fn section(
     title: &str,
     body: AnyElement,
 ) -> AnyElement {
+    section_lazy(map, state, model, id, name, title, || body)
+}
+
+/// Build an inspector section body only while the section is expanded. This
+/// matters for BYML maps with large parameter/link arrays: GPUI still rebuilds
+/// the parent view when the inspector scrolls or a field changes.
+pub fn section_lazy<F: FnOnce() -> AnyElement>(
+    map: &MapDocumentState,
+    state: &AppState,
+    model: &Entity<AppState>,
+    id: &str,
+    name: &str,
+    title: &str,
+    body: F,
+) -> AnyElement {
     let pal = state.theme();
     let collapsed = map.collapsed_sections.contains(name);
     let name = name.to_string();
@@ -40,7 +55,7 @@ pub fn section(
                 Ok(())
             },
         ))
-        .children((!collapsed).then(|| div().p_2().flex().flex_col().gap_1().child(body)))
+        .children((!collapsed).then(|| div().p_2().flex().flex_col().gap_1().child(body())))
         .into_any_element()
 }
 
@@ -792,23 +807,23 @@ pub fn render(
         );
     }
     content = content
-        .child(section(
+        .child(section_lazy(
             map,
             state,
             model,
             id,
             "transform",
             "变换",
-            transforms(map, state, model, id, actor, readonly),
+            || transforms(map, state, model, id, actor, readonly),
         ))
-        .child(section(
+        .child(section_lazy(
             map,
             state,
             model,
             id,
             "object",
             "Obj / 对象",
-            properties(map, state, model, id, vec![], actor, readonly, 0),
+            || properties(map, state, model, id, vec![], actor, readonly, 0),
         ));
     let parameters = actor.as_map().ok().and_then(|m| m.get("!Parameters"));
     let mut param_body = div().flex().flex_col().gap_1();
@@ -884,16 +899,18 @@ pub fn render(
         );
     }
     if let Some(parameters) = parameters {
-        param_body = param_body.child(properties(
-            map,
-            state,
-            model,
-            id,
-            vec![key("!Parameters")],
-            parameters,
-            readonly,
-            0,
-        ));
+        if !map.collapsed_sections.contains("parameters") {
+            param_body = param_body.child(properties(
+                map,
+                state,
+                model,
+                id,
+                vec![key("!Parameters")],
+                parameters,
+                readonly,
+                0,
+            ));
+        }
     } else if readonly {
         param_body = param_body.child(muted("无参数", &pal));
     } else {
@@ -901,14 +918,14 @@ pub fn render(
             m.replace_parameters(Byml::Map(Default::default()))
         }));
     }
-    content = content.child(section(
+    content = content.child(section_lazy(
         map,
         state,
         model,
         id,
         "parameters",
         "参数",
-        param_body.into_any_element(),
+        || param_body.into_any_element(),
     ));
     let incoming = map
         .links
@@ -921,23 +938,23 @@ pub fn render(
         .filter(|l| Some(l.source) == map.selected_ref())
         .count();
     content = content
-        .child(section(
+        .child(section_lazy(
             map,
             state,
             model,
             id,
             "incoming",
             &format!("传入链接 ({incoming})"),
-            links(map, state, model, id, true, readonly),
+            || links(map, state, model, id, true, readonly),
         ))
-        .child(section(
+        .child(section_lazy(
             map,
             state,
             model,
             id,
             "outgoing",
             &format!("传出链接 ({outgoing})"),
-            links(map, state, model, id, false, readonly),
+            || links(map, state, model, id, false, readonly),
         ));
     let mut diagnostics = div().flex().flex_col().gap_1();
     if let Some(visual) = map.assets.actors.get(actor_name(actor)) {
@@ -950,14 +967,14 @@ pub fn render(
         diagnostics = diagnostics.child(muted(warning.clone(), &pal));
     }
     content = content
-        .child(section(
+        .child(section_lazy(
             map,
             state,
             model,
             id,
             "source",
             "模型来源 / 资源诊断",
-            diagnostics.into_any_element(),
+            || diagnostics.into_any_element(),
         ))
         .child(muted(
             "Enter 应用 · Esc 取消 · Ctrl+Z 撤销\n布尔值点击切换；整数保留原始类型。",

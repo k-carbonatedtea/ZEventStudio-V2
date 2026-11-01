@@ -266,6 +266,17 @@ pub fn render_map_editor(state: &AppState, model: &Entity<AppState>) -> AnyEleme
             },
         ))
         .child(button(
+            "隐藏对象透视",
+            map.show_hidden_perspective,
+            &pal,
+            model,
+            id,
+            |m| {
+                m.show_hidden_perspective = !m.show_hidden_perspective;
+                Ok(())
+            },
+        ))
+        .child(button(
             "对象链接",
             map.show_links,
             &pal,

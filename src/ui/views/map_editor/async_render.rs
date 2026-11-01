@@ -1,4 +1,4 @@
-use crate::model::map_editor::MapDocumentState;
+use crate::model::{map_editor::MapDocumentState, model_preview::ModelDocumentState};
 use crate::ui::views::model_preview::wgpu_renderer::{
     compute_cache_key, render_wgpu_scene, types::WgpuCacheKey,
 };
@@ -7,13 +7,12 @@ use std::sync::{Arc, Condvar, Mutex, OnceLock};
 
 pub struct CompletedFrame {
     key: WgpuCacheKey,
-    pub map: MapDocumentState,
     pub image: Option<Arc<RenderImage>>,
 }
 
 struct Request {
     key: WgpuCacheKey,
-    map: MapDocumentState,
+    scene: ModelDocumentState,
     width: f32,
     height: f32,
 }
@@ -42,21 +41,18 @@ fn worker() -> &'static Arc<(Mutex<Mailbox>, Condvar)> {
                     mailbox.pending.take().unwrap()
                 };
                 let image = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    render_wgpu_scene(&request.map.scene, request.width, request.height).or_else(
-                        || {
-                            crate::ui::views::model_preview::rasterizer::rasterize_scene(
-                                &request.map.scene,
-                                request.width,
-                                request.height,
-                            )
-                        },
-                    )
+                    render_wgpu_scene(&request.scene, request.width, request.height).or_else(|| {
+                        crate::ui::views::model_preview::rasterizer::rasterize_scene(
+                            &request.scene,
+                            request.width,
+                            request.height,
+                        )
+                    })
                 }))
                 .ok()
                 .flatten();
                 let frame = Arc::new(CompletedFrame {
                     key: request.key,
-                    map: request.map,
                     image,
                 });
                 lock.lock().unwrap().completed = Some(frame);
@@ -96,7 +92,9 @@ pub fn request(
         mailbox.requested = Some(key.clone());
         mailbox.pending = Some(Request {
             key: key.clone(),
-            map: map.clone(),
+            // The renderer only reads the scene. Avoid cloning the full map
+            // document and its BYML actor tree while the inspector is open.
+            scene: map.scene.clone(),
             width,
             height,
         });
@@ -149,7 +147,7 @@ mod tests {
             let (frame, pending) = request(&map, 128., 128.);
             if !pending {
                 let frame = frame.expect("completed latest frame");
-                assert_eq!(frame.map.scene.camera.yaw, map.scene.camera.yaw);
+                assert_eq!(frame.key.yaw_bits, map.scene.camera.yaw.to_bits());
                 assert!(frame.image.is_some());
                 break;
             }

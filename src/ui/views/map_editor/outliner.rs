@@ -74,6 +74,7 @@ pub fn render(
     for (label, active, kind) in [
         ("显示可见对象", map.show_models, 0),
         ("显示隐藏对象", map.show_tags, 1),
+        ("隐藏对象透视框", map.show_hidden_perspective, 8),
         ("显示地图模型", map.show_map_models, 2),
         ("显示配套地图", map.show_context, 3),
         ("显示对象链接", map.show_links, 4),
@@ -96,9 +97,10 @@ pub fn render(
                     4 => m.show_links = !m.show_links,
                     5 => m.selected_links_only = !m.selected_links_only,
                     6 => m.show_terrain = !m.show_terrain,
-                    _ => m.show_water = !m.show_water,
+                    7 => m.show_water = !m.show_water,
+                    _ => m.show_hidden_perspective = !m.show_hidden_perspective,
                 }
-                if !matches!(kind, 4 | 5) {
+                if !matches!(kind, 4 | 5 | 8) {
                     m.rebuild_instances();
                 }
                 Ok(())
