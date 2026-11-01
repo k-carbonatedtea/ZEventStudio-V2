@@ -12,7 +12,7 @@ pub use actor_resolver::{detect_actor_model_target, locate_actor_model_file, Act
 #[allow(unused_imports)]
 pub use camera::{FastCameraProjector, OrbitCamera, PreviewPresetView};
 pub use texture_loader::load_companion_textures;
-pub use types::{PreviewMeshItem, RenderMode, RgbaTexture};
+pub use types::{PreviewMeshItem, RenderMode, RgbaTexture, TerrainRenderData};
 
 /// A shared mesh placed in a map. Geometry stays in model space on the GPU.
 #[derive(Debug, Clone, PartialEq)]
@@ -28,6 +28,7 @@ use rbfres_library::{BfresFile, ExtractedMesh};
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModelDocumentState {
     pub instances: Option<std::sync::Arc<Vec<ModelInstance>>>,
+    pub terrain: Option<std::sync::Arc<TerrainRenderData>>,
     /// 物理文件路径或 SARC 虚拟路径
     pub file_path: String,
     /// 模型归档内部主名称
@@ -37,9 +38,9 @@ pub struct ModelDocumentState {
     /// 从 BFRES 模型字典中提炼抽取的几何网格列表 (使用 Arc 避免 UI 重绘高频深拷贝数十万顶点)
     pub meshes: std::sync::Arc<Vec<ExtractedMesh>>,
     /// 已加载解码的标准 RGBA8 纹理字典 (纹理名 -> RgbaTexture)
-    pub textures: std::collections::HashMap<String, std::sync::Arc<RgbaTexture>>,
+    pub textures: std::sync::Arc<std::collections::HashMap<String, std::sync::Arc<RgbaTexture>>>,
     /// 子网格 UI 条目元数据列表 (管理显隐与统计)
-    pub mesh_items: Vec<PreviewMeshItem>,
+    pub mesh_items: std::sync::Arc<Vec<PreviewMeshItem>>,
     /// 模型全量总顶点数
     pub total_vertices: usize,
     /// 模型全量总三角面数
@@ -141,12 +142,13 @@ impl ModelDocumentState {
 
         Self {
             instances: None,
+            terrain: None,
             file_path: file_path.to_string(),
             model_name,
             is_switch,
             meshes: std::sync::Arc::new(meshes),
-            textures: std::collections::HashMap::new(),
-            mesh_items,
+            textures: Default::default(),
+            mesh_items: std::sync::Arc::new(mesh_items),
             total_vertices,
             total_triangles,
             bounding_box_min: min_bound,
@@ -168,14 +170,14 @@ impl ModelDocumentState {
 
     /// 切换指定子网格的可见性开关
     pub fn toggle_mesh_visibility(&mut self, idx: usize) {
-        if let Some(item) = self.mesh_items.get_mut(idx) {
+        if let Some(item) = std::sync::Arc::make_mut(&mut self.mesh_items).get_mut(idx) {
             item.visible = !item.visible;
         }
     }
 
     /// 批量设置所有子网格的可见性
     pub fn set_all_visibility(&mut self, visible: bool) {
-        for item in &mut self.mesh_items {
+        for item in std::sync::Arc::make_mut(&mut self.mesh_items) {
             item.visible = visible;
         }
     }

@@ -22,9 +22,16 @@ pub struct GpuMeshGeometry {
 }
 
 impl GpuMeshGeometry {
-    pub fn update_instances(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, instances: &[GpuInstance]) {
+    pub fn update_instances(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        instances: &[GpuInstance],
+    ) {
         self.instance_count = instances.len() as u32;
-        if instances.is_empty() { return; }
+        if instances.is_empty() {
+            return;
+        }
         if instances.len() > self.instance_capacity {
             self.instance_capacity = instances.len().next_power_of_two();
             self.instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -88,6 +95,10 @@ pub struct GpuGeometryCache {
 }
 
 impl GpuGeometryCache {
+    pub fn get(&self, model_path: &str, mesh_idx: usize) -> Option<&GpuMeshGeometry> {
+        self.cache.get(&(model_path.to_owned(), mesh_idx))
+    }
+
     pub fn new() -> Self {
         Self {
             cache: HashMap::new(),
@@ -103,7 +114,11 @@ impl GpuGeometryCache {
         mesh: &ExtractedMesh,
     ) -> Option<&mut GpuMeshGeometry> {
         let key = (model_path.to_string(), mesh_idx);
-        if self.cache.get(&key).is_none_or(|g| g.source_identity != mesh.positions.as_ptr() as usize) {
+        if self
+            .cache
+            .get(&key)
+            .is_none_or(|g| g.source_identity != mesh.positions.as_ptr() as usize)
+        {
             let geom = upload_mesh_geometry(device, mesh)?;
             self.cache.insert(key.clone(), geom);
         }
@@ -185,4 +200,3 @@ fn upload_mesh_geometry(device: &wgpu::Device, mesh: &ExtractedMesh) -> Option<G
         bound_texture_id: None,
     })
 }
-

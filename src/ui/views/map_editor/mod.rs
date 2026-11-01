@@ -1,10 +1,126 @@
+mod async_render;
 mod viewport;
 use crate::{
     model::map_editor::{MapDocumentState, MapInput},
     ui::{state::AppState, theme::ThemePalette},
 };
 use gpui::*;
+use roead::byml::Byml;
+use std::{cell::RefCell, sync::Arc};
 use uking_library::map::{actor_name, hash_id, Transform};
+
+struct OutlinerMatches {
+    root: Arc<Byml>,
+    query: String,
+    indices: Arc<Vec<usize>>,
+}
+
+thread_local! {
+    static OUTLINER_MATCHES: RefCell<Option<OutlinerMatches>> = const { RefCell::new(None) };
+}
+
+fn actor_matches(actor: &Byml, query: &str) -> bool {
+    if query.is_empty() {
+        return true;
+    }
+    let name = actor_name(actor);
+    let name_matches = if name.is_ascii() && query.is_ascii() {
+        name.as_bytes()
+            .windows(query.len())
+            .any(|part| part.eq_ignore_ascii_case(query.as_bytes()))
+    } else {
+        name.to_lowercase().contains(query)
+    };
+    if name_matches {
+        return true;
+    }
+    if query.len() > 8 || !query.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return false;
+    }
+    hash_id(actor).is_some_and(|hash| {
+        let mut digits = [b'0'; 8];
+        for (index, digit) in digits.iter_mut().enumerate() {
+            *digit = b"0123456789abcdef"[((hash >> ((7 - index) * 4)) & 15) as usize];
+        }
+        digits
+            .windows(query.len())
+            .any(|part| part.eq_ignore_ascii_case(query.as_bytes()))
+    })
+}
+
+fn filtered_actor_indices(map: &MapDocumentState, query: &str) -> Option<Arc<Vec<usize>>> {
+    if query.is_empty() {
+        return None;
+    }
+    OUTLINER_MATCHES.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        if let Some(matches) = cache.as_ref() {
+            if Arc::ptr_eq(&matches.root, &map.file.root) && matches.query == query {
+                return Some(matches.indices.clone());
+            }
+        }
+        let indices: Arc<Vec<usize>> = Arc::new(
+            map.file
+                .actors()
+                .iter()
+                .enumerate()
+                .filter_map(|(index, actor)| actor_matches(actor, query).then_some(index))
+                .collect(),
+        );
+        // Retaining the root prevents an allocation reused after edits or tab
+        // switches from being mistaken for the cached document.
+        *cache = Some(OutlinerMatches {
+            root: map.file.root.clone(),
+            query: query.into(),
+            indices: indices.clone(),
+        });
+        Some(indices)
+    })
+}
+
+#[cfg(test)]
+mod outliner_tests {
+    use super::{actor_matches, filtered_actor_indices, Arc, Byml, MapDocumentState};
+
+    fn document() -> MapDocumentState {
+        let root = Byml::from_text(
+            "Objs:\n- {UnitConfigName: Obj_Tree, HashId: !u 43981}\n- {UnitConfigName: Rock, HashId: !u 1}",
+        )
+        .unwrap();
+        let file = uking_library::map::MapFile::from_bytes(&root.to_binary(roead::Endian::Little))
+            .unwrap();
+        MapDocumentState::empty(file, "outliner-test", "outliner-test")
+    }
+
+    #[test]
+    fn matches_actor_names_and_zero_padded_hash_substrings() {
+        let map = document();
+        let tree = &map.file.actors()[0];
+        assert!(actor_matches(tree, "obj_tree"));
+        assert!(actor_matches(tree, "TrEe"));
+        assert!(actor_matches(tree, "0000ab"));
+        assert!(actor_matches(tree, "ABCD"));
+        assert!(!actor_matches(tree, "00000abcd"));
+        assert!(!actor_matches(tree, "xyz"));
+        assert!(!actor_matches(tree, "树"));
+    }
+
+    #[test]
+    fn reuses_filtered_indices_until_query_or_document_changes() {
+        let mut map = document();
+        assert!(filtered_actor_indices(&map, "").is_none());
+        let first = filtered_actor_indices(&map, "rock").unwrap();
+        assert_eq!(first.as_slice(), &[1]);
+        let cached = filtered_actor_indices(&map, "rock").unwrap();
+        assert!(Arc::ptr_eq(&first, &cached));
+        let trees = filtered_actor_indices(&map, "tree").unwrap();
+        assert_eq!(trees.as_slice(), &[0]);
+        map.file.delete(0).unwrap();
+        let edited = filtered_actor_indices(&map, "rock").unwrap();
+        assert_eq!(edited.as_slice(), &[0]);
+        assert!(!Arc::ptr_eq(&first, &edited));
+    }
+}
 
 pub fn button(
     label: impl Into<SharedString>,
@@ -204,17 +320,12 @@ fn outliner(
     let model_search = model.clone();
     let tid = id.to_string();
     let query = map.filter.to_lowercase();
-    let filtered: Vec<_> = map
-        .file
-        .actors()
-        .iter()
-        .enumerate()
-        .filter(|(_, a)| {
-            actor_name(a).to_lowercase().contains(&query)
-                || hash_id(a).is_some_and(|h| format!("{h:08x}").contains(&query))
-        })
-        .collect();
-    let pages = filtered.len().div_ceil(100).max(1);
+    let actors = map.file.actors();
+    let filtered = filtered_actor_indices(map, &query);
+    let count = filtered
+        .as_ref()
+        .map_or(actors.len(), |indices| indices.len());
+    let pages = count.div_ceil(100).max(1);
     let page = map.page.min(pages - 1);
     div()
         .w(px(200.))
@@ -230,7 +341,7 @@ fn outliner(
                 .py_2()
                 .text_xs()
                 .font_weight(FontWeight::BOLD)
-                .child(format!("场景对象 ({})", filtered.len())),
+                .child(format!("场景对象 ({count})")),
         )
         .child(
             div()
@@ -268,66 +379,61 @@ fn outliner(
                 .id("map-outliner")
                 .flex_1()
                 .overflow_y_scroll()
-                .children(
-                    filtered
-                        .into_iter()
-                        .skip(page * 100)
-                        .take(100)
-                        .map(|(i, actor)| {
-                            let selected = map.selected == Some(i);
-                            let name = actor_name(actor).to_string();
-                            let diagnostic = map
-                                .assets
-                                .actors
-                                .get(&name)
-                                .is_some_and(|v| v.diagnostic.is_some());
-                            let model = model.clone();
-                            let id = id.to_string();
+                .children((page * 100..(page * 100 + 100).min(count)).map(|position| {
+                    let i = filtered
+                        .as_ref()
+                        .map_or(position, |indices| indices[position]);
+                    let actor = &actors[i];
+                    let selected = map.selected == Some(i);
+                    let name = actor_name(actor).to_string();
+                    let diagnostic = map
+                        .assets
+                        .actors
+                        .get(&name)
+                        .is_some_and(|v| v.diagnostic.is_some());
+                    let model = model.clone();
+                    let id = id.to_string();
+                    div()
+                        .px_2()
+                        .py_1()
+                        .cursor_pointer()
+                        .bg(if selected {
+                            pal.card_hover
+                        } else {
+                            pal.panel_surface
+                        })
+                        .hover(|s| s.bg(pal.card_hover))
+                        .on_mouse_down(MouseButton::Left, move |e, _, cx| {
+                            model.update(cx, |st, cx| {
+                                st.clear_active_text_inputs();
+                                st.update_map(&id, |m| {
+                                    m.select(Some(i));
+                                    if e.click_count > 1 {
+                                        m.focus_selected();
+                                    }
+                                    Ok(())
+                                });
+                                cx.notify();
+                            });
+                        })
+                        .child(
                             div()
-                                .px_2()
-                                .py_1()
-                                .cursor_pointer()
-                                .bg(if selected {
-                                    pal.card_hover
+                                .text_xs()
+                                .text_color(if diagnostic {
+                                    rgb(0xE9AA61).into()
                                 } else {
-                                    pal.panel_surface
+                                    pal.text_primary
                                 })
-                                .hover(|s| s.bg(pal.card_hover))
-                                .on_mouse_down(MouseButton::Left, move |e, _, cx| {
-                                    model.update(cx, |st, cx| {
-                                        st.clear_active_text_inputs();
-                                        st.update_map(&id, |m| {
-                                            m.select(Some(i));
-                                            if e.click_count > 1 {
-                                                m.focus_selected();
-                                            }
-                                            Ok(())
-                                        });
-                                        cx.notify();
-                                    });
-                                })
-                                .child(
-                                    div()
-                                        .text_xs()
-                                        .text_color(if diagnostic {
-                                            rgb(0xE9AA61).into()
-                                        } else {
-                                            pal.text_primary
-                                        })
-                                        .overflow_hidden()
-                                        .child(format!(
-                                            "{} {name}",
-                                            if diagnostic { "!" } else { "·" }
-                                        )),
-                                )
-                                .child(
-                                    div()
-                                        .text_size(px(10.))
-                                        .text_color(pal.text_secondary)
-                                        .child(format!("{:08X}", hash_id(actor).unwrap_or(0))),
-                                )
-                        }),
-                ),
+                                .overflow_hidden()
+                                .child(format!("{} {name}", if diagnostic { "!" } else { "·" })),
+                        )
+                        .child(
+                            div()
+                                .text_size(px(10.))
+                                .text_color(pal.text_secondary)
+                                .child(format!("{:08X}", hash_id(actor).unwrap_or(0))),
+                        )
+                })),
         )
         .child(
             div()

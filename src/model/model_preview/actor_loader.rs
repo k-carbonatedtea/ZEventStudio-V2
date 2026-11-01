@@ -1,9 +1,9 @@
 //! Actor 3D 模型 BFRES 二进制解析与文档状态装配
 
+use rbfres_library::{BfresFile, ExtractedMesh};
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use rbfres_library::{BfresFile, ExtractedMesh};
 
 use super::actor_resolver::ActorModelTarget;
 use super::camera::OrbitCamera;
@@ -23,8 +23,8 @@ pub fn load_actor_model_document(
         raw_bytes
     };
 
-    let bfres = BfresFile::from_bytes(&decompressed)
-        .map_err(|e| format!("BFRES 模型解析失败: {:?}", e))?;
+    let bfres =
+        BfresFile::from_bytes(&decompressed).map_err(|e| format!("BFRES 模型解析失败: {:?}", e))?;
 
     let is_switch = bfres.is_switch;
     let path_str = model_path.to_string_lossy().to_string();
@@ -48,12 +48,18 @@ pub fn load_actor_model_document(
     // 判断当前 BFRES 模型集合中是否存在匹配该 Actor 指定 UnitName 的模型子字典
     let has_matching_model = !target.unit_names.is_empty()
         && bfres.models.iter().any(|(name, _)| {
-            target.unit_names.iter().any(|u| u.eq_ignore_ascii_case(name))
+            target
+                .unit_names
+                .iter()
+                .any(|u| u.eq_ignore_ascii_case(name))
         });
 
     for (dict_model_name, model) in bfres.models.iter() {
         let is_target_model = if has_matching_model {
-            target.unit_names.iter().any(|u| u.eq_ignore_ascii_case(dict_model_name))
+            target
+                .unit_names
+                .iter()
+                .any(|u| u.eq_ignore_ascii_case(dict_model_name))
         } else {
             true
         };
@@ -84,7 +90,10 @@ pub fn load_actor_model_document(
 
             mesh_items.push(PreviewMeshItem {
                 name: mesh.name.clone(),
-                material_name: mesh.material_name.clone().unwrap_or_else(|| "Default".to_string()),
+                material_name: mesh
+                    .material_name
+                    .clone()
+                    .unwrap_or_else(|| "Default".to_string()),
                 texture_name: mesh.texture_name.clone(),
                 vertex_count: v_count,
                 triangle_count: t_count,
@@ -112,12 +121,13 @@ pub fn load_actor_model_document(
 
     let mut doc_state = ModelDocumentState {
         instances: None,
+        terrain: None,
         file_path: path_str.clone(),
         model_name,
         is_switch,
         meshes: Arc::new(all_meshes),
-        textures: std::collections::HashMap::new(),
-        mesh_items,
+        textures: Default::default(),
+        mesh_items: Arc::new(mesh_items),
         total_vertices,
         total_triangles,
         bounding_box_min: global_min,
@@ -140,4 +150,3 @@ pub fn load_actor_model_document(
 
     Ok(doc_state)
 }
-

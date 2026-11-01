@@ -1,10 +1,10 @@
 //! UMii 3D 模型部件合成算法核心 (支持 Switch NX 与 Wii U Cafe 双平台 BFRES 模型装配)
 
+use rbfres_library::{BfresFile, ExtractedMesh};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
-use rbfres_library::{BfresFile, ExtractedMesh};
-use serde::{Deserialize, Serialize};
 
 use super::data::UmiiData;
 use super::parts::{collect_model_search_dirs, generate_part_targets, locate_part_file};
@@ -123,12 +123,13 @@ pub fn synthesize_npc_model_sync(
         // 加载伴生纹理并汇集
         let mut temp_state = ModelDocumentState {
             instances: None,
+            terrain: None,
             file_path: part_path.to_string_lossy().to_string(),
             model_name: target.category.to_string(),
             is_switch: is_switch_detected,
             meshes: Arc::new(Vec::new()),
-            textures: std::collections::HashMap::new(),
-            mesh_items: Vec::new(),
+            textures: Default::default(),
+            mesh_items: Default::default(),
             total_vertices: 0,
             total_triangles: 0,
             bounding_box_min: [0.0; 3],
@@ -147,7 +148,7 @@ pub fn synthesize_npc_model_sync(
             last_mouse_pos: (0.0, 0.0),
         };
         load_companion_textures(&part_path.to_string_lossy(), &bfres, &mut temp_state);
-        for (k, v) in temp_state.textures {
+        for (k, v) in Arc::unwrap_or_clone(temp_state.textures) {
             textures.insert(k, v);
         }
     }
@@ -166,12 +167,13 @@ pub fn synthesize_npc_model_sync(
 
     Ok(ModelDocumentState {
         instances: None,
+        terrain: None,
         file_path: format!("UMii://{}", data.name),
         model_name: format!("UMii_{}", data.name),
         is_switch: is_switch_detected,
         meshes: Arc::new(all_meshes),
-        textures,
-        mesh_items,
+        textures: Arc::new(textures),
+        mesh_items: Arc::new(mesh_items),
         total_vertices,
         total_triangles,
         bounding_box_min: global_min,
@@ -204,7 +206,8 @@ mod tests {
         }
 
         let bytes = fs::read(bumii_path).unwrap();
-        let umii_data = UmiiData::from_binary(&bytes).expect("Failed to parse AncientAssistant001.bumii");
+        let umii_data =
+            UmiiData::from_binary(&bytes).expect("Failed to parse AncientAssistant001.bumii");
         assert_eq!(umii_data.body_race, 0); // Hylia
 
         let model_dir = PathBuf::from(r"C:\Users\Administrator\Desktop\Tes\Romfs\Model");

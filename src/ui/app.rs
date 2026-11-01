@@ -12,6 +12,7 @@ pub struct AppView {
     pub model: Entity<AppState>,
     pub frame_count: u32,
     pub last_fps_update: Instant,
+    pub last_frame_at: Instant,
     pub fps: f32,
     pub frame_time_ms: f32,
     pub focus_handle: FocusHandle,
@@ -40,6 +41,7 @@ impl AppView {
             model,
             frame_count: 0,
             last_fps_update: Instant::now(),
+            last_frame_at: Instant::now(),
             fps: 60.0,
             frame_time_ms: 1.0,
             focus_handle,
@@ -75,8 +77,15 @@ impl Render for AppView {
         self.sync_msbt_bubble_editor(window, cx);
 
         // 采样并计算真实渲染帧率
-        self.frame_count += 1;
         let now = Instant::now();
+        // On-demand map rendering can stay idle for minutes. Start a fresh
+        // sample after an idle gap so that idle time does not count as a slow frame.
+        if now.duration_since(self.last_frame_at).as_secs_f32() >= 0.25 {
+            self.frame_count = 0;
+            self.last_fps_update = now;
+        }
+        self.last_frame_at = now;
+        self.frame_count += 1;
         let elapsed = now.duration_since(self.last_fps_update).as_secs_f32();
 
         if elapsed >= 0.25 {
@@ -105,7 +114,8 @@ impl Render for AppView {
         let has_active_field = self.model.read(cx).has_active_text_input();
         let is_extracting_markers = self.model.read(cx).quest_map_is_extracting_markers;
         let is_dragging = cx.has_active_drag();
-        if is_active || has_active_field || is_extracting_markers || is_timeline_playing || is_dragging {
+        let idle_map = self.model.read(cx).active_map().is_some();
+        if (is_active && !idle_map) || has_active_field || is_extracting_markers || is_timeline_playing || is_dragging {
             cx.on_next_frame(window, |_, _, cx| {
                 cx.notify();
             });

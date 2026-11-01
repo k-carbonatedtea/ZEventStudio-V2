@@ -2,6 +2,7 @@
 
 use super::types::RgbaTexture;
 use super::ModelDocumentState;
+use rayon::prelude::*;
 use rbfres_library::texture::BntxFile;
 use rbfres_library::BfresFile;
 use std::collections::HashSet;
@@ -10,11 +11,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 /// 自动探测并加载模型的内嵌纹理与配套纹理包 (.Tex.sbfres / .Tex1.sbfres / .bntx)
-pub fn load_companion_textures(
-    file_path: &str,
-    bfres: &BfresFile,
-    state: &mut ModelDocumentState,
-) {
+pub fn load_companion_textures(file_path: &str, bfres: &BfresFile, state: &mut ModelDocumentState) {
     // 1. 尝试从模型自身的外部文件字典 (ExternalFiles) 提取内嵌的 BNTX
     extract_bntx_from_bfres(bfres, state);
 
@@ -76,7 +73,8 @@ fn extract_innermost_sarc_bytes(archive_bytes: &[u8], intermediates: &[&str]) ->
         let sarc = roead::sarc::Sarc::new(&decomp).ok()?;
         let norm = intermediate.replace('\\', "/");
         let found = sarc.files().find(|f| {
-            f.name().is_some_and(|name| name == *intermediate || name.replace('\\', "/") == norm)
+            f.name()
+                .is_some_and(|name| name == *intermediate || name.replace('\\', "/") == norm)
         })?;
         current = found.data().to_vec();
     }
@@ -85,7 +83,10 @@ fn extract_innermost_sarc_bytes(archive_bytes: &[u8], intermediates: &[&str]) ->
 
 /// 从 SARC 归档封包内部加载关联的配套纹理
 fn load_sarc_companion_textures(virtual_path: &str, state: &mut ModelDocumentState) {
-    let parts: Vec<&str> = virtual_path.trim_start_matches("SARC:").split("//").collect();
+    let parts: Vec<&str> = virtual_path
+        .trim_start_matches("SARC:")
+        .split("//")
+        .collect();
     if parts.len() < 2 {
         return;
     }
@@ -96,7 +97,9 @@ fn load_sarc_companion_textures(virtual_path: &str, state: &mut ModelDocumentSta
         return;
     };
 
-    let Some(inner_sarc_bytes) = extract_innermost_sarc_bytes(&archive_bytes, &parts[1..parts.len() - 1]) else {
+    let Some(inner_sarc_bytes) =
+        extract_innermost_sarc_bytes(&archive_bytes, &parts[1..parts.len() - 1])
+    else {
         return;
     };
 
@@ -205,7 +208,11 @@ fn load_romfs_fallback_textures(state: &mut ModelDocumentState) {
 
     for game_model_dir in &fallback_dirs {
         if game_model_dir.exists() {
-            for candidate_name in &["Link.Tex.sbfres", "Link.Tex1.sbfres", "Armor_Default.Tex.sbfres"] {
+            for candidate_name in &[
+                "Link.Tex.sbfres",
+                "Link.Tex1.sbfres",
+                "Armor_Default.Tex.sbfres",
+            ] {
                 let candidate_path = game_model_dir.join(candidate_name);
                 load_tex_file_if_exists(&candidate_path, state);
             }
@@ -225,6 +232,24 @@ fn load_tex_file_if_exists(file_path: &Path, state: &mut ModelDocumentState) {
 
 /// 解析任意二进制字节流中的纹理数据 (支持 Yaz0 压缩、BFRES 归档与纯 BNTX)
 pub fn load_tex_bytes(bytes: &[u8], state: &mut ModelDocumentState) {
+    load_tex_bytes_selected(bytes, state, None);
+}
+
+/// Map previews only sample the color bindings referenced by their materials.
+/// Normal, mask and unused model textures need not be decoded or uploaded.
+pub fn load_tex_bytes_filtered(
+    bytes: &[u8],
+    state: &mut ModelDocumentState,
+    names: &HashSet<String>,
+) {
+    load_tex_bytes_selected(bytes, state, Some(names));
+}
+
+fn load_tex_bytes_selected(
+    bytes: &[u8],
+    state: &mut ModelDocumentState,
+    names: Option<&HashSet<String>>,
+) {
     let decomp = if bytes.len() >= 4 && &bytes[0..4] == b"Yaz0" {
         roead::yaz0::decompress(bytes).unwrap_or_else(|_| bytes.to_vec())
     } else {
@@ -234,19 +259,35 @@ pub fn load_tex_bytes(bytes: &[u8], state: &mut ModelDocumentState) {
     // 尝试直接作为 BNTX 解码
     if decomp.len() >= 4 && &decomp[0..4] == b"BNTX" {
         if let Ok(bntx) = BntxFile::from_bytes(&decomp) {
-            decode_and_insert_bntx(bntx, state);
+            decode_and_insert_bntx(bntx, state, names);
             return;
         }
     }
 
     // 尝试作为 BFRES 归档解包其内部外部文件
     if let Ok(tex_bfres) = BfresFile::from_bytes(&decomp) {
-        extract_bntx_from_bfres(&tex_bfres, state);
+        extract_bntx_selected(&tex_bfres, state, names);
     }
 }
 
 /// 从 BFRES 归档的 ExternalFiles 中提取并解码全部 BNTX 纹理
 pub fn extract_bntx_from_bfres(bfres: &BfresFile, state: &mut ModelDocumentState) {
+    extract_bntx_selected(bfres, state, None);
+}
+
+pub fn extract_bfres_textures_filtered(
+    bfres: &BfresFile,
+    state: &mut ModelDocumentState,
+    names: &HashSet<String>,
+) {
+    extract_bntx_selected(bfres, state, Some(names));
+}
+
+fn extract_bntx_selected(
+    bfres: &BfresFile,
+    state: &mut ModelDocumentState,
+    names: Option<&HashSet<String>>,
+) {
     for ext_file in bfres.external_files.values() {
         if ext_file.data.len() < 32 {
             continue;
@@ -255,37 +296,73 @@ pub fn extract_bntx_from_bfres(bfres: &BfresFile, state: &mut ModelDocumentState
         // 识别魔数为 "BNTX" 的纹理封包
         if &ext_file.data[0..4] == b"BNTX" {
             if let Ok(bntx) = BntxFile::from_bytes(&ext_file.data) {
-                decode_and_insert_bntx(bntx, state);
+                decode_and_insert_bntx(bntx, state, names);
             }
         }
     }
 }
 
-pub fn extract_bfres_textures(bfres: &BfresFile, state: &mut ModelDocumentState) {
-    extract_bntx_from_bfres(bfres, state);
-}
-
 /// 解码 BNTX 文件中的所有纹理切片并插入模型文档纹理池
-fn decode_and_insert_bntx(bntx: BntxFile, state: &mut ModelDocumentState) {
-    for tex in bntx.textures {
-        if state.textures.contains_key(&tex.name) {
-            continue;
-        }
-        let rgba = tex.decode_rgba();
-        if !rgba.is_empty() {
-            let rgba_tex = RgbaTexture {
-                width: tex.width,
-                height: tex.height,
-                rgba: Arc::new(rgba),
-            };
-            state.textures.insert(tex.name.clone(), Arc::new(rgba_tex));
-        }
-    }
+fn decode_and_insert_bntx(
+    bntx: BntxFile,
+    state: &mut ModelDocumentState,
+    names: Option<&HashSet<String>>,
+) {
+    let wanted: Vec<_> = bntx
+        .textures
+        .into_iter()
+        .filter(|tex| {
+            !state.textures.contains_key(&tex.name)
+                && names.is_none_or(|names| names.contains(&tex.name))
+        })
+        .collect();
+    let decoded: Vec<_> = wanted
+        .into_par_iter()
+        .filter_map(|tex| {
+            let rgba = tex.decode_rgba();
+            if rgba.len() != tex.width as usize * tex.height as usize * 4 {
+                return None;
+            }
+            Some((
+                tex.name,
+                Arc::new(RgbaTexture {
+                    width: tex.width,
+                    height: tex.height,
+                    rgba: Arc::new(rgba),
+                }),
+            ))
+        })
+        .collect();
+    Arc::make_mut(&mut state.textures).extend(decoded);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn filtered_decode_keeps_shader_color_binding_without_decoding_normal() {
+        let texture = |name: &str| rbfres_library::texture::BntxTexture {
+            name: name.into(),
+            width: 4,
+            height: 4,
+            format: rbfres_library::SurfaceFormat::BC1_UNORM,
+            data: vec![0; 512],
+            ..Default::default()
+        };
+        let bntx = BntxFile {
+            textures: vec![texture("UnusualShaderColor"), texture("Rock_Nrm")],
+        };
+        let mut state = ModelDocumentState::from_bfres("", "", &Default::default());
+        decode_and_insert_bntx(
+            bntx,
+            &mut state,
+            Some(&HashSet::from(["UnusualShaderColor".into()])),
+        );
+        assert_eq!(state.textures.len(), 1);
+        assert_eq!(state.textures["UnusualShaderColor"].rgba.len(), 64);
+        assert!(!state.textures.contains_key("Rock_Nrm"));
+    }
 
     #[test]
     fn test_candidate_filenames() {
@@ -314,11 +391,18 @@ mod tests {
         }
         let virtual_path = format!("SARC:{}//Model/DgnMrgPrt_Dungeon085.sbfres", pack_path);
         let bfres = BfresFile::default();
-        let mut state = ModelDocumentState::from_bfres(&virtual_path, "DgnMrgPrt_Dungeon085.sbfres", &bfres);
+        let mut state =
+            ModelDocumentState::from_bfres(&virtual_path, "DgnMrgPrt_Dungeon085.sbfres", &bfres);
         load_companion_textures(&virtual_path, &bfres, &mut state);
 
-        assert!(!state.textures.is_empty(), "Dungeon085 companion textures should be loaded from SARC!");
-        println!("Loaded textures count from Dungeon085: {}", state.textures.len());
+        assert!(
+            !state.textures.is_empty(),
+            "Dungeon085 companion textures should be loaded from SARC!"
+        );
+        println!(
+            "Loaded textures count from Dungeon085: {}",
+            state.textures.len()
+        );
         assert!(state.textures.contains_key("CmnTex_Cdun_MonyoLine_B_Alb"));
     }
 
@@ -336,23 +420,35 @@ mod tests {
             archive_bytes
         };
         let sarc = roead::sarc::Sarc::new(&sarc_bytes).unwrap();
-        let bfres_file = sarc.files().find(|f| f.name() == Some("Model/DgnMrgPrt_Dungeon085.sbfres")).unwrap();
+        let bfres_file = sarc
+            .files()
+            .find(|f| f.name() == Some("Model/DgnMrgPrt_Dungeon085.sbfres"))
+            .unwrap();
         let decomp = if &bfres_file.data()[0..4] == b"Yaz0" {
             roead::yaz0::decompress(bfres_file.data()).unwrap()
         } else {
             bfres_file.data().to_vec()
         };
         let bfres = BfresFile::from_bytes(&decomp).unwrap();
-        let mut state = ModelDocumentState::from_bfres(&virtual_path, "DgnMrgPrt_Dungeon085.sbfres", &bfres);
+        let mut state =
+            ModelDocumentState::from_bfres(&virtual_path, "DgnMrgPrt_Dungeon085.sbfres", &bfres);
         load_companion_textures(&virtual_path, &bfres, &mut state);
 
         println!("Dungeon085 meshes count: {}", state.meshes.len());
         println!("Dungeon085 loaded textures count: {}", state.textures.len());
         for (i, m) in state.meshes.iter().enumerate() {
-            let has_tex = m.texture_name.as_deref().and_then(|n| state.textures.get(n)).is_some()
-                || m.texture_refs.iter().any(|r| state.textures.get(r).is_some());
-            println!("Mesh #{}: name={:?}, mat={:?}, tex_name={:?}, tex_refs={:?}, has_tex={}",
-                i, m.name, m.material_name, m.texture_name, m.texture_refs, has_tex);
+            let has_tex = m
+                .texture_name
+                .as_deref()
+                .and_then(|n| state.textures.get(n))
+                .is_some()
+                || m.texture_refs
+                    .iter()
+                    .any(|r| state.textures.get(r).is_some());
+            println!(
+                "Mesh #{}: name={:?}, mat={:?}, tex_name={:?}, tex_refs={:?}, has_tex={}",
+                i, m.name, m.material_name, m.texture_name, m.texture_refs, has_tex
+            );
         }
     }
 }

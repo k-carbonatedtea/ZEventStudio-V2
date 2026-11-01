@@ -10,10 +10,7 @@ impl Mat4 {
     #[allow(dead_code)]
     pub fn identity() -> Self {
         Self([
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
         ])
     }
 
@@ -23,28 +20,48 @@ impl Mat4 {
         let range = near - far;
 
         Self([
-            f / aspect.max(0.001), 0.0, 0.0, 0.0,
-            0.0, f, 0.0, 0.0,
-            0.0, 0.0, far / range, -1.0,
-            0.0, 0.0, (near * far) / range, 0.0,
+            f / aspect.max(0.001),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            f,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            far / range,
+            -1.0,
+            0.0,
+            0.0,
+            (near * far) / range,
+            0.0,
         ])
     }
 
     /// 右手坐标系观察视角变换矩阵 (Look-At View Matrix)
     pub fn look_at_rh(eye: [f32; 3], target: [f32; 3], up: [f32; 3]) -> Self {
-        let forward = normalize([
-            target[0] - eye[0],
-            target[1] - eye[1],
-            target[2] - eye[2],
-        ]);
+        let forward = normalize([target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]]);
         let right = normalize(cross(forward, up));
         let true_up = cross(right, forward);
 
         Self([
-            right[0], true_up[0], -forward[0], 0.0,
-            right[1], true_up[1], -forward[1], 0.0,
-            right[2], true_up[2], -forward[2], 0.0,
-            -dot(right, eye), -dot(true_up, eye), dot(forward, eye), 1.0,
+            right[0],
+            true_up[0],
+            -forward[0],
+            0.0,
+            right[1],
+            true_up[1],
+            -forward[1],
+            0.0,
+            right[2],
+            true_up[2],
+            -forward[2],
+            0.0,
+            -dot(right, eye),
+            -dot(true_up, eye),
+            dot(forward, eye),
+            1.0,
         ])
     }
 
@@ -110,7 +127,11 @@ pub struct GpuInstance {
 
 impl GpuInstance {
     pub fn new(transform: uking_library::map::Transform, selected: bool) -> Self {
-        Self { model: transform.matrix(), normal: transform.normal_matrix(), flags: [if selected { 1. } else { 0. }, 0., 0., 0.] }
+        Self {
+            model: transform.matrix(),
+            normal: transform.normal_matrix(),
+            flags: [if selected { 1. } else { 0. }, 0., 0., 0.],
+        }
     }
 }
 
@@ -119,6 +140,8 @@ impl GpuInstance {
 pub struct WgpuCacheKey {
     pub geometry_identity: usize,
     pub instance_identity: usize,
+    pub texture_identity: usize,
+    pub terrain_identity: usize,
     pub model_path: String,
     pub yaw_bits: u32,
     pub pitch_bits: u32,
@@ -155,4 +178,3 @@ fn normalize(v: [f32; 3]) -> [f32; 3] {
         [v[0] / len, v[1] / len, v[2] / len]
     }
 }
-

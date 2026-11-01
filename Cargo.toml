@@ -37,6 +37,9 @@ opt-level = 3
 [profile.dev.package.botw-map]
 opt-level = 3
 
+[profile.dev.package.rbfres-library]
+opt-level = 3
+
 [profile.dev.package.image]
 opt-level = 3
 

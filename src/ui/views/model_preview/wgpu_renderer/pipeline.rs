@@ -8,7 +8,10 @@ use std::sync::Arc;
 pub struct WgpuPipeline {
     pub pipeline: Arc<wgpu::RenderPipeline>,
     pub transparent_pipeline: Arc<wgpu::RenderPipeline>,
+    pub terrain_pipeline: Arc<wgpu::RenderPipeline>,
     pub bind_group_layout: Arc<wgpu::BindGroupLayout>,
+    pub terrain_bind_group_layout: Arc<wgpu::BindGroupLayout>,
+    pub camera_bind_group_layout: Arc<wgpu::BindGroupLayout>,
     pub sampler: Arc<wgpu::Sampler>,
 }
 
@@ -52,11 +55,45 @@ impl WgpuPipeline {
             ],
         });
 
+        let terrain_bind_group_layout = super::terrain::create_bind_group_layout(device);
+        let empty_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Unused model terrain bindings"),
+                entries: &[],
+            });
+        let camera_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Shared camera bindings"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Model Pipeline Layout"),
-            bind_group_layouts: &[Some(&bind_group_layout)],
+            bind_group_layouts: &[
+                Some(&bind_group_layout),
+                Some(&empty_bind_group_layout),
+                Some(&camera_bind_group_layout),
+            ],
             immediate_size: 0,
         });
+        let terrain_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Terrain Pipeline Layout"),
+                bind_group_layouts: &[
+                    Some(&bind_group_layout),
+                    Some(&terrain_bind_group_layout),
+                    Some(&camera_bind_group_layout),
+                ],
+                immediate_size: 0,
+            });
 
         let vertex_buffer_layout = wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<GpuVertex>() as u64,
@@ -83,9 +120,10 @@ impl WgpuPipeline {
             ],
         };
 
-        let create_pipeline = |transparent: bool| device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let create_pipeline = |transparent: bool, terrain: bool| {
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Model 3D Render Pipeline"),
-            layout: Some(&pipeline_layout),
+            layout: Some(if terrain { &terrain_pipeline_layout } else { &pipeline_layout }),
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
@@ -98,7 +136,7 @@ impl WgpuPipeline {
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: Some("fs_main"),
+                entry_point: Some(if terrain { "fs_terrain" } else { "fs_main" }),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: wgpu::TextureFormat::Bgra8Unorm, // 对齐 Windows GPUI Direct3D 11 BGRA 图集格式
                     blend: Some(wgpu::BlendState::ALPHA_BLENDING),
@@ -125,9 +163,11 @@ impl WgpuPipeline {
             multisample: wgpu::MultisampleState::default(),
             multiview_mask: None,
             cache: None,
-        });
-        let pipeline = create_pipeline(false);
-        let transparent_pipeline = create_pipeline(true);
+        })
+        };
+        let pipeline = create_pipeline(false, false);
+        let transparent_pipeline = create_pipeline(true, false);
+        let terrain_pipeline = create_pipeline(false, true);
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Model Texture Linear Sampler"),
@@ -143,7 +183,10 @@ impl WgpuPipeline {
         Some(Self {
             pipeline: Arc::new(pipeline),
             transparent_pipeline: Arc::new(transparent_pipeline),
+            terrain_pipeline: Arc::new(terrain_pipeline),
             bind_group_layout: Arc::new(bind_group_layout),
+            terrain_bind_group_layout: Arc::new(terrain_bind_group_layout),
+            camera_bind_group_layout: Arc::new(camera_bind_group_layout),
             sampler: Arc::new(sampler),
         })
     }

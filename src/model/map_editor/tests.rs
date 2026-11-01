@@ -2,6 +2,81 @@ use super::*;
 use crate::model::model_preview::OrbitCamera;
 
 #[test]
+#[ignore = "requires ZEVENT_TEST_MAP and configured local game resources"]
+fn map_performance_benchmark() {
+    use std::time::Instant;
+    let path = std::env::var("ZEVENT_TEST_MAP").expect("set ZEVENT_TEST_MAP");
+    let file =
+        MapFile::from_bytes(&crate::model::file_tree::read_file_from_path(&path).unwrap()).unwrap();
+    let start = Instant::now();
+    let mut doc = loader::load_scene(
+        MapDocumentState::empty(file, &path, "performance"),
+        crate::model::settings::GamePathSettings::load_from_disk(),
+        None,
+    )
+    .unwrap();
+    println!(
+        "BENCH load_ms={:.1} meshes={} textures={} triangles={}",
+        start.elapsed().as_secs_f64() * 1000.,
+        doc.scene.meshes.len(),
+        doc.scene.textures.len(),
+        doc.scene.total_triangles
+    );
+    let start = Instant::now();
+    for _ in 0..100 {
+        std::hint::black_box(doc.clone());
+    }
+    println!(
+        "BENCH snapshot_ms={:.3}",
+        start.elapsed().as_secs_f64() * 10.
+    );
+    let start = Instant::now();
+    assert!(
+        crate::ui::views::model_preview::wgpu_renderer::render_wgpu_scene(&doc.scene, 1766., 1172.)
+            .is_some()
+    );
+    println!(
+        "BENCH first_frame_ms={:.1}",
+        start.elapsed().as_secs_f64() * 1000.
+    );
+    let mut times = Vec::new();
+    for _ in 0..12 {
+        doc.scene.camera.yaw += 0.03;
+        let start = Instant::now();
+        assert!(
+            crate::ui::views::model_preview::wgpu_renderer::render_wgpu_scene(
+                &doc.scene, 1766., 1172.
+            )
+            .is_some()
+        );
+        times.push(start.elapsed().as_secs_f64() * 1000.);
+    }
+    times.sort_by(f64::total_cmp);
+    println!(
+        "BENCH orbit_ms_p50={:.2} orbit_ms_max={:.2}",
+        times[times.len() / 2],
+        times[times.len() - 1]
+    );
+    if let Ok(output) = std::env::var("ZEVENT_TEST_RENDER") {
+        doc.select(Some(0));
+        doc.focus_selected();
+        doc.select(None);
+        let img = crate::ui::views::model_preview::wgpu_renderer::render_wgpu_scene(
+            &doc.scene, 1280., 800.,
+        )
+        .unwrap();
+        let mut rgba = img.as_bytes(0).unwrap().to_vec();
+        for p in rgba.chunks_exact_mut(4) {
+            p.swap(0, 2);
+            if p[3] == 0 {
+                p.copy_from_slice(&[23, 32, 39, 255]);
+            }
+        }
+        image::save_buffer(output, &rgba, 1280, 800, image::ColorType::Rgba8).unwrap();
+    }
+}
+
+#[test]
 fn focus_frames_offset_child_meshes_after_rotation_and_negative_scale() {
     let root = Byml::from_text("Objs: [{UnitConfigName: Tree, HashId: !u 1}]").unwrap();
     let mut file = MapFile::from_bytes(&root.to_binary(roead::Endian::Little)).unwrap();
@@ -210,6 +285,77 @@ fn software_renderer_places_instances_and_invalidates_after_moving() {
             .count(),
         0
     );
+}
+
+#[test]
+#[ignore = "requires a graphics adapter"]
+fn gpu_render_cache_tracks_camera_edit_undo_selection_and_textures() {
+    use crate::model::model_preview::{ModelDocumentState, ModelInstance, RgbaTexture};
+    use crate::ui::views::model_preview::wgpu_renderer::render_wgpu_scene;
+    let mut scene = ModelDocumentState::from_bfres("cache-test", "cache-test", &Default::default());
+    let mut mesh = geometry::cube("cache-test");
+    mesh.texture_name = Some("color".into());
+    loader::push_mesh(&mut scene, mesh);
+    scene.camera.target = [0.; 3];
+    scene.camera.distance = 8.;
+    scene.instances = Some(Arc::new(vec![ModelInstance {
+        mesh_index: 0,
+        transform: Transform::default(),
+        selected: false,
+    }]));
+    Arc::make_mut(&mut scene.textures).insert(
+        "color".into(),
+        Arc::new(RgbaTexture {
+            width: 1,
+            height: 1,
+            rgba: Arc::new(vec![200, 40, 20, 255]),
+        }),
+    );
+    let render = |s: &ModelDocumentState| render_wgpu_scene(s, 128., 128.).unwrap();
+    let original = scene.clone();
+    let first = render(&scene);
+    assert!(first.as_bytes(0).unwrap().chunks_exact(4).any(|p| p[3] > 0));
+    assert!(
+        Arc::ptr_eq(&first, &render(&scene)),
+        "unchanged frame must be reused"
+    );
+    scene.camera.yaw += 0.4;
+    assert_ne!(first.as_bytes(0), render(&scene).as_bytes(0));
+    scene = original.clone();
+    scene.selected_mesh_idx = Some(0);
+    assert_ne!(first.as_bytes(0), render(&scene).as_bytes(0));
+    scene = original.clone();
+    Arc::make_mut(scene.instances.as_mut().unwrap())[0]
+        .transform
+        .translation[0] = 100.;
+    assert!(render(&scene)
+        .as_bytes(0)
+        .unwrap()
+        .chunks_exact(4)
+        .all(|p| p[3] == 0));
+    scene = original.clone();
+    assert_eq!(
+        first.as_bytes(0),
+        render(&scene).as_bytes(0),
+        "undo must restore pixels"
+    );
+    Arc::make_mut(&mut scene.textures).insert(
+        "color".into(),
+        Arc::new(RgbaTexture {
+            width: 1,
+            height: 1,
+            rgba: Arc::new(vec![20, 200, 40, 255]),
+        }),
+    );
+    assert_ne!(first.as_bytes(0), render(&scene).as_bytes(0));
+    scene = original.clone();
+    Arc::make_mut(&mut scene.mesh_items)[0].visible = false;
+    assert!(render(&scene)
+        .as_bytes(0)
+        .unwrap()
+        .chunks_exact(4)
+        .all(|p| p[3] == 0));
+    assert_eq!(first.as_bytes(0), render(&original).as_bytes(0));
 }
 
 #[test]

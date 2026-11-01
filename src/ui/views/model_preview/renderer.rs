@@ -9,6 +9,15 @@ use std::sync::{Arc, Mutex};
 
 static LAST_PAINTED_FRAME: Mutex<Option<Arc<RenderImage>>> = Mutex::new(None);
 
+pub fn paint_rendered_image(image: Arc<RenderImage>, bounds: Bounds<Pixels>, window: &mut Window) {
+    let _ = window.paint_image(bounds,bounds,Corners::default(),image.clone(),0,false);
+    if let Ok(mut previous) = LAST_PAINTED_FRAME.lock() {
+        if let Some(old) = previous.replace(image.clone()) {
+            if old.id != image.id { let _ = window.drop_image(old); }
+        }
+    }
+}
+
 /// 渲染 3D 模型完整视口画布 (包含地面参考网格、坐标轴、模型实体/线框及包围盒)
 pub fn draw_model_viewport(
     state: &ModelDocumentState,

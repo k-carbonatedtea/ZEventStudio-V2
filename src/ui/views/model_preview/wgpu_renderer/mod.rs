@@ -5,6 +5,7 @@ pub mod geometry;
 pub mod pipeline;
 pub mod shaders;
 pub mod target;
+pub mod terrain;
 pub mod textures;
 pub mod types;
 
@@ -27,8 +28,11 @@ struct WgpuEngineState {
     geometries: GpuGeometryCache,
     target: Option<RenderTargetBundle>,
     cached_frame: Option<(WgpuCacheKey, Arc<RenderImage>)>,
-    source_meshes: Option<Arc<Vec<rbfres_library::ExtractedMesh>>>,
-    source_instances: Option<Arc<Vec<crate::model::model_preview::ModelInstance>>>,
+    source_scene: Option<ModelDocumentState>,
+    camera_buffer: wgpu::Buffer,
+    camera_bind_group: wgpu::BindGroup,
+    bundle: Option<wgpu::RenderBundle>,
+    terrain: Option<terrain::GpuTerrainMaterials>,
 }
 
 static ENGINE_STATE: Mutex<Option<WgpuEngineState>> = Mutex::new(None);
@@ -62,28 +66,61 @@ pub fn render_wgpu_scene(
         let pipeline = WgpuPipeline::new(&ctx.device)?;
         let textures = GpuTextureManager::new(&ctx)?;
         let geometries = GpuGeometryCache::new();
+        let camera_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Scene camera"),
+            size: 64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let camera_bind_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Scene camera"),
+            layout: &pipeline.camera_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.as_entire_binding(),
+            }],
+        });
         *guard = Some(WgpuEngineState {
             pipeline,
             textures,
             geometries,
             target: None,
             cached_frame: None,
-            source_meshes: None,
-            source_instances: None,
+            source_scene: None,
+            camera_buffer,
+            camera_bind_group,
+            bundle: None,
+            terrain: None,
         });
     }
 
     let engine = guard.as_mut()?;
     // Retain the source allocation while its frame is cached. Pointer reuse can
     // otherwise make undo/reload return an image from an unrelated scene.
-    if engine.source_meshes.as_ref().is_none_or(|m|!Arc::ptr_eq(m,&state.meshes)) {
+    if engine.source_scene.as_ref().is_none_or(|m| {
+        !Arc::ptr_eq(&m.meshes, &state.meshes) || !Arc::ptr_eq(&m.textures, &state.textures)
+    }) {
+        engine.bundle = None;
         engine.geometries.clear();
         engine.textures.cache.clear();
     }
-    engine.source_meshes=Some(state.meshes.clone());
-    engine.source_instances=state.instances.clone();
+    if engine
+        .source_scene
+        .as_ref()
+        .is_none_or(|m| !same_draw_data(m, state))
+    {
+        engine.bundle = None;
+    }
+    if engine.terrain.as_ref().map(|m| Arc::as_ptr(&m.source))
+        != state.terrain.as_ref().map(Arc::as_ptr)
+    {
+        engine.terrain = state.terrain.as_ref().and_then(|data| {
+            terrain::GpuTerrainMaterials::new(&ctx, &engine.pipeline, data.clone())
+        });
+    }
     let render_image = render_scene_pass(&ctx, engine, state, target_w, target_h)?;
 
+    engine.source_scene = Some(state.clone());
     engine.cached_frame = Some((cache_key, render_image.clone()));
     Some(render_image)
 }
@@ -93,6 +130,17 @@ struct PreparedMeshDraw {
     bind_group: Arc<wgpu::BindGroup>,
     index_count: u32,
     geom_key: (String, usize),
+    terrain: Option<Arc<wgpu::BindGroup>>,
+}
+
+fn same_draw_data(a: &ModelDocumentState, b: &ModelDocumentState) -> bool {
+    Arc::ptr_eq(&a.meshes, &b.meshes)
+        && a.instances.as_ref().map(Arc::as_ptr) == b.instances.as_ref().map(Arc::as_ptr)
+        && Arc::ptr_eq(&a.textures, &b.textures)
+        && Arc::ptr_eq(&a.mesh_items, &b.mesh_items)
+        && a.terrain.as_ref().map(Arc::as_ptr) == b.terrain.as_ref().map(Arc::as_ptr)
+        && a.selected_mesh_idx == b.selected_mesh_idx
+        && a.file_path == b.file_path
 }
 
 /// 执行单帧 WGPU 渲染 Pass 与显存读回
@@ -113,76 +161,22 @@ fn render_scene_pass(
     let mvp = proj.mul(&view);
 
     let sun_norm = normalize_sun([0.35, 0.80, 0.45]);
-    let projector = state.camera.projector(target_w as f32, target_h as f32);
+    ctx.queue.write_buffer(
+        &engine.camera_buffer,
+        0,
+        bytemuck::bytes_of(&mvp.to_cols_array_2d()),
+    );
 
-    // 1. 预处理所有待绘制网格 (准备显存缓冲、贴图与常量 UBO)
-    let mut draw_calls = Vec::new();
-    let mut instances_by_mesh = vec![Vec::new(); state.meshes.len()];
-    if let Some(instances) = &state.instances {
-        for instance in instances.iter() {
-            if let Some(batch) = instances_by_mesh.get_mut(instance.mesh_index) {
-                batch.push(GpuInstance::new(instance.transform, instance.selected));
-            }
-        }
+    if engine.bundle.is_none() {
+        engine.bundle = Some(prepare_bundle(ctx, engine, state, sun_norm)?);
     }
-    for (mesh_idx, mesh) in state.meshes.iter().enumerate() {
-        if state.instances.is_some() && instances_by_mesh[mesh_idx].is_empty() {continue;}
-        if state.mesh_items.get(mesh_idx).is_none_or(|item| !item.visible) {
-            continue;
-        }
-
-        let b_min = [mesh.bounding_box.min().x, mesh.bounding_box.min().y, mesh.bounding_box.min().z];
-        let b_max = [mesh.bounding_box.max().x, mesh.bounding_box.max().y, mesh.bounding_box.max().z];
-        if state.instances.is_none() && projector.is_all_behind_camera(b_min, b_max) {
-            continue;
-        }
-
-        let is_selected = state.selected_mesh_idx == Some(mesh_idx);
-        let base_hsla = get_material_color(
-            mesh.material_name.as_deref().unwrap_or(""),
-            mesh_idx,
-            is_selected,
-        );
-        let base_rgba = hsla_to_vec4(base_hsla);
-
-        let (tex_view, has_texture) = resolve_mesh_texture(ctx, engine, state, mesh);
-        let geom = engine.geometries.get_or_upload(&ctx.device, &state.file_path, mesh_idx, mesh)?;
-        if state.instances.is_some() {
-            geom.update_instances(&ctx.device, &ctx.queue, &instances_by_mesh[mesh_idx]);
-        } else {
-            geom.update_instances(&ctx.device, &ctx.queue, &[GpuInstance::new(Default::default(), false)]);
-        }
-
-        let uniforms = GpuUniforms {
-            mvp: mvp.to_cols_array_2d(),
-            sun_dir: sun_norm,
-            base_color: base_rgba,
-            flags: [
-                if has_texture { 1 } else { 0 },
-                if mesh.is_alpha_cutout() { 1 } else { 0 },
-                if is_selected { 1 } else { 0 },
-                mesh.display_face as u32,
-            ],
-        };
-
-        geom.update_uniforms(&ctx.queue, &uniforms);
-        let bind_group = geom.get_or_create_bind_group(&ctx.device, &engine.pipeline, &tex_view)?;
-
-        draw_calls.push(PreparedMeshDraw {
-            transparent: mesh.texture_name.as_ref().is_some_and(|n|n=="__map_marker"||n=="__terrain_water"),
-            bind_group,
-            index_count: geom.index_count,
-            geom_key: (state.file_path.clone(), mesh_idx),
-        });
-    }
-
-    draw_calls.sort_by_key(|d|d.transparent);
     let target = engine.target.as_ref()?;
-    let mut encoder = ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("Model Preview Render Encoder"),
-    });
+    let mut encoder = ctx
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Model Preview Render Encoder"),
+        });
 
-    // 2. 执行 GPU RenderPass 绘制全部可见网格
     {
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Model Preview Render Pass"),
@@ -191,12 +185,7 @@ fn render_scene_pass(
                 resolve_target: None,
                 depth_slice: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: 0.0,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 0.0,
-                    }),
+                    load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
                     store: wgpu::StoreOp::Store,
                 },
             })],
@@ -212,21 +201,141 @@ fn render_scene_pass(
             occlusion_query_set: None,
             multiview_mask: None,
         });
-
-        for draw in &draw_calls {
-            pass.set_pipeline(if draw.transparent {&engine.pipeline.transparent_pipeline}else{&engine.pipeline.pipeline});
-            let Some(geom) = engine.geometries.get_or_upload(&ctx.device, &draw.geom_key.0, draw.geom_key.1, &state.meshes[draw.geom_key.1]) else {
-                continue;
-            };
-
-            pass.set_bind_group(0, draw.bind_group.as_ref(), &[]);
-            pass.set_vertex_buffer(0, geom.vertex_buffer.slice(..));
-            pass.set_vertex_buffer(1, geom.instance_buffer.slice(..));
-            pass.set_index_buffer(geom.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-            pass.draw_indexed(0..draw.index_count, 0, 0..geom.instance_count);
-        }
+        pass.execute_bundles(std::iter::once(engine.bundle.as_ref()?));
     }
 
+    readback(ctx, target, encoder, target_w, target_h)
+}
+
+fn prepare_bundle(
+    ctx: &WgpuContext,
+    engine: &mut WgpuEngineState,
+    state: &ModelDocumentState,
+    sun_norm: [f32; 4],
+) -> Option<wgpu::RenderBundle> {
+    // 1. 预处理所有待绘制网格 (准备显存缓冲、贴图与常量 UBO)
+    let mut draw_calls = Vec::new();
+    let mut instances_by_mesh = vec![Vec::new(); state.meshes.len()];
+    if let Some(instances) = &state.instances {
+        for instance in instances.iter() {
+            if let Some(batch) = instances_by_mesh.get_mut(instance.mesh_index) {
+                batch.push(GpuInstance::new(instance.transform, instance.selected));
+            }
+        }
+    }
+    for (mesh_idx, mesh) in state.meshes.iter().enumerate() {
+        if state.instances.is_some() && instances_by_mesh[mesh_idx].is_empty() {
+            continue;
+        }
+        if state
+            .mesh_items
+            .get(mesh_idx)
+            .is_none_or(|item| !item.visible)
+        {
+            continue;
+        }
+
+        let is_selected = state.selected_mesh_idx == Some(mesh_idx);
+        let base_hsla = get_material_color(
+            mesh.material_name.as_deref().unwrap_or(""),
+            mesh_idx,
+            is_selected,
+        );
+        let base_rgba = hsla_to_vec4(base_hsla);
+
+        let (tex_view, has_texture) = resolve_mesh_texture(ctx, engine, state, mesh);
+        let geom =
+            engine
+                .geometries
+                .get_or_upload(&ctx.device, &state.file_path, mesh_idx, mesh)?;
+        if state.instances.is_some() {
+            geom.update_instances(&ctx.device, &ctx.queue, &instances_by_mesh[mesh_idx]);
+        } else {
+            geom.update_instances(
+                &ctx.device,
+                &ctx.queue,
+                &[GpuInstance::new(Default::default(), false)],
+            );
+        }
+
+        let uniforms = GpuUniforms {
+            mvp: Mat4::identity().to_cols_array_2d(),
+            sun_dir: sun_norm,
+            base_color: base_rgba,
+            flags: [
+                if has_texture { 1 } else { 0 },
+                if mesh.is_alpha_cutout() { 1 } else { 0 },
+                if is_selected { 1 } else { 0 },
+                mesh.display_face as u32,
+            ],
+        };
+
+        geom.update_uniforms(&ctx.queue, &uniforms);
+        let bind_group = geom.get_or_create_bind_group(&ctx.device, &engine.pipeline, &tex_view)?;
+
+        draw_calls.push(PreparedMeshDraw {
+            transparent: mesh
+                .texture_name
+                .as_ref()
+                .is_some_and(|n| n == "__map_marker" || n == "__terrain_water"),
+            bind_group,
+            index_count: geom.index_count,
+            geom_key: (state.file_path.clone(), mesh_idx),
+            terrain: mesh
+                .texture_name
+                .as_deref()
+                .and_then(|name| engine.terrain.as_ref()?.get_bind_group(name)),
+        });
+    }
+
+    draw_calls.sort_by_key(|d| d.transparent);
+    let mut bundle =
+        ctx.device
+            .create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
+                label: Some("Reusable scene draw commands"),
+                color_formats: &[Some(wgpu::TextureFormat::Bgra8Unorm)],
+                depth_stencil: Some(wgpu::RenderBundleDepthStencil {
+                    format: wgpu::TextureFormat::Depth32Float,
+                    depth_read_only: false,
+                    stencil_read_only: true,
+                }),
+                sample_count: 1,
+                multiview: None,
+            });
+    for draw in &draw_calls {
+        bundle.set_pipeline(if draw.terrain.is_some() {
+            &engine.pipeline.terrain_pipeline
+        } else if draw.transparent {
+            &engine.pipeline.transparent_pipeline
+        } else {
+            &engine.pipeline.pipeline
+        });
+        let Some(geom) = engine.geometries.get(&draw.geom_key.0, draw.geom_key.1) else {
+            continue;
+        };
+
+        bundle.set_bind_group(0, draw.bind_group.as_ref(), &[]);
+        if let Some(terrain) = &draw.terrain {
+            bundle.set_bind_group(1, terrain.as_ref(), &[]);
+        }
+        bundle.set_bind_group(2, &engine.camera_bind_group, &[]);
+        bundle.set_vertex_buffer(0, geom.vertex_buffer.slice(..));
+        bundle.set_vertex_buffer(1, geom.instance_buffer.slice(..));
+        bundle.set_index_buffer(geom.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+        bundle.draw_indexed(0..draw.index_count, 0, 0..geom.instance_count);
+    }
+    Some(bundle.finish(&wgpu::RenderBundleDescriptor {
+        label: Some("Scene draw commands"),
+    }))
+}
+
+fn readback(
+    ctx: &WgpuContext,
+    target: &RenderTargetBundle,
+    mut encoder: wgpu::CommandEncoder,
+    target_w: u32,
+    target_h: u32,
+) -> Option<Arc<RenderImage>> {
     // 3. 将离屏颜色纹理拷贝至可回读暂存缓冲 StagingBuffer
     encoder.copy_texture_to_buffer(
         wgpu::TexelCopyTextureInfo {
@@ -254,16 +363,24 @@ fn render_scene_pass(
 
     // 4. 映射暂存缓冲并读回原始 RGBA/BGRA 像素
     let (sender, receiver) = std::sync::mpsc::channel();
-    target.staging_buffer.slice(..).map_async(wgpu::MapMode::Read, move |result| {
-        let _ = sender.send(result);
-    });
+    target
+        .staging_buffer
+        .slice(..)
+        .map_async(wgpu::MapMode::Read, move |result| {
+            let _ = sender.send(result);
+        });
 
-    ctx.device.poll(wgpu::PollType::Wait {
-        submission_index: Some(submission),
-        timeout: Some(std::time::Duration::from_secs(10)),
-    }).ok()?;
+    ctx.device
+        .poll(wgpu::PollType::Wait {
+            submission_index: Some(submission),
+            timeout: Some(std::time::Duration::from_secs(10)),
+        })
+        .ok()?;
 
-    receiver.recv_timeout(std::time::Duration::from_secs(10)).ok()?.ok()?;
+    receiver
+        .recv_timeout(std::time::Duration::from_secs(10))
+        .ok()?
+        .ok()?;
 
     let mapped_range = target.staging_buffer.slice(..).get_mapped_range().ok()?;
     let unpadded = target.unpadded_bytes_per_row as usize;
@@ -282,11 +399,7 @@ fn render_scene_pass(
     drop(mapped_range);
     target.staging_buffer.unmap();
 
-    let img_buffer = ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(
-        target_w,
-        target_h,
-        raw_pixels,
-    )?;
+    let img_buffer = ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(target_w, target_h, raw_pixels)?;
     Some(Arc::new(RenderImage::new(vec![Frame::new(img_buffer)])))
 }
 
@@ -304,7 +417,11 @@ fn resolve_mesh_texture(
             }
         }
     }
-    for ref_name in mesh.texture_refs.iter().filter(|n| rbfres_library::ExtractedMesh::is_color_texture(n)) {
+    for ref_name in mesh
+        .texture_refs
+        .iter()
+        .filter(|n| rbfres_library::ExtractedMesh::is_color_texture(n))
+    {
         if let Some(tex) = state.textures.get(ref_name) {
             if let Some(view) = engine.textures.get_or_upload(ctx, ref_name, tex) {
                 return (view, true);
@@ -314,17 +431,22 @@ fn resolve_mesh_texture(
     (engine.textures.default_white.clone(), false)
 }
 
-fn compute_cache_key(state: &ModelDocumentState, target_w: u32, target_h: u32) -> WgpuCacheKey {
-    let mut vis_hash = 0u64;
-    for (i, item) in state.mesh_items.iter().enumerate() {
-        if item.visible {
-            vis_hash = vis_hash.wrapping_add(1u64 << (i % 64));
-        }
-    }
-
+pub(crate) fn compute_cache_key(
+    state: &ModelDocumentState,
+    target_w: u32,
+    target_h: u32,
+) -> WgpuCacheKey {
     WgpuCacheKey {
         geometry_identity: Arc::as_ptr(&state.meshes) as usize,
-        instance_identity: state.instances.as_ref().map_or(0, |i| Arc::as_ptr(i) as usize),
+        instance_identity: state
+            .instances
+            .as_ref()
+            .map_or(0, |i| Arc::as_ptr(i) as usize),
+        texture_identity: Arc::as_ptr(&state.textures) as usize,
+        terrain_identity: state
+            .terrain
+            .as_ref()
+            .map_or(0, |i| Arc::as_ptr(i) as usize),
         model_path: state.file_path.clone(),
         yaw_bits: state.camera.yaw.to_bits(),
         pitch_bits: state.camera.pitch.to_bits(),
@@ -339,7 +461,7 @@ fn compute_cache_key(state: &ModelDocumentState, target_w: u32, target_h: u32) -
         view_h: target_h,
         render_mode: state.render_mode,
         selected_mesh_idx: state.selected_mesh_idx,
-        visibility_hash: vis_hash,
+        visibility_hash: Arc::as_ptr(&state.mesh_items) as usize as u64,
     }
 }
 
@@ -349,15 +471,17 @@ fn hsla_to_vec4(hsla: gpui::Hsla) -> [f32; 4] {
 }
 
 fn normalize_sun(dir: [f32; 3]) -> [f32; 4] {
-    let len = (dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]).sqrt().max(0.001);
+    let len = (dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2])
+        .sqrt()
+        .max(0.001);
     [dir[0] / len, dir[1] / len, dir[2] / len, 0.0]
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
     use rbfres_library::BfresFile;
+    use std::path::Path;
 
     #[test]
     fn test_wgpu_render_dungeon085() {
@@ -366,16 +490,24 @@ mod tests {
             return;
         }
         let virtual_path = format!("SARC:{}//Model/DgnMrgPrt_Dungeon085.sbfres", pack_path);
-        let Ok(bytes) = crate::model::file_tree::read_file_from_path(&virtual_path) else { return; };
+        let Ok(bytes) = crate::model::file_tree::read_file_from_path(&virtual_path) else {
+            return;
+        };
         let decomp = crate::model::file_converter::decompress_if_yaz0(&bytes);
-        let Ok(bfres) = BfresFile::from_bytes(&decomp) else { return; };
-        let mut state = ModelDocumentState::from_bfres(&virtual_path, "DgnMrgPrt_Dungeon085.sbfres", &bfres);
+        let Ok(bfres) = BfresFile::from_bytes(&decomp) else {
+            return;
+        };
+        let mut state =
+            ModelDocumentState::from_bfres(&virtual_path, "DgnMrgPrt_Dungeon085.sbfres", &bfres);
         crate::model::model_preview::load_companion_textures(&virtual_path, &bfres, &mut state);
 
         let start = std::time::Instant::now();
         let image = render_wgpu_scene(&state, 1280.0, 720.0);
         let elapsed = start.elapsed();
-        println!(">>> 200,000 Triangles 1st Frame (Cold Init + Upload) Time: {:?}", elapsed);
+        println!(
+            ">>> 200,000 Triangles 1st Frame (Cold Init + Upload) Time: {:?}",
+            elapsed
+        );
 
         let start2 = std::time::Instant::now();
         let image2 = render_wgpu_scene(&state, 1280.0, 720.0);
@@ -388,7 +520,10 @@ mod tests {
         let start3 = std::time::Instant::now();
         let image3 = render_wgpu_scene(&rotated_state, 1280.0, 720.0);
         let elapsed3 = start3.elapsed();
-        println!(">>> 3rd Frame (Camera Rotating, Full 200,000 Triangles GPU Render) Time: {:?}", elapsed3);
+        println!(
+            ">>> 3rd Frame (Camera Rotating, Full 200,000 Triangles GPU Render) Time: {:?}",
+            elapsed3
+        );
 
         assert!(image.is_some() && image2.is_some() && image3.is_some());
     }

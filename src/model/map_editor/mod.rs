@@ -387,13 +387,20 @@ impl MapDocumentState {
     }
 
     /// Nearest actual triangle hit. Local AABB rejection avoids testing every triangle.
-    pub fn pick(&self, x: f32, y: f32, width: f32, height: f32) -> Option<usize> {
-        let (right, up, forward) = self.scene.camera.compute_basis();
-        let tan = (self.scene.camera.fov / 2.).tan();
+    pub fn pick_with_camera(
+        &self,
+        camera: &super::model_preview::OrbitCamera,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+    ) -> Option<usize> {
+        let (right, up, forward) = camera.compute_basis();
+        let tan = (camera.fov / 2.).tan();
         let nx = (2. * x / width - 1.) * width / height * tan;
         let ny = (1. - 2. * y / height) * tan;
         let direction = std::array::from_fn(|i| forward[i] + right[i] * nx + up[i] * ny);
-        let eye = self.scene.camera.compute_eye();
+        let eye = camera.compute_eye();
         let mut nearest = f32::INFINITY;
         let mut hit = None;
         for (instance, owner) in self

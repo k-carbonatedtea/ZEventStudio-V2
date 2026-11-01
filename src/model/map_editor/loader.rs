@@ -4,7 +4,11 @@ use crate::model::{
     settings::GamePathSettings,
 };
 use rbfres_library::{BfresFile, ExtractedMesh};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+    time::Instant,
+};
 use uking_library::{
     map::actor_name,
     terrain::{section_center, HeightField, TerrainTable},
@@ -12,7 +16,7 @@ use uking_library::{
 
 pub(super) fn push_mesh(scene: &mut ModelDocumentState, mesh: ExtractedMesh) -> usize {
     let index = scene.mesh_items.len();
-    scene.mesh_items.push(PreviewMeshItem {
+    Arc::make_mut(&mut scene.mesh_items).push(PreviewMeshItem {
         name: mesh.name.clone(),
         material_name: mesh.material_name.clone().unwrap_or_default(),
         texture_name: mesh.texture_name.clone(),
@@ -39,6 +43,8 @@ pub fn load_scene(
     settings: GamePathSettings,
     project: Option<String>,
 ) -> Result<MapDocumentState, String> {
+    let started = Instant::now();
+    let profile = std::env::var_os("ZEVENT_PROFILE_LOAD").is_some();
     let mut resources = Resources::new(
         &doc.scene.file_path,
         project.as_deref(),
@@ -55,7 +61,6 @@ pub fn load_scene(
         .map(|a| actor_name(a).to_string())
         .collect();
     let mut cache: HashMap<(String, String), Vec<usize>> = HashMap::new();
-    let mut parsed_files: HashMap<String, Arc<BfresFile>> = HashMap::new();
     let mut loaded_textures = std::collections::HashSet::new();
     let marker_index = push_mesh(&mut doc.scene, geometry::cube("Editor marker"));
     assets.round_markers = [
@@ -63,7 +68,7 @@ pub fn load_scene(
         push_mesh(&mut doc.scene, geometry::round_marker(false)),
     ];
     let marker_texture = "__map_marker".to_string();
-    doc.scene.textures.insert(
+    Arc::make_mut(&mut doc.scene.textures).insert(
         marker_texture.clone(),
         Arc::new(RgbaTexture {
             width: 1,
@@ -127,8 +132,9 @@ pub fn load_scene(
                 ) {
                     Ok(npc) => {
                         let ns = format!("__umii_{name}");
-                        for (name, texture) in npc.textures {
-                            doc.scene.textures.insert(format!("{ns}::{name}"), texture);
+                        for (name, texture) in npc.textures.iter() {
+                            Arc::make_mut(&mut doc.scene.textures)
+                                .insert(format!("{ns}::{name}"), texture.clone());
                         }
                         for mut mesh in npc.meshes.iter().cloned() {
                             mesh.texture_name = mesh.texture_name.map(|n| format!("{ns}::{n}"));
@@ -157,20 +163,11 @@ pub fn load_scene(
                     visual.diagnostic = Some(format!("模型文件缺失: {folder} / {unit}"));
                     continue;
                 };
-                let bfres = if let Some(file) = parsed_files.get(&resource.path) {
-                    file.clone()
-                } else {
-                    let data = uking_library::decompress(&resource.bytes)?;
-                    match BfresFile::from_bytes(&data) {
-                        Ok(file) => {
-                            let file = Arc::new(file);
-                            parsed_files.insert(resource.path.clone(), file.clone());
-                            file
-                        }
-                        Err(e) => {
-                            visual.diagnostic = Some(format!("{}: {e}", resource.path));
-                            continue;
-                        }
+                let bfres = match resources.parse_model(&resource) {
+                    Ok(file) => file,
+                    Err(e) => {
+                        visual.diagnostic = Some(format!("{}: {e}", resource.path));
+                        continue;
                     }
                 };
                 let mut indices = Vec::new();
@@ -181,10 +178,12 @@ pub fn load_scene(
                 }
                 let namespace = resource.path.clone();
                 if loaded_textures.insert(namespace.clone()) {
+                    let names = color_texture_names(&bfres);
                     let mut textures = ModelDocumentState::from_bfres("", "", &Default::default());
-                    crate::model::model_preview::texture_loader::extract_bfres_textures(
+                    crate::model::model_preview::texture_loader::extract_bfres_textures_filtered(
                         &bfres,
                         &mut textures,
+                        &names,
                     );
                     for suffix in [
                         "Tex", "Tex1", "Tex2", "Tex1.1", "Tex1.2", "Tex1.3", "Tex1.4", "Tex1.5",
@@ -193,16 +192,16 @@ pub fn load_scene(
                         if let Some(tex) =
                             resources.read(&format!("Model/{folder}.{suffix}.sbfres"))
                         {
-                            crate::model::model_preview::texture_loader::load_tex_bytes(
+                            crate::model::model_preview::texture_loader::load_tex_bytes_filtered(
                                 &tex.bytes,
                                 &mut textures,
+                                &names,
                             );
                         }
                     }
-                    for (name, texture) in textures.textures {
-                        doc.scene
-                            .textures
-                            .insert(format!("{namespace}::{name}"), texture);
+                    for (name, texture) in textures.textures.iter() {
+                        Arc::make_mut(&mut doc.scene.textures)
+                            .insert(format!("{namespace}::{name}"), texture.clone());
                     }
                 }
                 for (model_name, model) in bfres.models.iter() {
@@ -240,12 +239,24 @@ pub fn load_scene(
         }
         assets.actors.insert(name, visual);
     }
-    drop(parsed_files);
-    load_actor_terrain_materials(&mut doc, &mut resources, &mut assets, project.as_deref());
+    if profile {
+        eprintln!(
+            "[MAP LOAD] actors/models/textures: {:.3}s",
+            started.elapsed().as_secs_f64()
+        );
+    }
+    let mut materials = super::terrain_material::TerrainMaterials::new(project.as_deref());
+    load_actor_terrain_materials(&mut doc, &mut resources, &mut assets, &mut materials);
+    if profile {
+        eprintln!(
+            "[MAP LOAD] shared terrain materials: {:.3}s",
+            started.elapsed().as_secs_f64()
+        );
+    }
     if let Err(error) = load_dungeon_background(&mut doc, &mut resources, &mut assets) {
         assets.warnings.push(error);
     }
-    if let Err(error) = load_terrain(&mut doc, &mut resources, &mut assets, project.as_deref()) {
+    if let Err(error) = load_terrain(&mut doc, &mut resources, &mut assets, &mut materials) {
         assets.warnings.push(error);
     }
     doc.assets = Arc::new(assets);
@@ -254,14 +265,35 @@ pub fn load_scene(
     doc.scene.fit_camera();
     doc.scene.camera.distance *= 0.65;
     doc.scene.camera.pitch = 0.7;
+    if profile {
+        eprintln!(
+            "[MAP LOAD] complete: {:.3}s, decoded textures: {}",
+            started.elapsed().as_secs_f64(),
+            doc.scene.textures.len()
+        );
+    }
     Ok(doc)
+}
+
+fn color_texture_names(file: &BfresFile) -> HashSet<String> {
+    file.models
+        .values()
+        .flat_map(|model| model.materials.values())
+        .filter_map(|material| {
+            material
+                .albedo_binding()
+                .and_then(|i| material.texture_refs.get(i))
+        })
+        .filter(|name| name.as_str() != "MaterialAlb")
+        .cloned()
+        .collect()
 }
 
 fn load_actor_terrain_materials(
     doc: &mut MapDocumentState,
     resources: &mut Resources,
     assets: &mut MapAssets,
-    project: Option<&str>,
+    materials: &mut super::terrain_material::TerrainMaterials,
 ) {
     let bindings: Vec<_> = doc
         .scene
@@ -276,13 +308,12 @@ fn load_actor_terrain_materials(
     if bindings.is_empty() {
         return;
     }
-    let mut materials = super::terrain_material::TerrainMaterials::new(project);
     if let Err(e) = materials.load_game_array(resources) {
         assets.warnings.push(e);
     }
     for (name, index) in bindings {
         if let Some(texture) = materials.layer(index) {
-            doc.scene.textures.insert(name, texture);
+            Arc::make_mut(&mut doc.scene.textures).insert(name, texture);
         } else {
             assets
                 .warnings
@@ -311,21 +342,26 @@ fn load_dungeon_background(
     let Some(resource) = resources.model_file(&folder, "") else {
         return Err(format!("缺少神庙合并模型 {folder}"));
     };
-    let bfres = BfresFile::from_bytes(&uking_library::decompress(&resource.bytes)?)
-        .map_err(|e| e.to_string())?;
+    let bfres = resources.parse_model(&resource)?;
     let ns = resource.path;
     let mut textures = ModelDocumentState::from_bfres("", "", &Default::default());
-    crate::model::model_preview::texture_loader::extract_bfres_textures(&bfres, &mut textures);
+    let names = color_texture_names(&bfres);
+    crate::model::model_preview::texture_loader::extract_bfres_textures_filtered(
+        &bfres,
+        &mut textures,
+        &names,
+    );
     for suffix in ["Tex", "Tex1", "Tex2"] {
         if let Some(resource) = resources.read(&format!("Model/{folder}.{suffix}.sbfres")) {
-            crate::model::model_preview::texture_loader::load_tex_bytes(
+            crate::model::model_preview::texture_loader::load_tex_bytes_filtered(
                 &resource.bytes,
                 &mut textures,
+                &names,
             );
         }
     }
-    for (name, texture) in textures.textures {
-        doc.scene.textures.insert(format!("{ns}::{name}"), texture);
+    for (name, texture) in textures.textures.iter() {
+        Arc::make_mut(&mut doc.scene.textures).insert(format!("{ns}::{name}"), texture.clone());
     }
     for (_, model) in bfres.models.iter() {
         for mut mesh in ExtractedMesh::extract_from_model(model, bfres.byte_order) {
@@ -364,7 +400,7 @@ fn load_context(doc: &MapDocumentState, resources: &mut Resources, assets: &mut 
         .ok()
         .map(|bytes| super::resources::Resource {
             path: candidate,
-            bytes,
+            bytes: Arc::new(bytes),
         });
     if found.is_none() {
         let normalized = path.replace('\\', "/");
@@ -399,7 +435,7 @@ fn load_terrain(
     doc: &mut MapDocumentState,
     resources: &mut Resources,
     assets: &mut MapAssets,
-    project: Option<&str>,
+    materials: &mut super::terrain_material::TerrainMaterials,
 ) -> Result<(), String> {
     let path = doc.scene.file_path.replace('\\', "/");
     let file_name = path.rsplit('/').next().unwrap_or("");
@@ -417,10 +453,10 @@ fn load_terrain(
         .ok_or("没有找到地形索引 TSCB，请配置游戏资源目录")?;
     let data = uking_library::decompress(&resource.bytes)?;
     let table = TerrainTable::from_bytes(&data)?;
-    let mut materials = super::terrain_material::TerrainMaterials::new(project);
     if let Err(error) = materials.load_game_array(resources) {
         assets.warnings.push(error);
     }
+    let mut render_data = materials.render_data(&table);
     let terrain_tiles = table.section_tiles(center, 1000., 250.);
     for &tile in &terrain_tiles {
         let height = match resources.terrain_file(field, tile, "hght") {
@@ -440,7 +476,15 @@ fn load_terrain(
                 let texture = materials.bake(&table, &material);
                 let texture_name = format!("__terrain_{}", tile.name);
                 mesh.texture_name = Some(texture_name.clone());
-                doc.scene.textures.insert(texture_name, Arc::new(texture));
+                render_data.tiles.insert(
+                    texture_name.clone(),
+                    Arc::new(RgbaTexture {
+                        width: 256,
+                        height: 256,
+                        rgba: Arc::new(material),
+                    }),
+                );
+                Arc::make_mut(&mut doc.scene.textures).insert(texture_name, Arc::new(texture));
             }
             Ok(_) => assets
                 .warnings
@@ -464,13 +508,15 @@ fn load_terrain(
                     if !mesh.indices.is_empty() {
                         let texture_name = "__terrain_water".to_string();
                         mesh.texture_name = Some(texture_name.clone());
-                        doc.scene.textures.entry(texture_name).or_insert_with(|| {
-                            Arc::new(RgbaTexture {
-                                width: 1,
-                                height: 1,
-                                rgba: Arc::new(vec![42, 132, 165, 190]),
-                            })
-                        });
+                        Arc::make_mut(&mut doc.scene.textures)
+                            .entry(texture_name)
+                            .or_insert_with(|| {
+                                Arc::new(RgbaTexture {
+                                    width: 1,
+                                    height: 1,
+                                    rgba: Arc::new(vec![42, 132, 165, 190]),
+                                })
+                            });
                         assets.water_meshes.push(push_mesh(&mut doc.scene, mesh));
                     }
                 }
@@ -481,5 +527,6 @@ fn load_terrain(
     if materials.missing {
         assets.warnings.push("未找到部分地形材质贴图；可将 MaterialAlb_*.png 放入 .cache/map_terrain，或设置 ZEVENT_TERRAIN_CACHE。地形高度仍使用原始数据。".into());
     }
+    doc.scene.terrain = Some(Arc::new(render_data));
     Ok(())
 }

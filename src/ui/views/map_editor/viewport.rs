@@ -6,6 +6,8 @@ use uking_library::map::{hash_id, Transform};
 pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &str) -> AnyElement {
     let rect = Arc::new(Mutex::new([0f32, 0., 1., 1.]));
     let paint_rect = rect.clone();
+    let displayed_camera = Arc::new(Mutex::new(None));
+    let painted_camera = displayed_camera.clone();
     let snapshot = map.clone();
     let mut view = div()
         .id("map-viewport")
@@ -25,12 +27,27 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
                         bounds.size.height.into(),
                     ];
                     if !snapshot.loading {
-                        crate::ui::views::model_preview::renderer::draw_model_viewport(
-                            &snapshot.scene,
-                            bounds,
-                            window,
+                        let scale = window.scale_factor();
+                        let (frame, pending) = super::async_render::request(
+                            &snapshot,
+                            f32::from(bounds.size.width) * scale,
+                            f32::from(bounds.size.height) * scale,
                         );
-                        draw_selection(&snapshot, bounds, window);
+                        if let Some(frame) = frame {
+                            if let Some(image) = &frame.image {
+                                crate::ui::views::model_preview::renderer::paint_rendered_image(
+                                    image.clone(),
+                                    bounds,
+                                    window,
+                                );
+                                *painted_camera.lock().unwrap() =
+                                    Some(frame.map.scene.camera.clone());
+                                draw_selection(&frame.map, bounds, window);
+                            }
+                        }
+                        if pending {
+                            window.request_animation_frame();
+                        }
                     }
                 },
             )
@@ -105,6 +122,7 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
         let mouse_up_model = model.clone();
         let tid = id.to_string();
         let r = rect.clone();
+        let displayed_camera = displayed_camera.clone();
         view = view.on_mouse_up(button, move |e, _, cx| {
             mouse_up_model.update(cx, |st, cx| {
                 st.update_map(&tid, |m| {
@@ -115,7 +133,14 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
                         && (pos.0 - m.press_mouse.0).hypot(pos.1 - m.press_mouse.1) < 4.
                     {
                         let r = *r.lock().unwrap();
-                        let hit = m.pick(pos.0 - r[0], pos.1 - r[1], r[2], r[3]);
+                        let camera = displayed_camera.lock().unwrap();
+                        let hit = m.pick_with_camera(
+                            camera.as_ref().unwrap_or(&m.scene.camera),
+                            pos.0 - r[0],
+                            pos.1 - r[1],
+                            r[2],
+                            r[3],
+                        );
                         m.select(hit);
                     }
                     m.orbiting = false;

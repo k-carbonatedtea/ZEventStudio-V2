@@ -68,6 +68,18 @@ pub struct RgbaTexture {
     pub rgba: std::sync::Arc<Vec<u8>>,
 }
 
+/// Native terrain materials are sampled in the fragment shader. The small
+/// per-tile texture in `textures` is only a software-renderer fallback.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TerrainRenderData {
+    /// Original-resolution repeating color layers, indexed by the material table.
+    pub layers: Vec<std::sync::Arc<RgbaTexture>>,
+    /// 256 entries: tile UV repetition X/Y, array layer, reserved.
+    pub material_params: Vec<[f32; 4]>,
+    /// Original 256x256 material IDs and blend weights, keyed by mesh texture name.
+    pub tiles: std::collections::HashMap<String, std::sync::Arc<RgbaTexture>>,
+}
+
 impl RgbaTexture {
     /// 基于 UV 坐标采样原始 RGBA8 像素值 [R, G, B, A] (采用快速分支消除 rem_euclid 耗时)
     #[inline(always)]
@@ -187,7 +199,8 @@ impl RgbaTexture {
         }
 
         let px = ((u_wrap * (self.width as f32 - 1.0)).round() as u32).min(self.width - 1) as usize;
-        let py = ((v_wrap * (self.height as f32 - 1.0)).round() as u32).min(self.height - 1) as usize;
+        let py =
+            ((v_wrap * (self.height as f32 - 1.0)).round() as u32).min(self.height - 1) as usize;
 
         let idx = (py * self.width as usize + px) * 4;
         if idx + 4 <= self.rgba.len() {
@@ -201,4 +214,3 @@ impl RgbaTexture {
         }
     }
 }
-
