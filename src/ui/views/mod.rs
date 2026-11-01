@@ -7,6 +7,7 @@ pub mod model_preview;
 pub mod msbt_editor;
 pub mod quest_map;
 pub mod timeline_editor;
+pub mod umii_editor;
 pub mod welcome;
 
 pub use actor_manager::render_actor_manager_view;
@@ -18,4 +19,5 @@ pub use model_preview::render_model_preview_view;
 pub use msbt_editor::render_msbt_bubble_editor;
 pub use quest_map::render_quest_map_view;
 pub use timeline_editor::render_timeline_editor_view;
+pub use umii_editor::render_umii_editor_view;
 pub use welcome::render_welcome_view;

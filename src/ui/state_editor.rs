@@ -42,7 +42,14 @@ impl AppState {
                     DocumentTabKind::ModelPreview => {
                         tab.is_modified = false;
                     }
-                    DocumentTabKind::Timeline => {
+                    DocumentTabKind::UmiiEditor => {
+                        if let Some(ref mut u) = tab.umii_state {
+                            u.data = u.original_data.clone();
+                        }
+                        tab.is_modified = false;
+                    }
+
+            DocumentTabKind::Timeline => {
                         if let Some(ref mut tl_state) = tab.timeline_state {
                             tl_state.timeline = tl_state.original_timeline.clone();
                         }
@@ -134,6 +141,23 @@ impl AppState {
                     let mut new_state = crate::model::ModelDocumentState::from_bfres(&tab.file_path, &tab.title, &bfres);
                     crate::model::model_preview::load_companion_textures(&tab.file_path, &bfres, &mut new_state);
                     tab_mut.model_state = Some(new_state);
+                    tab_mut.is_modified = false;
+                    tab_mut.last_disk_mtime = mtime;
+                }
+            }
+            DocumentTabKind::UmiiEditor => {
+                let bytes = crate::model::file_tree::read_file_from_path(&tab.file_path)?;
+                let decompressed = crate::model::file_converter::decompress_if_yaz0(&bytes);
+                let umii_data = crate::ui::state_umii::parse_umii_data_from_bytes(&decompressed, &tab.title)?;
+                let mtime = crate::model::document_tab::get_file_mtime(&tab.file_path);
+                let proj_root = self.project_path.clone();
+                if let Some(tab_mut) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
+                    if let Some(ref mut u) = tab_mut.umii_state {
+                        u.data = umii_data.clone();
+                        u.original_data = umii_data;
+                        let search_dirs = crate::model::umii::collect_model_search_dirs(u.target_platform, proj_root.as_deref());
+                        let _ = u.synthesize_model(&search_dirs);
+                    }
                     tab_mut.is_modified = false;
                     tab_mut.last_disk_mtime = mtime;
                 }

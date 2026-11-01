@@ -171,5 +171,12 @@ pub fn render_workspace_tab_content(
             None,
         )
         .into_any_element(),
+        AppWorkspaceTab::UmiiEditor => wrap_sidebar_workspace(
+            state,
+            model,
+            crate::ui::views::render_umii_editor_view(state, model),
+            None,
+        )
+        .into_any_element(),
     }
 }

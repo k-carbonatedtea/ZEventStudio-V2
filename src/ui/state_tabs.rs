@@ -44,6 +44,9 @@ impl AppState {
                 DocumentTabKind::ModelPreview => {
                     self.current_tab = AppWorkspaceTab::ModelPreview;
                 }
+                DocumentTabKind::UmiiEditor => {
+                    self.current_tab = AppWorkspaceTab::UmiiEditor;
+                }
             }
 
             if self.active_activity_tab == crate::ui::state::ActivityBarTab::Explorer {
@@ -241,6 +244,10 @@ impl AppState {
                         DocumentTabKind::ModelPreview => {
                             self.graph = Graph::new("EventFlow");
                             self.current_tab = AppWorkspaceTab::ModelPreview;
+                        }
+                        DocumentTabKind::UmiiEditor => {
+                            self.graph = Graph::new("EventFlow");
+                            self.current_tab = AppWorkspaceTab::UmiiEditor;
                         }
                     }
                 } else {

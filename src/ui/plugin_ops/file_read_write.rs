@@ -71,6 +71,17 @@ impl AppState {
                         "is_modified": tab.is_modified,
                     }));
                 }
+                DocumentTabKind::UmiiEditor => {
+                    let content = tab.umii_state.as_ref().map(|u| u.data.to_yaml_text()).unwrap_or_default();
+                    return Ok(serde_json::json!({
+                        "status": "ok",
+                        "path": tab.file_path,
+                        "format": "umii",
+                        "content": content,
+                        "is_open_in_tab": true,
+                        "is_modified": tab.is_modified,
+                    }));
+                }
                 DocumentTabKind::Timeline => {
                     let json_content = if let Some(ref tl_state) = tab.timeline_state {
                         serde_json::to_string_pretty(&tl_state.timeline).unwrap_or_default()
@@ -208,7 +219,15 @@ impl AppState {
                     }
                     DocumentTabKind::DiffViewer => {}
                     DocumentTabKind::ModelPreview => {}
-                    DocumentTabKind::Timeline => {
+                    DocumentTabKind::UmiiEditor => {
+                        if let Ok(umii_data) = crate::model::umii::UmiiData::from_yaml_text(content) {
+                            if let Some(ref mut u) = tab.umii_state {
+                                u.data = umii_data.clone();
+                                u.original_data = umii_data;
+                            }
+                        }
+                    }
+                DocumentTabKind::Timeline => {
                         if let Ok(timeline) = serde_json::from_str::<revfl::timeline::Timeline>(content) {
                             if let Some(ref mut tl_state) = tab.timeline_state {
                                 tl_state.timeline = timeline.clone();

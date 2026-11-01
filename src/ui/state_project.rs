@@ -234,6 +234,7 @@ impl AppState {
                     DocumentTabKind::DiffViewer => self.current_tab = AppWorkspaceTab::DiffViewer,
                     DocumentTabKind::Timeline => self.current_tab = AppWorkspaceTab::Timeline,
                     DocumentTabKind::ModelPreview => self.current_tab = AppWorkspaceTab::ModelPreview,
+                    DocumentTabKind::UmiiEditor => self.current_tab = AppWorkspaceTab::UmiiEditor,
                 }
                 return;
             }

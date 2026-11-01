@@ -27,6 +27,7 @@ pub mod subgraph;
 pub mod dialogue;
 pub mod timeline;
 pub mod model_preview;
+pub mod umii;
 
 #[allow(unused_imports)]
 pub use plugin::*;
@@ -59,3 +60,5 @@ pub use sarc_writer::{copy_dir_all, delete_file_from_target, extract_sarc_to_dir
 pub use dialogue::{extract_node_message_target, resolve_node_dialogue, DialogueItem, DialogueSource};
 pub use timeline::*;
 pub use model_preview::*;
+#[allow(unused_imports)]
+pub use umii::*;

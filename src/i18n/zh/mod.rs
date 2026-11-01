@@ -5,6 +5,7 @@ pub mod plugins;
 pub mod quests;
 pub mod timeline;
 pub mod model_preview;
+pub mod umii;
 
 pub use editor::get_zh_editor;
 pub use file_ops::get_zh_file_ops;
@@ -13,6 +14,7 @@ pub use plugins::get_zh_plugins;
 pub use quests::get_zh_quests;
 pub use timeline::get_zh_timeline;
 pub use model_preview::get_zh_model_preview;
+pub use umii::get_umii_zh;
 
 /// 中文 (Simplified Chinese) 本地化词典
 pub fn get_zh(key: &str) -> &str {
@@ -35,6 +37,9 @@ pub fn get_zh(key: &str) -> &str {
         return text;
     }
     if let Some(text) = get_zh_model_preview(key) {
+        return text;
+    }
+    if let Some(text) = get_umii_zh(key) {
         return text;
     }
     key

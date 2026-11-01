@@ -5,6 +5,7 @@ pub mod plugins;
 pub mod quests;
 pub mod timeline;
 pub mod model_preview;
+pub mod umii;
 
 pub use editor::get_en_editor;
 pub use file_ops::get_en_file_ops;
@@ -13,6 +14,7 @@ pub use plugins::get_en_plugins;
 pub use quests::get_en_quests;
 pub use timeline::get_en_timeline;
 pub use model_preview::get_en_model_preview;
+pub use umii::get_umii_en;
 
 /// 英文 (English) 本地化词典
 pub fn get_en(key: &str) -> &str {
@@ -35,6 +37,9 @@ pub fn get_en(key: &str) -> &str {
         return text;
     }
     if let Some(text) = get_en_model_preview(key) {
+        return text;
+    }
+    if let Some(text) = get_umii_en(key) {
         return text;
     }
     key

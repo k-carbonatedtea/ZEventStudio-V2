@@ -32,6 +32,7 @@ pub enum AppWorkspaceTab {
     DiffViewer,
     Quests,
     ModelPreview,
+    UmiiEditor,
 }
 
 #[allow(dead_code)]

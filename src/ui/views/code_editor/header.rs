@@ -85,6 +85,10 @@ pub fn render_code_editor_header(
                 .children(render_actor_model_preview_badge(
                     code_state, state, model,
                 ))
+                // UMii 形象可视化编辑器切换徽章
+                .children(render_umii_editor_badge(
+                    code_state, state, model,
+                ))
                 // MSBT 模式切换控件 (源码模式 ⇋ 气泡对话编辑器 Bubble-Wrap)
                 .child(crate::ui::views::msbt_editor::render_msbt_view_mode_toggle(
                     code_state, state, model,
@@ -282,6 +286,76 @@ fn render_actor_model_preview_badge(
                     .text_size(px(10.5))
                     .text_color(rgb(0x06B6D4))
                     .child(state.t("code_editor.model_preview")),
+            ),
+    )
+}
+
+/// 渲染 UMii 形象可视化编辑器切换入口徽章
+fn render_umii_editor_badge(
+    code_state: &CodeDocumentState,
+    state: &AppState,
+    model: &Entity<AppState>,
+) -> Option<impl IntoElement> {
+    let lower_path = code_state.file_path.to_lowercase();
+    let is_umii = lower_path.ends_with(".bumii")
+        || lower_path.ends_with(".umii.yml")
+        || lower_path.ends_with(".umii.yaml")
+        || lower_path.contains("/umii/")
+        || lower_path.contains("\\umii\\")
+        || code_state.content.contains("ffsd:")
+        || code_state.content.contains("Personal:");
+    if !is_umii {
+        return None;
+    }
+
+    let pal = state.theme();
+    let model_click = model.clone();
+    let file_path = code_state.file_path.clone();
+
+    Some(
+        div()
+            .id("btn_open_umii_editor")
+            .flex()
+            .items_center()
+            .gap_1()
+            .px_2()
+            .py_0p5()
+            .rounded_md()
+            .bg(pal.card_surface)
+            .border_1()
+            .border_color(rgb(0x8B5CF6))
+            .cursor_pointer()
+            .hover(|s| s.bg(pal.card_hover).border_color(rgb(0xA78BFA)))
+            .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                let path = file_path.clone();
+                model_click.update(cx, |st, cx| {
+                    let bytes = match crate::model::file_tree::read_file_from_path(&path) {
+                        Ok(b) => b,
+                        Err(e) => {
+                            st.toast = Some(crate::ui::components::Toast::error(e.to_string()));
+                            return;
+                        }
+                    };
+                    let decomp = crate::model::file_converter::decompress_if_yaz0(&bytes);
+                    let raw_name = path
+                        .rsplit("//")
+                        .next()
+                        .unwrap_or(&path)
+                        .rsplit('/')
+                        .next()
+                        .unwrap_or(&path)
+                        .to_string();
+                    st.load_umii_tab(&path, &raw_name, &decomp);
+                    cx.notify();
+                });
+            })
+            .child(div().text_size(px(11.5)).child("👤"))
+            .child(
+                div()
+                    .font_weight(FontWeight::BOLD)
+                    .text_size(px(10.5))
+                    .text_color(rgb(0x8B5CF6))
+                    .child(state.t("umii.switch_to_visual")),
             ),
     )
 }

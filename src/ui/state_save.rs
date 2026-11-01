@@ -27,11 +27,12 @@ impl AppState {
                 tab.graph.clone()
             };
             let timeline_to_save = tab.timeline_state.as_ref().map(|ts| ts.timeline.clone());
+            let umii_to_save = tab.umii_state.as_ref().map(|u| (u.data.clone(), u.target_platform));
             let file_type = tab.file_type.clone();
-            (tab.tab_kind, tab.file_path.clone(), file_type, code_info, graph_to_save, timeline_to_save)
+            (tab.tab_kind, tab.file_path.clone(), file_type, code_info, graph_to_save, timeline_to_save, umii_to_save)
         };
 
-        let (tab_kind, file_path, _file_type, code_info, graph_to_save, timeline_to_save) = tab_info;
+        let (tab_kind, file_path, _file_type, code_info, graph_to_save, timeline_to_save, umii_to_save) = tab_info;
 
         match tab_kind {
             DocumentTabKind::Timeline => {
@@ -174,6 +175,55 @@ impl AppState {
             }
             DocumentTabKind::DiffViewer => true,
             DocumentTabKind::ModelPreview => true,
+            DocumentTabKind::UmiiEditor => {
+                let (umii_data, _platform) = match umii_to_save {
+                    Some(u) => u,
+                    None => {
+                        self.toast = Some(Toast::error(self.t("toast.no_active_file")));
+                        return false;
+                    }
+                };
+
+                let lower_path = file_path.to_lowercase();
+                let bytes = if lower_path.ends_with(".yml") || lower_path.ends_with(".yaml") {
+                    umii_data.to_yaml_text().into_bytes()
+                } else {
+                    match umii_data.to_binary() {
+                        Ok(b) => b,
+                        Err(e) => {
+                            self.toast = Some(Toast::error(e));
+                            return false;
+                        }
+                    }
+                };
+
+                let final_bytes = if crate::model::should_compress_yaz0(&file_path) {
+                    roead::yaz0::compress(&bytes)
+                } else {
+                    bytes
+                };
+
+                match write_file_to_target(&file_path, &final_bytes) {
+                    Ok(_) => {
+                        if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
+                            if let Some(ref mut u) = tab.umii_state {
+                                u.mark_saved();
+                            }
+                            tab.is_modified = false;
+                            tab.last_disk_mtime = crate::model::document_tab::get_file_mtime(&file_path);
+                        }
+                        if self.git_is_repo {
+                            self.refresh_git_status();
+                        }
+                        self.toast = Some(Toast::success(self.t("toast.save_success")));
+                        true
+                    }
+                    Err(e) => {
+                        self.toast = Some(Toast::error(format!("{}: {}", self.t("toast.save_failed"), e)));
+                        false
+                    }
+                }
+            }
         }
     }
 
@@ -243,6 +293,12 @@ impl AppState {
                     }
                     if let Some(ref mut code) = tab.code_state {
                         code.revert();
+                    }
+                    tab.is_modified = false;
+                }
+                DocumentTabKind::UmiiEditor => {
+                    if let Some(ref mut u) = tab.umii_state {
+                        u.data = u.original_data.clone();
                     }
                     tab.is_modified = false;
                 }
