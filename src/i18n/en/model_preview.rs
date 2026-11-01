@@ -39,4 +39,3 @@ pub fn get_en_model_preview(key: &str) -> Option<&'static str> {
         _ => None,
     }
 }
-

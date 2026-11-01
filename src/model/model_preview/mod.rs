@@ -7,9 +7,7 @@ pub mod texture_loader;
 pub mod types;
 
 pub use actor_loader::load_actor_model_document;
-pub use actor_resolver::{
-    detect_actor_model_target, locate_actor_model_file, ActorModelTarget,
-};
+pub use actor_resolver::{detect_actor_model_target, locate_actor_model_file, ActorModelTarget};
 
 #[allow(unused_imports)]
 pub use camera::{FastCameraProjector, OrbitCamera, PreviewPresetView};
@@ -76,7 +74,10 @@ impl ModelDocumentState {
         } else if let Some((first_key, _)) = bfres.models.iter().next() {
             first_key.to_string()
         } else {
-            raw_name.trim_end_matches(".sbfres").trim_end_matches(".bfres").to_string()
+            raw_name
+                .trim_end_matches(".sbfres")
+                .trim_end_matches(".bfres")
+                .to_string()
         };
 
         // 提取所有网格几何数据
@@ -107,7 +108,10 @@ impl ModelDocumentState {
 
             mesh_items.push(PreviewMeshItem {
                 name: mesh.name.clone(),
-                material_name: mesh.material_name.clone().unwrap_or_else(|| "Default".to_string()),
+                material_name: mesh
+                    .material_name
+                    .clone()
+                    .unwrap_or_else(|| "Default".to_string()),
                 texture_name: mesh.texture_name.clone(),
                 vertex_count: v_count,
                 triangle_count: t_count,
@@ -168,7 +172,8 @@ impl ModelDocumentState {
 
     /// 重置并对焦摄像机至模型完整包围盒
     pub fn fit_camera(&mut self) {
-        self.camera.fit_bounding_box(self.bounding_box_min, self.bounding_box_max);
+        self.camera
+            .fit_bounding_box(self.bounding_box_min, self.bounding_box_max);
     }
 
     /// 获取当前处于可见显示状态的子网格数量
@@ -178,12 +183,20 @@ impl ModelDocumentState {
 
     /// 获取当前处于可见状态的总顶点数
     pub fn visible_vertices_count(&self) -> usize {
-        self.mesh_items.iter().filter(|m| m.visible).map(|m| m.vertex_count).sum()
+        self.mesh_items
+            .iter()
+            .filter(|m| m.visible)
+            .map(|m| m.vertex_count)
+            .sum()
     }
 
     /// 获取当前处于可见状态的总三角面数
     pub fn visible_triangles_count(&self) -> usize {
-        self.mesh_items.iter().filter(|m| m.visible).map(|m| m.triangle_count).sum()
+        self.mesh_items
+            .iter()
+            .filter(|m| m.visible)
+            .map(|m| m.triangle_count)
+            .sum()
     }
 
     /// 获取模型各轴向尺寸跨度 [Width X, Height Y, Depth Z]

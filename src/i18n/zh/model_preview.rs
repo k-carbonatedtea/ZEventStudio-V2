@@ -39,4 +39,3 @@ pub fn get_zh_model_preview(key: &str) -> Option<&'static str> {
         _ => None,
     }
 }
-
