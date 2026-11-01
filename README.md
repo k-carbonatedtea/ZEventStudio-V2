@@ -1,5 +1,7 @@
 # Event Studio
 
+BOTW 地图编辑器：打开 `.smubin` / `.mubin` 即可查看对象模型、地形和水面，编辑对象变换并保存。详见 [地图编辑器说明](docs/map-editor.md)。
+
 <p align="center">
   <strong>High-Performance Visual Event Flow & Script Editor for Nintendo Games</strong><br>
   <strong>高性能任天堂游戏可视化事件流与脚本编辑器</strong>

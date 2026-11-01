@@ -122,6 +122,7 @@ pub fn synthesize_npc_model_sync(
 
         // 加载伴生纹理并汇集
         let mut temp_state = ModelDocumentState {
+            instances: None,
             file_path: part_path.to_string_lossy().to_string(),
             model_name: target.category.to_string(),
             is_switch: is_switch_detected,
@@ -164,6 +165,7 @@ pub fn synthesize_npc_model_sync(
     camera.fit_bounding_box(global_min, global_max);
 
     Ok(ModelDocumentState {
+        instances: None,
         file_path: format!("UMii://{}", data.name),
         model_name: format!("UMii_{}", data.name),
         is_switch: is_switch_detected,

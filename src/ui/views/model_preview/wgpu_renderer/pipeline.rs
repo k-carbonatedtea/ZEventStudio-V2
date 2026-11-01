@@ -1,12 +1,13 @@
 //! WGPU 渲染管线、BindGroupLayout 与通用采样器创建配置
 
 use super::shaders::create_shader_module;
-use super::types::GpuVertex;
+use super::types::{GpuInstance, GpuVertex};
 use std::sync::Arc;
 
 /// 封装 WGPU 图形管线核心渲染基础设施
 pub struct WgpuPipeline {
     pub pipeline: Arc<wgpu::RenderPipeline>,
+    pub transparent_pipeline: Arc<wgpu::RenderPipeline>,
     pub bind_group_layout: Arc<wgpu::BindGroupLayout>,
     pub sampler: Arc<wgpu::Sampler>,
 }
@@ -82,13 +83,17 @@ impl WgpuPipeline {
             ],
         };
 
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let create_pipeline = |transparent: bool| device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Model 3D Render Pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[Some(vertex_buffer_layout)],
+                buffers: &[Some(vertex_buffer_layout.clone()), Some(wgpu::VertexBufferLayout {
+                    array_stride: std::mem::size_of::<GpuInstance>() as u64,
+                    step_mode: wgpu::VertexStepMode::Instance,
+                    attributes: &wgpu::vertex_attr_array![3 => Float32x4, 4 => Float32x4, 5 => Float32x4, 6 => Float32x4, 7 => Float32x4, 8 => Float32x4, 9 => Float32x4, 10 => Float32x4],
+                })],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
@@ -112,7 +117,7 @@ impl WgpuPipeline {
             },
             depth_stencil: Some(wgpu::DepthStencilState {
                 format: wgpu::TextureFormat::Depth32Float,
-                depth_write_enabled: Some(true),
+                depth_write_enabled: Some(!transparent),
                 depth_compare: Some(wgpu::CompareFunction::LessEqual),
                 stencil: wgpu::StencilState::default(),
                 bias: wgpu::DepthBiasState::default(),
@@ -121,6 +126,8 @@ impl WgpuPipeline {
             multiview_mask: None,
             cache: None,
         });
+        let pipeline = create_pipeline(false);
+        let transparent_pipeline = create_pipeline(true);
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Model Texture Linear Sampler"),
@@ -135,6 +142,7 @@ impl WgpuPipeline {
 
         Some(Self {
             pipeline: Arc::new(pipeline),
+            transparent_pipeline: Arc::new(transparent_pipeline),
             bind_group_layout: Arc::new(bind_group_layout),
             sampler: Arc::new(sampler),
         })

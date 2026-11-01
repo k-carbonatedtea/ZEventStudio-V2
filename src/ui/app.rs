@@ -57,6 +57,7 @@ impl AppView {
 
 impl Render for AppView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.model.update(cx, |st, cx| st.start_pending_map_load(cx));
         let is_active = window.is_window_active();
 
         // 窗口从后台切回前台时，自动检测 Git 状态与活动文件磁盘外部变更

@@ -42,14 +42,11 @@ pub fn rasterize_scene(
     let sun_norm = [sun_dir[0] / sun_len, sun_dir[1] / sun_len, sun_dir[2] / sun_len];
 
     // 2. 预计算所有可见子网格的顶点投影与三角面包围盒
-    let batches: Vec<PreparedMeshBatch> = state
-        .meshes
-        .iter()
-        .enumerate()
-        .filter_map(|(idx, mesh)| {
-            prepare_mesh_batch(mesh, idx, state, &projector, sun_norm, target_w, target_h)
-        })
-        .collect();
+    let batches: Vec<PreparedMeshBatch> = if let Some(instances)=&state.instances {
+        instances.iter().filter_map(|i|state.meshes.get(i.mesh_index).and_then(|mesh|prepare_mesh_batch(mesh,i.mesh_index,state,&projector,sun_norm,target_w,target_h,Some(i)))).collect()
+    } else {
+        state.meshes.iter().enumerate().filter_map(|(idx,mesh)|prepare_mesh_batch(mesh,idx,state,&projector,sun_norm,target_w,target_h,None)).collect()
+    };
 
     let total_pixels = (target_w * target_h) as usize;
     let mut color_buffer = vec![0u8; total_pixels * 4];
@@ -102,6 +99,7 @@ pub fn rasterize_scene(
     // 4. 写入静态渲染缓存
     if let Ok(mut guard) = RENDER_CACHE.lock() {
         *guard = Some(CachedImage {
+            _source_meshes: state.meshes.clone(),
             key: cache_key,
             image: render_image.clone(),
         });
@@ -123,7 +121,15 @@ fn compute_cache_key(
         }
     }
 
+    use std::hash::{Hash,Hasher};
+    let mut instance_hash=std::collections::hash_map::DefaultHasher::new();
+    if let Some(instances)=&state.instances {for i in instances.iter(){
+        i.mesh_index.hash(&mut instance_hash);i.selected.hash(&mut instance_hash);
+        for f in i.transform.translation.iter().chain(&i.transform.rotation).chain(&i.transform.scale){f.to_bits().hash(&mut instance_hash);}
+    }}
     RenderCacheKey {
+        geometry_identity: Arc::as_ptr(&state.meshes) as usize,
+        instance_hash: instance_hash.finish(),
         model_path: state.file_path.clone(),
         yaw_bits: state.camera.yaw.to_bits(),
         pitch_bits: state.camera.pitch.to_bits(),

@@ -6,6 +6,23 @@ use crate::ui::state::AppState;
 impl AppState {
     /// 保存指定文档标签页（无论是当前活跃或后台标签、流程图还是代码文件，写回磁盘或 SARC）
     pub fn save_document_tab(&mut self, tab_id: &str) -> bool {
+        if let Some(map) = self.open_tabs.iter_mut().find(|t| t.id == tab_id).and_then(|t| t.map_state.as_mut()) {
+            if let Err(error) = map.apply_input() { self.toast = Some(Toast::error(error)); return false; }
+            let bytes = map.file.to_bytes();
+            let path = map.scene.file_path.clone();
+            match write_file_to_target(&path, &bytes) {
+                Ok(()) => {
+                    if let Some(tab) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
+                        if let Some(map) = &mut tab.map_state { map.file.mark_saved(); }
+                        tab.is_modified = false;
+                        tab.last_disk_mtime = crate::model::document_tab::get_file_mtime(&path);
+                    }
+                    if self.git_is_repo { self.refresh_git_status(); }
+                    self.toast = Some(Toast::success(self.t("toast.save_success"))); return true;
+                }
+                Err(e) => { self.toast = Some(Toast::error(e)); return false; }
+            }
+        }
         let is_active = self.active_tab_id.as_deref() == Some(tab_id);
 
         if is_active
@@ -285,6 +302,7 @@ impl AppState {
                     tab.is_modified = false;
                 }
                 DocumentTabKind::ModelPreview => {
+                    if let Some(map) = &mut tab.map_state { map.revert(); }
                     tab.is_modified = false;
                 }
                 DocumentTabKind::Timeline => {

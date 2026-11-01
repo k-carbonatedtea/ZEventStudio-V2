@@ -21,3 +21,4 @@ pub use quest_map::render_quest_map_view;
 pub use timeline_editor::render_timeline_editor_view;
 pub use umii_editor::render_umii_editor_view;
 pub use welcome::render_welcome_view;
+pub mod map_editor;

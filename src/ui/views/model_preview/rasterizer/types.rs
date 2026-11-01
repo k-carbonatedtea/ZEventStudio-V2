@@ -7,6 +7,8 @@ use std::sync::Arc;
 /// 光栅化渲染缓存键 (用于静止画面零开销复用)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RenderCacheKey {
+    pub geometry_identity: usize,
+    pub instance_hash: u64,
     pub model_path: String,
     pub yaw_bits: u32,
     pub pitch_bits: u32,
@@ -21,6 +23,7 @@ pub struct RenderCacheKey {
 }
 
 pub struct CachedImage {
+    pub _source_meshes: Arc<Vec<rbfres_library::ExtractedMesh>>,
     pub key: RenderCacheKey,
     pub image: Arc<RenderImage>,
 }

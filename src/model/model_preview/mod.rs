@@ -14,11 +14,20 @@ pub use camera::{FastCameraProjector, OrbitCamera, PreviewPresetView};
 pub use texture_loader::load_companion_textures;
 pub use types::{PreviewMeshItem, RenderMode, RgbaTexture};
 
+/// A shared mesh placed in a map. Geometry stays in model space on the GPU.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModelInstance {
+    pub mesh_index: usize,
+    pub transform: uking_library::map::Transform,
+    pub selected: bool,
+}
+
 use rbfres_library::{BfresFile, ExtractedMesh};
 
 /// 3D 模型预览标签页专属文档状态
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModelDocumentState {
+    pub instances: Option<std::sync::Arc<Vec<ModelInstance>>>,
     /// 物理文件路径或 SARC 虚拟路径
     pub file_path: String,
     /// 模型归档内部主名称
@@ -131,6 +140,7 @@ impl ModelDocumentState {
         camera.fit_bounding_box(min_bound, max_bound);
 
         Self {
+            instances: None,
             file_path: file_path.to_string(),
             model_name,
             is_switch,

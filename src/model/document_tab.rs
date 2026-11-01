@@ -79,6 +79,7 @@ pub struct OpenDocumentTab {
     pub code_state: Option<CodeDocumentState>,
     pub diff_state: Option<DiffViewerTabState>,
     pub model_state: Option<crate::model::ModelDocumentState>,
+    pub map_state: Option<crate::model::map_editor::MapDocumentState>,
     pub umii_state: Option<crate::model::umii::UmiiDocumentState>,
     pub is_modified: bool,
     pub last_disk_mtime: Option<std::time::SystemTime>,
@@ -90,7 +91,7 @@ impl OpenDocumentTab {
         Self {
             id, title, file_path, file_type, tab_kind: DocumentTabKind::Flowchart,
             graph, original_graph, timeline_state: None, code_state: None, diff_state: None, model_state: None, umii_state: None,
-            is_modified: false, last_disk_mtime,
+            map_state: None, is_modified: false, last_disk_mtime,
         }
     }
 
@@ -100,7 +101,7 @@ impl OpenDocumentTab {
         Self {
             id, title, file_path, file_type, tab_kind: DocumentTabKind::Timeline,
             graph: None, original_graph: None, timeline_state: Some(timeline_state), code_state: None, diff_state: None, model_state: None, umii_state: None,
-            is_modified: false, last_disk_mtime,
+            map_state: None, is_modified: false, last_disk_mtime,
         }
     }
 
@@ -109,7 +110,7 @@ impl OpenDocumentTab {
         Self {
             id, title, file_path, file_type, tab_kind: DocumentTabKind::CodeEditor,
             graph: None, original_graph: None, timeline_state: None, code_state: Some(code_state), diff_state: None, model_state: None, umii_state: None,
-            is_modified: false, last_disk_mtime,
+            map_state: None, is_modified: false, last_disk_mtime,
         }
     }
 
@@ -117,7 +118,7 @@ impl OpenDocumentTab {
         Self {
             id, title, file_path, file_type: "diff".to_string(), tab_kind: DocumentTabKind::DiffViewer,
             graph: None, original_graph: None, timeline_state: None, code_state: None, diff_state: Some(diff_state), model_state: None, umii_state: None,
-            is_modified: false, last_disk_mtime: None,
+            map_state: None, is_modified: false, last_disk_mtime: None,
         }
     }
 
@@ -126,7 +127,7 @@ impl OpenDocumentTab {
         Self {
             id, title, file_path, file_type, tab_kind: DocumentTabKind::ModelPreview,
             graph: None, original_graph: None, timeline_state: None, code_state: None, diff_state: None, model_state: Some(model_state), umii_state: None,
-            is_modified: false, last_disk_mtime,
+            map_state: None, is_modified: false, last_disk_mtime,
         }
     }
 
@@ -135,11 +136,12 @@ impl OpenDocumentTab {
         Self {
             id, title, file_path, file_type, tab_kind: DocumentTabKind::UmiiEditor,
             graph: None, original_graph: None, timeline_state: None, code_state: None, diff_state: None, model_state: None, umii_state: Some(umii_state),
-            is_modified: false, last_disk_mtime,
+            map_state: None, is_modified: false, last_disk_mtime,
         }
     }
 
     pub fn icon(&self) -> &'static str {
+        if self.map_state.is_some() { return "🗺"; }
         if self.tab_kind == DocumentTabKind::DiffViewer { return "⇄"; }
         if self.tab_kind == DocumentTabKind::Timeline { return "🎬"; }
         if self.tab_kind == DocumentTabKind::ModelPreview { return "🧊"; }
@@ -161,6 +163,7 @@ impl OpenDocumentTab {
     }
 
     pub fn recompute_modified(&mut self) {
+        if let Some(map) = &self.map_state { self.is_modified = map.file.is_modified(); return; }
         if let Some(ref code) = self.code_state {
             if code.is_modified() { self.is_modified = true; return; }
         }

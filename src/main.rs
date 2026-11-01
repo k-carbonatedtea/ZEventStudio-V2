@@ -32,6 +32,11 @@ fn main() {
         cx.open_window(window_options, |window, cx| {
             let app_view = cx.new(AppView::new);
             let model = app_view.read(cx).model.clone();
+            for path in std::env::args().skip(1).filter(|p| !p.starts_with('-')) {
+                if std::path::Path::new(&path).is_file() || path.starts_with("SARC:") {
+                    model.update(cx, |st, _| st.load_file_by_path(&path));
+                }
+            }
             let focus = app_view.read(cx).focus_handle.clone();
             focus.focus(window, cx);
 

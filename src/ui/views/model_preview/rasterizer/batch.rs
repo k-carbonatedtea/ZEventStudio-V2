@@ -15,6 +15,7 @@ pub fn prepare_mesh_batch<'a>(
     sun_norm: [f32; 3],
     buf_w: u32,
     buf_h: u32,
+    instance: Option<&crate::model::model_preview::ModelInstance>,
 ) -> Option<PreparedMeshBatch<'a>> {
     if !is_mesh_visible(state, mesh_idx) {
         return None;
@@ -22,11 +23,11 @@ pub fn prepare_mesh_batch<'a>(
 
     let b_min = [mesh.bounding_box.min().x, mesh.bounding_box.min().y, mesh.bounding_box.min().z];
     let b_max = [mesh.bounding_box.max().x, mesh.bounding_box.max().y, mesh.bounding_box.max().z];
-    if projector.is_all_behind_camera(b_min, b_max) {
+    if instance.is_none() && projector.is_all_behind_camera(b_min, b_max) {
         return None;
     }
 
-    let is_selected = state.selected_mesh_idx == Some(mesh_idx);
+    let is_selected = instance.map_or(state.selected_mesh_idx == Some(mesh_idx),|i|i.selected);
     let base_hsla = get_material_color(
         mesh.material_name.as_deref().unwrap_or(""),
         mesh_idx,
@@ -43,7 +44,8 @@ pub fn prepare_mesh_batch<'a>(
     // 唯一顶点投影预计算 (共享顶点仅投影一次)
     let mut proj_verts: Vec<Option<([f32; 2], f32)>> = Vec::with_capacity(v_len);
     for p in &mesh.positions {
-        proj_verts.push(projector.project([p.x, p.y, p.z]));
+        let p=[p.x,p.y,p.z];
+        proj_verts.push(projector.project(instance.map_or(p,|i|i.transform.point(p))));
     }
 
     // 顶点法线平滑光照预计算 (区分正反面照度)
@@ -51,7 +53,11 @@ pub fn prepare_mesh_batch<'a>(
     let mut lighting_back: Vec<f32> = Vec::with_capacity(v_len);
     for i in 0..v_len {
         let (lf, lb) = if i < norm_len {
-            let n = &mesh.normals[i];
+            let mut n = mesh.normals[i];
+            if let Some(instance)=instance {
+                let m=instance.transform.normal_matrix();
+                n=rbfres_library::Vec3::new(m[0][0]*n.x+m[1][0]*n.y+m[2][0]*n.z,m[0][1]*n.x+m[1][1]*n.y+m[2][1]*n.z,m[0][2]*n.x+m[1][2]*n.y+m[2][2]*n.z).normalize();
+            }
             let dot = n.x * sun_norm[0] + n.y * sun_norm[1] + n.z * sun_norm[2];
             let front = (0.25 + 0.75 * (dot * 0.5 + 0.5)).clamp(0.18, 1.0);
             let back = (0.25 + 0.75 * (-dot * 0.5 + 0.5)).clamp(0.18, 1.0);
@@ -85,6 +91,7 @@ pub fn prepare_mesh_batch<'a>(
         }
 
         let is_back = denom > 0.0;
+        if mesh.display_face == 3 || (mesh.display_face == 1 && is_back) || (mesh.display_face == 2 && !is_back) { continue; }
         let (int0, int1, int2) = if is_back {
             (lighting_back[i0], lighting_back[i1], lighting_back[i2])
         } else {
@@ -143,7 +150,7 @@ fn resolve_texture<'a>(
             return Some(&**tex);
         }
     }
-    for ref_name in &mesh.texture_refs {
+    for ref_name in mesh.texture_refs.iter().filter(|n| ExtractedMesh::is_color_texture(n)) {
         if let Some(tex) = state.textures.get(ref_name) {
             return Some(&**tex);
         }

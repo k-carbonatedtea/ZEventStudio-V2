@@ -3,6 +3,7 @@ use crate::ui::state::{ActiveSettingsField, AppState, GitCommitFocus, QuestCreat
 /// 文本输入框焦点调度与 IME 输入法支持状态扩展
 impl AppState {
     pub fn has_active_text_input(&self) -> bool {
+        if self.active_map().is_some_and(|m| m.input.is_some()) { return true; }
         if self.settings_modal_open && self.active_settings_field != ActiveSettingsField::None {
             return true;
         }
@@ -34,6 +35,10 @@ impl AppState {
 
     /// 清除所有侧边栏及编辑输入框的激活状态，使焦点回归主工作区/代码编辑器
     pub fn clear_active_text_inputs(&mut self) {
+        if let Some(map) = self.active_map_mut() {
+            if let Err(error)=map.apply_input() {self.toast=Some(crate::ui::components::Toast::error(error));}
+        }
+        self.sync_active_tab_modified();
         self.global_search_focused = false;
         self.file_search_focused = false;
         self.git_history_search_focused = false;
@@ -130,6 +135,9 @@ impl AppState {
         }
         if self.msbt_new_entry_focused {
             return Some(&self.msbt_new_entry_name);
+        }
+        if let Some(map) = self.active_map().filter(|m| m.input.is_some()) {
+            return Some(if map.input == Some(crate::model::map_editor::MapInput::Search) { &map.filter } else { &map.input_text });
         }
         None
     }
@@ -298,7 +306,11 @@ impl AppState {
             match self.git_commit_focus {
                 GitCommitFocus::Title => f(&mut self.git_commit_title),
                 GitCommitFocus::Description => f(&mut self.git_commit_desc),
-                GitCommitFocus::None => return false,
+                GitCommitFocus::None => {
+                    let Some(map) = self.active_map_mut().filter(|m|m.input.is_some()) else {return false;};
+                    let target = if map.input == Some(crate::model::map_editor::MapInput::Search) { map.page = 0; &mut map.filter } else { &mut map.input_text };
+                    f(target)
+                },
             }
         };
 

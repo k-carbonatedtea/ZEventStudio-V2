@@ -21,25 +21,38 @@ struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
+    @location(3) model0: vec4<f32>,
+    @location(4) model1: vec4<f32>,
+    @location(5) model2: vec4<f32>,
+    @location(6) model3: vec4<f32>,
+    @location(7) normal0: vec4<f32>,
+    @location(8) normal1: vec4<f32>,
+    @location(9) normal2: vec4<f32>,
+    @location(10) instance_flags: vec4<f32>,
 };
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) world_normal: vec3<f32>,
     @location(1) uv: vec2<f32>,
+    @location(2) @interpolate(flat) selected: f32,
 };
 
 @vertex
 fn vs_main(model: VertexInput) -> VertexOutput {
     var out: VertexOutput;
-    out.clip_position = uniforms.mvp * vec4<f32>(model.position, 1.0);
-    out.world_normal = model.normal;
+    let world = mat4x4<f32>(model.model0, model.model1, model.model2, model.model3);
+    let normal = mat3x3<f32>(model.normal0.xyz, model.normal1.xyz, model.normal2.xyz);
+    out.clip_position = uniforms.mvp * world * vec4<f32>(model.position, 1.0);
+    out.world_normal = normal * model.normal;
     out.uv = model.uv;
+    out.selected = model.instance_flags.x;
     return out;
 }
 
 @fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+fn fs_main(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4<f32> {
+    if (uniforms.flags.w == 3u || (uniforms.flags.w == 1u && !front) || (uniforms.flags.w == 2u && front)) { discard; }
     var col: vec4<f32>;
     if (uniforms.flags.x == 1u) {
         // 绑定了漫反射贴图时，使用贴图真实采样色彩
@@ -65,7 +78,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var rgb = col.rgb * lit;
 
     // 选中网格高亮渲染态
-    if (uniforms.flags.z == 1u) {
+    if (uniforms.flags.z == 1u || in.selected > 0.5) {
         rgb = mix(rgb, vec3<f32>(0.2, 0.9, 0.9), 0.35);
     }
 

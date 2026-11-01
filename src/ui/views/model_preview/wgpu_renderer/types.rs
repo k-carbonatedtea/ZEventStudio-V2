@@ -100,9 +100,25 @@ pub struct GpuUniforms {
     pub flags: [u32; 4],
 }
 
+#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+#[repr(C)]
+pub struct GpuInstance {
+    pub model: [[f32; 4]; 4],
+    pub normal: [[f32; 4]; 3],
+    pub flags: [f32; 4],
+}
+
+impl GpuInstance {
+    pub fn new(transform: uking_library::map::Transform, selected: bool) -> Self {
+        Self { model: transform.matrix(), normal: transform.normal_matrix(), flags: [if selected { 1. } else { 0. }, 0., 0., 0.] }
+    }
+}
+
 /// 静态渲染缓存键 (用于视口未变动时瞬时返回画面)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WgpuCacheKey {
+    pub geometry_identity: usize,
+    pub instance_identity: usize,
     pub model_path: String,
     pub yaw_bits: u32,
     pub pitch_bits: u32,

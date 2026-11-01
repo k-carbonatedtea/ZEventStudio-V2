@@ -6956,13 +6956,7 @@ dependencies = [
 name = "uking-library"
 version = "0.1.0"
 dependencies = [
- "byteorder",
- "image 0.25.10",
- "rbfres-library",
  "roead",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
 ]
 
 [[package]]

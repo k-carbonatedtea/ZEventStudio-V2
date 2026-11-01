@@ -67,6 +67,23 @@ impl AppState {
             return;
         }
 
+        if lower_name.ends_with(".smubin") || lower_name.ends_with(".mubin") {
+            match uking_library::map::MapFile::from_bytes(&bytes) {
+                Ok(file) => {
+                    let doc = crate::model::map_editor::MapDocumentState::empty(file, path, &raw_name);
+                    let id = uuid::Uuid::new_v4().to_string();
+                    let mut tab = OpenDocumentTab::new_model(id.clone(), raw_name.clone(), path.into(), "mubin".into(), doc.scene.clone());
+                    tab.model_state = None;
+                    tab.map_state = Some(doc);
+                    self.open_tabs.push(tab);
+                    self.active_tab_id = Some(id);
+                    self.current_tab = AppWorkspaceTab::ModelPreview;
+                }
+                Err(e) => self.toast = Some(Toast::error(format!("地图打开失败: {e}"))),
+            }
+            return;
+        }
+
         // 3. 检查 Nintendo BFRES 3D 模型归档 (如 .sbfres, .bfres 或以魔数 FRES 开头)
         let is_bfres_file = lower_name.ends_with(".bfres")
             || lower_name.ends_with(".sbfres")

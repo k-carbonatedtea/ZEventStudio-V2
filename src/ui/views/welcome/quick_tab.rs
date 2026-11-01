@@ -153,8 +153,8 @@ pub fn pick_and_load_file(model: &Entity<AppState>, cx: &mut App) {
     cx.spawn(async move |cx| {
         let handle = rfd::AsyncFileDialog::new()
             .add_filter(
-                "EventFlow & Zelda Packages (*.bfevfl, *.sbeventpack, *.sbactorpack, *.pack, *.msbt, *.json)",
-                &["bfevfl", "sbeventpack", "sbactorpack", "pack", "sarc", "ssarc", "spack", "msbt", "aamp", "byml", "json"],
+                "Zelda files (maps, models, EventFlow, packages)",
+                &["smubin", "mubin", "sbfres", "bfres", "bfevfl", "bfevtm", "sbeventpack", "sbactorpack", "pack", "sarc", "ssarc", "spack", "msbt", "aamp", "byml", "json"],
             )
             .set_title("选择 BotW 游戏事件流或封包文件")
             .pick_file()

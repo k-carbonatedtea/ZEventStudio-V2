@@ -1,7 +1,7 @@
 //! WGPU 网格顶点、索引与静态 Uniform/BindGroup 显存复用管理器
 
 use super::pipeline::WgpuPipeline;
-use super::types::{GpuUniforms, GpuVertex};
+use super::types::{GpuInstance, GpuUniforms, GpuVertex};
 use rbfres_library::ExtractedMesh;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -9,6 +9,10 @@ use wgpu::util::DeviceExt;
 
 /// GPU 显存网格几何体对象 (持久持有显存顶点缓冲、索引缓冲、UBO 与 BindGroup)
 pub struct GpuMeshGeometry {
+    pub instance_buffer: wgpu::Buffer,
+    pub instance_count: u32,
+    instance_capacity: usize,
+    source_identity: usize,
     pub vertex_buffer: wgpu::Buffer,
     pub index_buffer: wgpu::Buffer,
     pub index_count: u32,
@@ -18,6 +22,20 @@ pub struct GpuMeshGeometry {
 }
 
 impl GpuMeshGeometry {
+    pub fn update_instances(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, instances: &[GpuInstance]) {
+        self.instance_count = instances.len() as u32;
+        if instances.is_empty() { return; }
+        if instances.len() > self.instance_capacity {
+            self.instance_capacity = instances.len().next_power_of_two();
+            self.instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Map mesh instances"),
+                size: (self.instance_capacity * std::mem::size_of::<GpuInstance>()) as u64,
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+        }
+        queue.write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(instances));
+    }
     /// 原位覆写常量 Uniform 缓冲内容 (0 内存分配，极速写入 host 映射区)
     pub fn update_uniforms(&self, queue: &wgpu::Queue, uniforms: &GpuUniforms) {
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(uniforms));
@@ -85,7 +103,7 @@ impl GpuGeometryCache {
         mesh: &ExtractedMesh,
     ) -> Option<&mut GpuMeshGeometry> {
         let key = (model_path.to_string(), mesh_idx);
-        if !self.cache.contains_key(&key) {
+        if self.cache.get(&key).is_none_or(|g| g.source_identity != mesh.positions.as_ptr() as usize) {
             let geom = upload_mesh_geometry(device, mesh)?;
             self.cache.insert(key.clone(), geom);
         }
@@ -151,6 +169,14 @@ fn upload_mesh_geometry(device: &wgpu::Device, mesh: &ExtractedMesh) -> Option<G
     });
 
     Some(GpuMeshGeometry {
+        instance_buffer: device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Mesh identity instance"),
+            contents: bytemuck::bytes_of(&GpuInstance::new(Default::default(), false)),
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+        }),
+        instance_count: 1,
+        instance_capacity: 1,
+        source_identity: mesh.positions.as_ptr() as usize,
         vertex_buffer,
         index_buffer,
         index_count,

@@ -11,6 +11,7 @@ pub mod quick_add;
 pub mod settings;
 pub mod sidebar;
 pub mod state;
+pub mod state_map;
 pub mod state_canvas;
 pub mod state_diff;
 pub mod state_drop;

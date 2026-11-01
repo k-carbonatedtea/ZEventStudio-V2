@@ -246,7 +246,7 @@ pub fn load_tex_bytes(bytes: &[u8], state: &mut ModelDocumentState) {
 }
 
 /// 从 BFRES 归档的 ExternalFiles 中提取并解码全部 BNTX 纹理
-fn extract_bntx_from_bfres(bfres: &BfresFile, state: &mut ModelDocumentState) {
+pub fn extract_bntx_from_bfres(bfres: &BfresFile, state: &mut ModelDocumentState) {
     for ext_file in bfres.external_files.values() {
         if ext_file.data.len() < 32 {
             continue;
@@ -259,6 +259,10 @@ fn extract_bntx_from_bfres(bfres: &BfresFile, state: &mut ModelDocumentState) {
             }
         }
     }
+}
+
+pub fn extract_bfres_textures(bfres: &BfresFile, state: &mut ModelDocumentState) {
+    extract_bntx_from_bfres(bfres, state);
 }
 
 /// 解码 BNTX 文件中的所有纹理切片并插入模型文档纹理池

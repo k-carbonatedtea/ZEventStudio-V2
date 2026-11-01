@@ -22,6 +22,13 @@ impl AppState {
         if let Some(tab) = self.open_tabs.iter().find(|tab_item| {
             tab_item.file_path == resolved_path || tab_item.file_path == raw_path
         }) {
+            if let Some(map) = &tab.map_state {
+                return Ok(serde_json::json!({"status":"ok","path":tab.file_path,"format":"mubin",
+                    "content":map.file.root.to_text(),"is_open_in_tab":true,"is_modified":map.file.is_modified(),
+                    "objects":map.file.actors().len(),"loading":map.loading,
+                    "terrain_tiles":map.assets.heights.len(),"warnings":map.assets.warnings,
+                    "missing_models":map.assets.actors.iter().filter_map(|(n,v)|v.diagnostic.as_ref().map(|e|format!("{n}: {e}"))).collect::<Vec<_>>() }));
+            }
             match tab.tab_kind {
                 DocumentTabKind::CodeEditor => {
                     let content = tab.code_state.as_ref().map(|code| code.content.clone()).unwrap_or_default();
@@ -169,7 +176,16 @@ impl AppState {
         let final_bytes = compile_content_to_target_bytes(&resolved_path, content, format_param, target_endian)?;
         write_file_to_target(&resolved_path, &final_bytes)?;
 
-        let tab_synced = self.sync_memory_tab_after_write(&resolved_path, content);
+        let mut tab_synced = self.sync_memory_tab_after_write(&resolved_path, content);
+        if let Ok(file)=uking_library::map::MapFile::from_bytes(&final_bytes) {
+            for tab in &mut self.open_tabs {
+                if tab.file_path == resolved_path && tab.map_state.is_some() {
+                    let title=tab.map_state.as_ref().unwrap().scene.model_name.clone();
+                    tab.map_state=Some(crate::model::map_editor::MapDocumentState::empty(file.clone(),&resolved_path,&title));
+                    tab.recompute_modified();tab_synced=true;
+                }
+            }
+        }
         self.reload_project();
         if self.git_is_repo {
             self.refresh_git_status();

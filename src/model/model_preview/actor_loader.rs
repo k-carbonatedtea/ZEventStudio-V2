@@ -111,6 +111,7 @@ pub fn load_actor_model_document(
     camera.fit_bounding_box(fit_min, fit_max);
 
     let mut doc_state = ModelDocumentState {
+        instances: None,
         file_path: path_str.clone(),
         model_name,
         is_switch,

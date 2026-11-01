@@ -62,3 +62,4 @@ pub use timeline::*;
 pub use model_preview::*;
 #[allow(unused_imports)]
 pub use umii::*;
+pub mod map_editor;

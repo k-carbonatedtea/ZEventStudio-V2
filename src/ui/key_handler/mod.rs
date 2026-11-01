@@ -112,6 +112,7 @@ pub fn handle_global_key_event(event: &KeyDownEvent, state: &mut AppState, clipb
     }
 
     // 6. 资源管理器文件过滤搜索框输入拦截
+    if let Some(handled) = super::state_map::handle_map_key(event, state, clipboard) { return handled; }
     if state.file_search_focused {
         if event.keystroke.key == "escape" || event.keystroke.key == "enter" {
             state.file_search_focused = false;

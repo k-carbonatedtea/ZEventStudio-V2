@@ -40,6 +40,7 @@ impl AppState {
                         tab.is_modified = false;
                     }
                     DocumentTabKind::ModelPreview => {
+                        if let Some(map) = &mut tab.map_state { map.revert(); }
                         tab.is_modified = false;
                     }
                     DocumentTabKind::UmiiEditor => {
@@ -133,6 +134,16 @@ impl AppState {
             }
             DocumentTabKind::DiffViewer => {}
             DocumentTabKind::ModelPreview => {
+                if tab.map_state.is_some() {
+                    let bytes = crate::model::file_tree::read_file_from_path(&tab.file_path)?;
+                    let file = uking_library::map::MapFile::from_bytes(&bytes)?;
+                    if let Some(target) = self.open_tabs.iter_mut().find(|t| t.id == tab_id) {
+                        target.map_state = Some(crate::model::map_editor::MapDocumentState::empty(file, &tab.file_path, &tab.title));
+                        target.is_modified = false;
+                        target.last_disk_mtime = crate::model::document_tab::get_file_mtime(&tab.file_path);
+                    }
+                    return Ok(());
+                }
                 let bytes = crate::model::file_tree::read_file_from_path(&tab.file_path)?;
                 let decompressed = crate::model::file_converter::decompress_if_yaz0(&bytes);
                 let bfres = rbfres_library::BfresFile::from_bytes(&decompressed).map_err(|e| e.to_string())?;

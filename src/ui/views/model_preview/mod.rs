@@ -22,6 +22,9 @@ use toolbar::render_preview_toolbar;
 
 /// 渲染 3D 模型预览主交互视图 (Model Preview View)
 pub fn render_model_preview_view(state: &AppState, model: &Entity<AppState>) -> impl IntoElement {
+    if state.active_map().is_some() {
+        return super::map_editor::render_map_editor(state, model).into_any_element();
+    }
     let pal = state.theme();
 
     // 检索当前处于激活状态的 ModelPreview 文档标签

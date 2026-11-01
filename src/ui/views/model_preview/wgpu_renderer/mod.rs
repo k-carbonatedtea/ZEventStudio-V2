@@ -16,7 +16,7 @@ use pipeline::WgpuPipeline;
 use std::sync::{Arc, Mutex};
 use target::RenderTargetBundle;
 use textures::GpuTextureManager;
-use types::{GpuUniforms, Mat4, WgpuCacheKey};
+use types::{GpuInstance, GpuUniforms, Mat4, WgpuCacheKey};
 
 use crate::model::model_preview::ModelDocumentState;
 use crate::ui::views::model_preview::gizmos::get_material_color;
@@ -27,6 +27,8 @@ struct WgpuEngineState {
     geometries: GpuGeometryCache,
     target: Option<RenderTargetBundle>,
     cached_frame: Option<(WgpuCacheKey, Arc<RenderImage>)>,
+    source_meshes: Option<Arc<Vec<rbfres_library::ExtractedMesh>>>,
+    source_instances: Option<Arc<Vec<crate::model::model_preview::ModelInstance>>>,
 }
 
 static ENGINE_STATE: Mutex<Option<WgpuEngineState>> = Mutex::new(None);
@@ -66,10 +68,20 @@ pub fn render_wgpu_scene(
             geometries,
             target: None,
             cached_frame: None,
+            source_meshes: None,
+            source_instances: None,
         });
     }
 
     let engine = guard.as_mut()?;
+    // Retain the source allocation while its frame is cached. Pointer reuse can
+    // otherwise make undo/reload return an image from an unrelated scene.
+    if engine.source_meshes.as_ref().is_none_or(|m|!Arc::ptr_eq(m,&state.meshes)) {
+        engine.geometries.clear();
+        engine.textures.cache.clear();
+    }
+    engine.source_meshes=Some(state.meshes.clone());
+    engine.source_instances=state.instances.clone();
     let render_image = render_scene_pass(&ctx, engine, state, target_w, target_h)?;
 
     engine.cached_frame = Some((cache_key, render_image.clone()));
@@ -77,6 +89,7 @@ pub fn render_wgpu_scene(
 }
 
 struct PreparedMeshDraw {
+    transparent: bool,
     bind_group: Arc<wgpu::BindGroup>,
     index_count: u32,
     geom_key: (String, usize),
@@ -104,14 +117,23 @@ fn render_scene_pass(
 
     // 1. 预处理所有待绘制网格 (准备显存缓冲、贴图与常量 UBO)
     let mut draw_calls = Vec::new();
+    let mut instances_by_mesh = vec![Vec::new(); state.meshes.len()];
+    if let Some(instances) = &state.instances {
+        for instance in instances.iter() {
+            if let Some(batch) = instances_by_mesh.get_mut(instance.mesh_index) {
+                batch.push(GpuInstance::new(instance.transform, instance.selected));
+            }
+        }
+    }
     for (mesh_idx, mesh) in state.meshes.iter().enumerate() {
+        if state.instances.is_some() && instances_by_mesh[mesh_idx].is_empty() {continue;}
         if state.mesh_items.get(mesh_idx).is_none_or(|item| !item.visible) {
             continue;
         }
 
         let b_min = [mesh.bounding_box.min().x, mesh.bounding_box.min().y, mesh.bounding_box.min().z];
         let b_max = [mesh.bounding_box.max().x, mesh.bounding_box.max().y, mesh.bounding_box.max().z];
-        if projector.is_all_behind_camera(b_min, b_max) {
+        if state.instances.is_none() && projector.is_all_behind_camera(b_min, b_max) {
             continue;
         }
 
@@ -125,6 +147,11 @@ fn render_scene_pass(
 
         let (tex_view, has_texture) = resolve_mesh_texture(ctx, engine, state, mesh);
         let geom = engine.geometries.get_or_upload(&ctx.device, &state.file_path, mesh_idx, mesh)?;
+        if state.instances.is_some() {
+            geom.update_instances(&ctx.device, &ctx.queue, &instances_by_mesh[mesh_idx]);
+        } else {
+            geom.update_instances(&ctx.device, &ctx.queue, &[GpuInstance::new(Default::default(), false)]);
+        }
 
         let uniforms = GpuUniforms {
             mvp: mvp.to_cols_array_2d(),
@@ -134,7 +161,7 @@ fn render_scene_pass(
                 if has_texture { 1 } else { 0 },
                 if mesh.is_alpha_cutout() { 1 } else { 0 },
                 if is_selected { 1 } else { 0 },
-                0,
+                mesh.display_face as u32,
             ],
         };
 
@@ -142,12 +169,14 @@ fn render_scene_pass(
         let bind_group = geom.get_or_create_bind_group(&ctx.device, &engine.pipeline, &tex_view)?;
 
         draw_calls.push(PreparedMeshDraw {
+            transparent: mesh.texture_name.as_ref().is_some_and(|n|n=="__map_marker"||n=="__terrain_water"),
             bind_group,
             index_count: geom.index_count,
             geom_key: (state.file_path.clone(), mesh_idx),
         });
     }
 
+    draw_calls.sort_by_key(|d|d.transparent);
     let target = engine.target.as_ref()?;
     let mut encoder = ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("Model Preview Render Encoder"),
@@ -184,17 +213,17 @@ fn render_scene_pass(
             multiview_mask: None,
         });
 
-        pass.set_pipeline(&engine.pipeline.pipeline);
-
         for draw in &draw_calls {
+            pass.set_pipeline(if draw.transparent {&engine.pipeline.transparent_pipeline}else{&engine.pipeline.pipeline});
             let Some(geom) = engine.geometries.get_or_upload(&ctx.device, &draw.geom_key.0, draw.geom_key.1, &state.meshes[draw.geom_key.1]) else {
                 continue;
             };
 
             pass.set_bind_group(0, draw.bind_group.as_ref(), &[]);
             pass.set_vertex_buffer(0, geom.vertex_buffer.slice(..));
+            pass.set_vertex_buffer(1, geom.instance_buffer.slice(..));
             pass.set_index_buffer(geom.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-            pass.draw_indexed(0..draw.index_count, 0, 0..1);
+            pass.draw_indexed(0..draw.index_count, 0, 0..geom.instance_count);
         }
     }
 
@@ -275,7 +304,7 @@ fn resolve_mesh_texture(
             }
         }
     }
-    for ref_name in &mesh.texture_refs {
+    for ref_name in mesh.texture_refs.iter().filter(|n| rbfres_library::ExtractedMesh::is_color_texture(n)) {
         if let Some(tex) = state.textures.get(ref_name) {
             if let Some(view) = engine.textures.get_or_upload(ctx, ref_name, tex) {
                 return (view, true);
@@ -294,6 +323,8 @@ fn compute_cache_key(state: &ModelDocumentState, target_w: u32, target_h: u32) -
     }
 
     WgpuCacheKey {
+        geometry_identity: Arc::as_ptr(&state.meshes) as usize,
+        instance_identity: state.instances.as_ref().map_or(0, |i| Arc::as_ptr(i) as usize),
         model_path: state.file_path.clone(),
         yaw_bits: state.camera.yaw.to_bits(),
         pitch_bits: state.camera.pitch.to_bits(),
