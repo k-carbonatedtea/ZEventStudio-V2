@@ -105,6 +105,7 @@ pub fn handle_map_key(
                 state.active_map_mut()?.apply_input()
             } else {
                 state.active_map_mut()?.input = None;
+                state.active_map_mut()?.input_error = None;
                 Ok(())
             };
             if let Err(e) = result {
@@ -143,10 +144,16 @@ pub fn handle_map_key(
             ("z", true, false) => map.undo(),
             ("y", true, _) | ("z", true, true) => map.redo(),
             ("d", true, _) => {
-                let _ = map.duplicate();
+                if let Err(error) = map.duplicate() {
+                    map.input_error = Some(error.clone());
+                    state.toast = Some(Toast::error(error));
+                }
             }
             ("delete", false, _) => {
-                let _ = map.delete();
+                if let Err(error) = map.delete() {
+                    map.input_error = Some(error.clone());
+                    state.toast = Some(Toast::error(error));
+                }
             }
             ("f", false, _) => map.focus_selected(),
             ("escape", false, _) => map.select(None),

@@ -62,23 +62,51 @@ pub fn load_scene(
         .collect();
     let mut cache: HashMap<(String, String), Vec<usize>> = HashMap::new();
     let mut loaded_textures = std::collections::HashSet::new();
-    let marker_index = push_mesh(&mut doc.scene, geometry::cube("Editor marker"));
+    let marker_index = push_mesh(&mut doc.scene, geometry::rito_cube("Editor marker", 0.625));
+    let area_marker_index = push_mesh(&mut doc.scene, geometry::cube("Editor area"));
     assets.round_markers = [
         push_mesh(&mut doc.scene, geometry::round_marker(true)),
         push_mesh(&mut doc.scene, geometry::round_marker(false)),
     ];
-    let marker_texture = "__map_marker".to_string();
+    let marker_texture = "__editor_marker_generic".to_string();
     Arc::make_mut(&mut doc.scene.textures).insert(
         marker_texture.clone(),
+        editor_texture(include_bytes!("../../../assets/editor-markers/TexturedCube.png")),
+    );
+    Arc::make_mut(&mut doc.scene.meshes)[marker_index].texture_name = Some(marker_texture);
+    Arc::make_mut(&mut doc.scene.textures).insert(
+        "__editor_marker_area".into(),
         Arc::new(RgbaTexture {
             width: 1,
             height: 1,
-            rgba: Arc::new(vec![244, 160, 56, 160]),
+            rgba: Arc::new(vec![92, 164, 220, 36]),
         }),
     );
-    Arc::make_mut(&mut doc.scene.meshes)[marker_index].texture_name = Some(marker_texture);
+    Arc::make_mut(&mut doc.scene.meshes)[area_marker_index].texture_name =
+        Some("__editor_marker_area".into());
+    let mut tag_meshes = HashMap::new();
+    for (name, bytes) in [
+        ("LinkTagAnd", include_bytes!("../../../assets/editor-markers/LinkTagAnd.png") as &[u8]),
+        ("LinkTagNAnd", include_bytes!("../../../assets/editor-markers/LinkTagNAnd.png") as &[u8]),
+        ("LinkTagOr", include_bytes!("../../../assets/editor-markers/LinkTagOr.png") as &[u8]),
+        ("LinkTagXOr", include_bytes!("../../../assets/editor-markers/LinkTagXOr.png") as &[u8]),
+        ("LinkTagNOr", include_bytes!("../../../assets/editor-markers/LinkTagNOr.png") as &[u8]),
+        ("LinkTagNone", include_bytes!("../../../assets/editor-markers/LinkTagNone.png") as &[u8]),
+        ("LinkTagCount", include_bytes!("../../../assets/editor-markers/LinkTagCount.png") as &[u8]),
+        ("LinkTagPulse", include_bytes!("../../../assets/editor-markers/LinkTagPulse.png") as &[u8]),
+        ("EventTag", include_bytes!("../../../assets/editor-markers/EventTag.png") as &[u8]),
+    ] {
+        let texture_name = format!("__editor_marker_{name}");
+        Arc::make_mut(&mut doc.scene.textures).insert(
+            texture_name.clone(),
+            editor_texture(bytes),
+        );
+        let mesh_index = push_mesh(&mut doc.scene, geometry::rito_cube(name, 0.625));
+        Arc::make_mut(&mut doc.scene.meshes)[mesh_index].texture_name = Some(texture_name);
+        tag_meshes.insert(name.to_string(), mesh_index);
+    }
     for i in assets.round_markers {
-        Arc::make_mut(&mut doc.scene.meshes)[i].texture_name = Some("__map_marker".into());
+        Arc::make_mut(&mut doc.scene.meshes)[i].texture_name = Some("__editor_marker_area".into());
     }
     for name in names {
         let mut visual = ActorVisual {
@@ -228,13 +256,23 @@ pub fn load_scene(
             visual.diagnostic = None;
         }
         if visual.meshes.is_empty() {
-            visual.meshes.push(marker_index);
-            if !logical {
+            if logical {
+                if is_area_profile(&profile, &name) {
+                    assets.area_actors.insert(name.clone());
+                    visual.meshes.push(area_marker_index);
+                    visual.resource = format!("区域 / {name}");
+                } else if let Some(tag) = rito_tag_name(&name) {
+                    visual.meshes.push(tag_meshes[tag]);
+                    visual.resource = format!("Rito 标记 / {tag}");
+                } else {
+                    visual.meshes.push(marker_index);
+                    visual.resource = format!("逻辑对象 / {name}");
+                }
+            } else {
+                visual.meshes.push(marker_index);
                 visual
                     .diagnostic
                     .get_or_insert_with(|| "没有可绘制的模型网格".into());
-            } else {
-                visual.resource = format!("逻辑区域 / {name}");
             }
         }
         assets.actors.insert(name, visual);
@@ -262,7 +300,11 @@ pub fn load_scene(
     doc.assets = Arc::new(assets);
     doc.loading = false;
     doc.rebuild_instances();
-    doc.scene.fit_camera();
+    if doc.selected_ref().is_some() {
+        doc.focus_selected();
+    } else {
+        doc.scene.fit_camera();
+    }
     doc.scene.camera.distance *= 0.65;
     doc.scene.camera.pitch = 0.7;
     if profile {
@@ -273,6 +315,39 @@ pub fn load_scene(
         );
     }
     Ok(doc)
+}
+
+fn editor_texture(bytes: &[u8]) -> Arc<RgbaTexture> {
+    let image = image::load_from_memory(bytes)
+        .expect("embedded Rito editor marker texture must decode")
+        .to_rgba8();
+    Arc::new(RgbaTexture {
+        width: image.width(),
+        height: image.height(),
+        rgba: Arc::new(image.into_raw()),
+    })
+}
+
+fn is_area_profile(profile: &str, name: &str) -> bool {
+    profile == "Area"
+        || profile == "SpotBgmTag"
+        || matches!(name, "BoxWater" | "AscendingCurrent" | "AirWall" | "NavMesh")
+}
+
+fn rito_tag_name(name: &str) -> Option<&'static str> {
+    [
+        "LinkTagAnd",
+        "LinkTagNAnd",
+        "LinkTagOr",
+        "LinkTagXOr",
+        "LinkTagNOr",
+        "LinkTagNone",
+        "LinkTagCount",
+        "LinkTagPulse",
+        "EventTag",
+    ]
+    .into_iter()
+    .find(|tag| name == *tag || name.starts_with(&format!("{tag}_")))
 }
 
 fn color_texture_names(file: &BfresFile) -> HashSet<String> {

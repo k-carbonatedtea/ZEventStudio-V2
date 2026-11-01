@@ -1,7 +1,7 @@
 use crate::{model::map_editor::MapDocumentState, ui::state::AppState};
 use gpui::*;
 use std::sync::{Arc, Mutex};
-use uking_library::map::{hash_id, Transform};
+use uking_library::map::Transform;
 
 pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &str) -> AnyElement {
     let rect = Arc::new(Mutex::new([0f32, 0., 1., 1.]));
@@ -42,7 +42,15 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
                                 );
                                 *painted_camera.lock().unwrap() =
                                     Some(frame.map.scene.camera.clone());
+                                draw_area_outlines(&frame.map, bounds, window);
                                 draw_selection(&frame.map, bounds, window);
+                                draw_links(
+                                    &frame.map,
+                                    snapshot.show_links,
+                                    snapshot.selected_links_only,
+                                    bounds,
+                                    window,
+                                );
                             }
                         }
                         if pending {
@@ -59,6 +67,12 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
         view = view.on_mouse_down(button, move |e, _, cx| {
             model.update(cx, |st, cx| {
                 st.clear_active_text_inputs();
+                if st
+                    .active_map()
+                    .is_some_and(|m| m.input.is_some() && m.input_error.is_some())
+                {
+                    return;
+                }
                 st.update_map(&id, |m| {
                     let pos = (f32::from(e.position.x), f32::from(e.position.y));
                     m.last_mouse = pos;
@@ -126,6 +140,9 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
         view = view.on_mouse_up(button, move |e, _, cx| {
             mouse_up_model.update(cx, |st, cx| {
                 st.update_map(&tid, |m| {
+                    if m.input.is_some() && m.input_error.is_some() {
+                        return Ok(());
+                    }
                     let pos = (f32::from(e.position.x), f32::from(e.position.y));
                     if button == MouseButton::Left
                         && !m.orbiting
@@ -141,7 +158,7 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
                             r[2],
                             r[3],
                         );
-                        m.select(hit);
+                        m.select_ref(hit);
                     }
                     m.orbiting = false;
                     m.panning = false;
@@ -218,10 +235,10 @@ fn plane_point(
 }
 
 fn draw_selection(map: &MapDocumentState, bounds: Bounds<Pixels>, window: &mut Window) {
-    let Some((index, actor)) = map
-        .selected
-        .and_then(|i| map.file.actors().get(i).map(|a| (i, a)))
-    else {
+    let Some(reference) = map.selected_ref() else {
+        return;
+    };
+    let Some(actor) = map.actor(reference) else {
         return;
     };
     let w = f32::from(bounds.size.width);
@@ -234,7 +251,7 @@ fn draw_selection(map: &MapDocumentState, bounds: Bounds<Pixels>, window: &mut W
     let mut count = 0;
     if let Some(instances) = &map.scene.instances {
         for (instance, owner) in instances.iter().zip(map.instance_owners.iter()) {
-            if *owner != Some(index) {
+            if *owner != Some(reference) {
                 continue;
             }
             let b = &map.scene.meshes[instance.mesh_index].bounding_box;
@@ -290,43 +307,155 @@ fn draw_selection(map: &MapDocumentState, bounds: Bounds<Pixels>, window: &mut W
         h,
         window,
     );
-    if let Some(links) = actor
-        .as_map()
-        .ok()
-        .and_then(|m| m.get("LinksToObj"))
-        .and_then(|v| v.as_array().ok())
-    {
-        let mut path = PathBuilder::stroke(px(2.));
-        let mut count = 0;
-        for link in links {
-            let dest = link
-                .as_map()
-                .ok()
-                .and_then(|m| m.get("DestUnitHashId"))
-                .and_then(|v| match v {
-                    roead::byml::Byml::U32(v) => Some(*v),
-                    roead::byml::Byml::I32(v) => Some(*v as u32),
-                    _ => None,
-                });
-            if let Some(target) = map
-                .file
-                .actors()
-                .iter()
-                .find(|a| hash_id(a) == dest && dest.is_some())
-            {
-                if let (Some((a, _)), Some((b, _))) = (
-                    projector.project(transform.translation),
-                    projector.project(Transform::from_actor(target).translation),
-                ) {
-                    path.move_to(point(px(ox + a[0]), px(oy + a[1])));
-                    path.line_to(point(px(ox + b[0]), px(oy + b[1])));
-                    count += 1;
-                }
+}
+
+fn draw_area_outlines(map: &MapDocumentState, bounds: Bounds<Pixels>, window: &mut Window) {
+    let projector = map
+        .scene
+        .camera
+        .projector(bounds.size.width.into(), bounds.size.height.into());
+    let ox = f32::from(bounds.origin.x);
+    let oy = f32::from(bounds.origin.y);
+    let mut path = PathBuilder::stroke(px(1.2));
+    let mut selected_path = PathBuilder::stroke(px(2.0));
+    let mut count = 0;
+    let mut selected_count = 0;
+    let mut draw_one = |reference: crate::model::map_editor::ActorRef, actor: &roead::byml::Byml| {
+        if !map.assets.area_actors.contains(uking_library::map::actor_name(actor))
+            || !map.object_visible(reference)
+        {
+            return;
+        }
+        let t = Transform::from_actor(actor);
+        let corners = [
+            [-1., -1., -1.],
+            [1., -1., -1.],
+            [1., 1., -1.],
+            [-1., 1., -1.],
+            [-1., -1., 1.],
+            [1., -1., 1.],
+            [1., 1., 1.],
+            [-1., 1., 1.],
+        ]
+        .map(|p| t.point(p));
+        let selected = map.selected_ref() == Some(reference);
+        let target = if selected { &mut selected_path } else { &mut path };
+        for (a, b) in [
+            (0, 1),
+            (1, 2),
+            (2, 3),
+            (3, 0),
+            (4, 5),
+            (5, 6),
+            (6, 7),
+            (7, 4),
+            (0, 4),
+            (1, 5),
+            (2, 6),
+            (3, 7),
+        ] {
+            if let (Some((a, _)), Some((b, _))) = (projector.project(corners[a]), projector.project(corners[b])) {
+                target.move_to(point(px(ox + a[0]), px(oy + a[1])));
+                target.line_to(point(px(ox + b[0]), px(oy + b[1])));
+                if selected { selected_count += 1; } else { count += 1; }
             }
+        }
+    };
+    for (i, actor) in map.file.actors().iter().enumerate() {
+        draw_one(crate::model::map_editor::ActorRef::Current(i), actor);
+    }
+    for (i, actor) in map.assets.context_actors.iter().enumerate() {
+        draw_one(crate::model::map_editor::ActorRef::Context(i), actor);
+    }
+    if count > 0 {
+        if let Ok(path) = path.build() { window.paint_path(path, rgb(0x111820)); }
+    }
+    if selected_count > 0 {
+        if let Ok(path) = selected_path.build() { window.paint_path(path, rgb(0x63DCCB)); }
+    }
+}
+
+fn draw_links(
+    map: &MapDocumentState,
+    show: bool,
+    selected_only: bool,
+    bounds: Bounds<Pixels>,
+    window: &mut Window,
+) {
+    if !show {
+        return;
+    }
+    let projector = map
+        .scene
+        .camera
+        .projector(bounds.size.width.into(), bounds.size.height.into());
+    let ox = f32::from(bounds.origin.x);
+    let oy = f32::from(bounds.origin.y);
+    for selected in [false, true] {
+        let mut path = PathBuilder::stroke(px(if selected { 2. } else { 1. }));
+        let mut count = 0;
+        for link in map.links.iter() {
+            let connected = map
+                .selected_ref()
+                .is_some_and(|r| link.source == r || link.target == Some(r));
+            if connected != selected || (selected_only && !connected) {
+                continue;
+            }
+            if !map.object_visible(link.source)
+                || link.target.is_some_and(|r| !map.object_visible(r))
+            {
+                continue;
+            }
+            if !map.show_context
+                && (matches!(link.source, crate::model::map_editor::ActorRef::Context(_))
+                    || matches!(
+                        link.target,
+                        Some(crate::model::map_editor::ActorRef::Context(_))
+                    ))
+            {
+                continue;
+            }
+            let Some(to) = link.to else {
+                continue;
+            };
+            let (Some((a, _)), Some((b, _))) =
+                (projector.project(link.from), projector.project(to))
+            else {
+                continue;
+            };
+            let [ax, ay] = [ox + a[0], oy + a[1]];
+            let [bx, by] = [ox + b[0], oy + b[1]];
+            path.move_to(point(px(ax), px(ay)));
+            path.line_to(point(px(bx), px(by)));
+            let dx = bx - ax;
+            let dy = by - ay;
+            let len = dx.hypot(dy);
+            if len > 12. {
+                let size = 7.;
+                let ux = dx / len;
+                let uy = dy / len;
+                path.move_to(point(
+                    px(bx - size * ux + size * 0.45 * uy),
+                    px(by - size * uy - size * 0.45 * ux),
+                ));
+                path.line_to(point(px(bx), px(by)));
+                path.line_to(point(
+                    px(bx - size * ux - size * 0.45 * uy),
+                    px(by - size * uy + size * 0.45 * ux),
+                ));
+            }
+            count += 1;
         }
         if count > 0 {
             if let Ok(path) = path.build() {
-                window.paint_path(path, rgb(0xEABB63));
+                window.paint_path(
+                    path,
+                    if selected {
+                        rgba(0xF2C46EFF)
+                    } else {
+                        rgba(0x7B9CA699)
+                    },
+                );
             }
         }
     }

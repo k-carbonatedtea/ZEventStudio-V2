@@ -274,10 +274,9 @@ fn prepare_bundle(
         let bind_group = geom.get_or_create_bind_group(&ctx.device, &engine.pipeline, &tex_view)?;
 
         draw_calls.push(PreparedMeshDraw {
-            transparent: mesh
-                .texture_name
-                .as_ref()
-                .is_some_and(|n| n == "__map_marker" || n == "__terrain_water"),
+            transparent: mesh.texture_name.as_ref().is_some_and(|n| {
+                n == "__terrain_water" || n.starts_with("__editor_marker_")
+            }),
             bind_group,
             index_count: geom.index_count,
             geom_key: (state.file_path.clone(), mesh_idx),

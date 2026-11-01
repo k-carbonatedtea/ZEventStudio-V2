@@ -1,23 +1,14 @@
 mod async_render;
+mod inspector;
+mod outliner;
 mod viewport;
 use crate::{
-    model::map_editor::{MapDocumentState, MapInput},
+    model::map_editor::MapDocumentState,
     ui::{state::AppState, theme::ThemePalette},
 };
 use gpui::*;
 use roead::byml::Byml;
-use std::{cell::RefCell, sync::Arc};
-use uking_library::map::{actor_name, hash_id, Transform};
-
-struct OutlinerMatches {
-    root: Arc<Byml>,
-    query: String,
-    indices: Arc<Vec<usize>>,
-}
-
-thread_local! {
-    static OUTLINER_MATCHES: RefCell<Option<OutlinerMatches>> = const { RefCell::new(None) };
-}
+use uking_library::map::{actor_name, hash_id};
 
 fn actor_matches(actor: &Byml, query: &str) -> bool {
     if query.is_empty() {
@@ -48,39 +39,11 @@ fn actor_matches(actor: &Byml, query: &str) -> bool {
     })
 }
 
-fn filtered_actor_indices(map: &MapDocumentState, query: &str) -> Option<Arc<Vec<usize>>> {
-    if query.is_empty() {
-        return None;
-    }
-    OUTLINER_MATCHES.with(|cache| {
-        let mut cache = cache.borrow_mut();
-        if let Some(matches) = cache.as_ref() {
-            if Arc::ptr_eq(&matches.root, &map.file.root) && matches.query == query {
-                return Some(matches.indices.clone());
-            }
-        }
-        let indices: Arc<Vec<usize>> = Arc::new(
-            map.file
-                .actors()
-                .iter()
-                .enumerate()
-                .filter_map(|(index, actor)| actor_matches(actor, query).then_some(index))
-                .collect(),
-        );
-        // Retaining the root prevents an allocation reused after edits or tab
-        // switches from being mistaken for the cached document.
-        *cache = Some(OutlinerMatches {
-            root: map.file.root.clone(),
-            query: query.into(),
-            indices: indices.clone(),
-        });
-        Some(indices)
-    })
-}
-
 #[cfg(test)]
 mod outliner_tests {
-    use super::{actor_matches, filtered_actor_indices, Arc, Byml, MapDocumentState};
+    use super::{actor_matches, outliner::rows, Byml, MapDocumentState};
+    use crate::model::map_editor::ActorRef;
+    use std::sync::Arc;
 
     fn document() -> MapDocumentState {
         let root = Byml::from_text(
@@ -108,17 +71,27 @@ mod outliner_tests {
     #[test]
     fn reuses_filtered_indices_until_query_or_document_changes() {
         let mut map = document();
-        assert!(filtered_actor_indices(&map, "").is_none());
-        let first = filtered_actor_indices(&map, "rock").unwrap();
-        assert_eq!(first.as_slice(), &[1]);
-        let cached = filtered_actor_indices(&map, "rock").unwrap();
-        assert!(Arc::ptr_eq(&first, &cached));
-        let trees = filtered_actor_indices(&map, "tree").unwrap();
-        assert_eq!(trees.as_slice(), &[0]);
+        map.filter = "rock".into();
+        let first = rows(&map);
+        assert_eq!(first.as_slice(), &[ActorRef::Current(1)]);
+        assert!(Arc::ptr_eq(&first, &rows(&map)));
+        map.filter = "tree".into();
+        assert_eq!(rows(&map).as_slice(), &[ActorRef::Current(0)]);
         map.file.delete(0).unwrap();
-        let edited = filtered_actor_indices(&map, "rock").unwrap();
-        assert_eq!(edited.as_slice(), &[0]);
+        map.filter = "rock".into();
+        let edited = rows(&map);
+        assert_eq!(edited.as_slice(), &[ActorRef::Current(0)]);
         assert!(!Arc::ptr_eq(&first, &edited));
+        Arc::make_mut(&mut map.assets)
+            .context_actors
+            .push(Byml::from_text("{UnitConfigName: Rock, HashId: !u 2}").unwrap());
+        map.outliner_scope = 1;
+        assert_eq!(rows(&map).as_slice(), &[ActorRef::Context(0)]);
+        map.outliner_scope = 2;
+        assert_eq!(
+            rows(&map).as_slice(),
+            &[ActorRef::Current(0), ActorRef::Context(0)]
+        );
     }
 }
 
@@ -148,7 +121,24 @@ pub fn button(
         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
             model.update(cx, |st, cx| {
                 st.clear_active_text_inputs();
-                st.update_map(&id, |m| action(m));
+                if st
+                    .active_map()
+                    .is_some_and(|m| m.input.is_some() && m.input_error.is_some())
+                {
+                    return;
+                }
+                st.update_map(&id, |m| {
+                    let result = action(m);
+                    m.input_error = result.as_ref().err().cloned();
+                    result
+                });
+                if let Some(map) = st
+                    .active_map()
+                    .filter(|m| m.input == Some(crate::model::map_editor::MapInput::PropertyName))
+                {
+                    st.text_input_cursor = map.input_text.chars().count();
+                    st.text_input_select_anchor = Some(0);
+                }
                 cx.notify();
             });
         })
@@ -162,6 +152,10 @@ pub fn render_map_editor(state: &AppState, model: &Entity<AppState>) -> AnyEleme
         return div().into_any_element();
     };
     let id = state.active_tab_id.as_deref().unwrap_or("");
+    let resize_model = model.clone();
+    let resize_id = id.to_string();
+    let up_model = model.clone();
+    let up_id = id.to_string();
     let m = model.clone();
     let save_id = id.to_string();
     let missing = map
@@ -237,11 +231,18 @@ pub fn render_map_editor(state: &AppState, model: &Entity<AppState>) -> AnyEleme
         .px_3()
         .py_1()
         .bg(pal.panel_surface)
-        .child(button("模型", map.show_models, &pal, model, id, |m| {
-            m.show_models = !m.show_models;
-            m.rebuild_instances();
-            Ok(())
-        }))
+        .child(button(
+            "可见对象",
+            map.show_models,
+            &pal,
+            model,
+            id,
+            |m| {
+                m.show_models = !m.show_models;
+                m.rebuild_instances();
+                Ok(())
+            },
+        ))
         .child(button("地形", map.show_terrain, &pal, model, id, |m| {
             m.show_terrain = !m.show_terrain;
             m.rebuild_instances();
@@ -253,7 +254,7 @@ pub fn render_map_editor(state: &AppState, model: &Entity<AppState>) -> AnyEleme
             Ok(())
         }))
         .child(button(
-            "区域 / 标记",
+            "隐藏对象",
             map.show_tags,
             &pal,
             model,
@@ -261,6 +262,17 @@ pub fn render_map_editor(state: &AppState, model: &Entity<AppState>) -> AnyEleme
             |m| {
                 m.show_tags = !m.show_tags;
                 m.rebuild_instances();
+                Ok(())
+            },
+        ))
+        .child(button(
+            "对象链接",
+            map.show_links,
+            &pal,
+            model,
+            id,
+            |m| {
+                m.show_links = !m.show_links;
                 Ok(())
             },
         ))
@@ -300,382 +312,60 @@ pub fn render_map_editor(state: &AppState, model: &Entity<AppState>) -> AnyEleme
         );
     }
     div().size_full().flex().flex_col().overflow_hidden().bg(pal.app_bg).text_color(pal.text_primary)
+        .on_mouse_move(move |e,_,cx| {resize_model.update(cx,|st,cx| {
+            if st.active_map().is_some_and(|m|m.panel_resize.is_some()) {
+                st.update_map(&resize_id,|m| {
+                    if !e.dragging() {m.panel_resize=None;return Ok(());}
+                    if let Some((right,start,width))=m.panel_resize {
+                    let delta=f32::from(e.position.x)-start;
+                    if right {m.inspector_width=(width-delta).clamp(300.,700.);}else{m.outliner_width=(width+delta).clamp(180.,420.);}
+                } Ok(())});cx.notify();
+            }
+        });})
+        .on_mouse_up(MouseButton::Left,move |_,_,cx| {up_model.update(cx,|st,cx| {st.update_map(&up_id,|m|{m.panel_resize=None;Ok(())});cx.notify();});})
         .child(toolbar).child(layers)
         .child(div().flex_1().min_h_0().flex().overflow_hidden()
-            .child(outliner(map,state,model,id))
+            .child(outliner::render(map,state,model,id))
+            .child(resize_handle(false,map,state,model,id))
             .child(viewport::render_viewport(map,model,id))
-            .child(inspector(map,state,model,id)))
+            .child(resize_handle(true,map,state,model,id))
+            .child(inspector::render(map,state,model,id)))
         .child(div().px_3().py_1().bg(pal.panel_surface).text_xs().text_color(pal.text_secondary)
             .child("左键选择 · 右键旋转 · 中键平移 · 滚轮缩放 · Shift+左拖移动 · F 聚焦 · Ctrl+D 复制 · Delete 删除"))
         .into_any_element()
 }
 
-fn outliner(
+fn resize_handle(
+    right: bool,
     map: &MapDocumentState,
     state: &AppState,
     model: &Entity<AppState>,
     id: &str,
 ) -> AnyElement {
     let pal = state.theme();
-    let model_search = model.clone();
-    let tid = id.to_string();
-    let query = map.filter.to_lowercase();
-    let actors = map.file.actors();
-    let filtered = filtered_actor_indices(map, &query);
-    let count = filtered
-        .as_ref()
-        .map_or(actors.len(), |indices| indices.len());
-    let pages = count.div_ceil(100).max(1);
-    let page = map.page.min(pages - 1);
-    div()
-        .w(px(200.))
-        .flex_shrink_0()
-        .flex()
-        .flex_col()
-        .border_r_1()
-        .border_color(pal.card_border)
-        .bg(pal.panel_surface)
-        .child(
-            div()
-                .px_3()
-                .py_2()
-                .text_xs()
-                .font_weight(FontWeight::BOLD)
-                .child(format!("场景对象 ({count})")),
-        )
-        .child(
-            div()
-                .mx_2()
-                .mb_2()
-                .p_2()
-                .rounded_md()
-                .border_1()
-                .border_color(if map.input == Some(MapInput::Search) {
-                    pal.primary_accent
-                } else {
-                    pal.card_border
-                })
-                .text_xs()
-                .cursor_text()
-                .child(if map.filter.is_empty() {
-                    "搜索 Actor / HashId".into()
-                } else {
-                    map.filter.clone()
-                })
-                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                    model_search.update(cx, |st, cx| {
-                        st.clear_active_text_inputs();
-                        if let Some(m) = st.active_map_mut() {
-                            m.input = Some(MapInput::Search);
-                            st.text_input_cursor = m.filter.chars().count();
-                        }
-                        cx.notify();
-                    });
-                    let _ = &tid;
-                }),
-        )
-        .child(
-            div()
-                .id("map-outliner")
-                .flex_1()
-                .overflow_y_scroll()
-                .children((page * 100..(page * 100 + 100).min(count)).map(|position| {
-                    let i = filtered
-                        .as_ref()
-                        .map_or(position, |indices| indices[position]);
-                    let actor = &actors[i];
-                    let selected = map.selected == Some(i);
-                    let name = actor_name(actor).to_string();
-                    let diagnostic = map
-                        .assets
-                        .actors
-                        .get(&name)
-                        .is_some_and(|v| v.diagnostic.is_some());
-                    let model = model.clone();
-                    let id = id.to_string();
-                    div()
-                        .px_2()
-                        .py_1()
-                        .cursor_pointer()
-                        .bg(if selected {
-                            pal.card_hover
-                        } else {
-                            pal.panel_surface
-                        })
-                        .hover(|s| s.bg(pal.card_hover))
-                        .on_mouse_down(MouseButton::Left, move |e, _, cx| {
-                            model.update(cx, |st, cx| {
-                                st.clear_active_text_inputs();
-                                st.update_map(&id, |m| {
-                                    m.select(Some(i));
-                                    if e.click_count > 1 {
-                                        m.focus_selected();
-                                    }
-                                    Ok(())
-                                });
-                                cx.notify();
-                            });
-                        })
-                        .child(
-                            div()
-                                .text_xs()
-                                .text_color(if diagnostic {
-                                    rgb(0xE9AA61).into()
-                                } else {
-                                    pal.text_primary
-                                })
-                                .overflow_hidden()
-                                .child(format!("{} {name}", if diagnostic { "!" } else { "·" })),
-                        )
-                        .child(
-                            div()
-                                .text_size(px(10.))
-                                .text_color(pal.text_secondary)
-                                .child(format!("{:08X}", hash_id(actor).unwrap_or(0))),
-                        )
-                })),
-        )
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .p_2()
-                .child(button("‹", false, &pal, model, id, |m| {
-                    m.page = m.page.saturating_sub(1);
-                    Ok(())
-                }))
-                .child(div().text_xs().child(format!("{} / {pages}", page + 1)))
-                .child(button("›", false, &pal, model, id, move |m| {
-                    m.page = (m.page + 1).min(pages - 1);
-                    Ok(())
-                })),
-        )
-        .into_any_element()
-}
-
-fn inspector(
-    map: &MapDocumentState,
-    state: &AppState,
-    model: &Entity<AppState>,
-    id: &str,
-) -> AnyElement {
-    let pal = state.theme();
-    let mut panel = div()
-        .id("map-inspector")
-        .w(px(252.))
-        .flex_shrink_0()
-        .p_3()
-        .flex()
-        .flex_col()
-        .gap_2()
-        .overflow_y_scroll()
-        .border_l_1()
-        .border_color(pal.card_border)
-        .bg(pal.panel_surface);
-    if let Some(error) = &map.load_error {
-        panel = panel.child(
-            div()
-                .text_xs()
-                .text_color(rgb(0xED8B71))
-                .child(error.clone()),
-        );
-    }
-    if !map.assets.background_meshes.is_empty() {
-        panel = panel.child(div().text_xs().text_color(pal.text_secondary).child(
-            "神庙主体为合并背景。缺少独立模型的建筑仅编辑放置数据，合并模型与碰撞不会重建。",
-        ));
-    }
-    for warning in &map.assets.warnings {
-        panel = panel.child(
-            div()
-                .text_xs()
-                .text_color(rgb(0xE9AA61))
-                .child(warning.clone()),
-        );
-    }
-    let Some((index, actor)) = map
-        .selected
-        .and_then(|i| map.file.actors().get(i).map(|a| (i, a)))
-    else {
-        return panel
-            .child(
-                div()
-                    .text_sm()
-                    .text_color(pal.text_secondary)
-                    .child("选择对象以编辑变换与查看模型来源"),
-            )
-            .into_any_element();
+    let model = model.clone();
+    let id = id.to_string();
+    let width = if right {
+        map.inspector_width
+    } else {
+        map.outliner_width
     };
-    panel = panel
-        .child(
-            div()
-                .text_sm()
-                .font_weight(FontWeight::BOLD)
-                .child(actor_name(actor).to_string()),
-        )
-        .child(
-            div()
-                .text_xs()
-                .text_color(pal.text_secondary)
-                .child(format!(
-                    "HashId {:08X} · #{}",
-                    hash_id(actor).unwrap_or(0),
-                    index
-                )),
-        );
-    if let Some(visual) = map.assets.actors.get(actor_name(actor)) {
-        panel = panel.child(
-            div()
-                .text_xs()
-                .text_color(pal.text_secondary)
-                .child(visual.resource.clone()),
-        );
-        if let Some(error) = &visual.diagnostic {
-            panel = panel.child(
-                div()
-                    .text_xs()
-                    .text_color(rgb(0xE9AA61))
-                    .child(error.clone()),
-            );
-        }
-    }
-    let t = Transform::from_actor(actor);
-    for (kind, title, values) in [
-        (0, "位置", t.translation),
-        (1, "旋转 (°)", t.rotation.map(f32::to_degrees)),
-        (2, "缩放", t.scale),
-    ] {
-        panel = panel.child(
-            div()
-                .mt_2()
-                .text_xs()
-                .font_weight(FontWeight::BOLD)
-                .child(title),
-        );
-        for axis in 0..3 {
-            let value = values[axis];
-            let m = model.clone();
-            let id = id.to_string();
-            let field = MapInput::Transform(kind, axis);
-            let editing = map.input == Some(field);
-            panel = panel.child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap_2()
-                    .child(
-                        div()
-                            .w(px(14.))
-                            .text_xs()
-                            .text_color([rgb(0xED7C73), rgb(0x8DC87A), rgb(0x76A9EA)][axis])
-                            .child(["X", "Y", "Z"][axis]),
-                    )
-                    .child(
-                        div()
-                            .flex_1()
-                            .px_2()
-                            .py_1()
-                            .rounded_md()
-                            .border_1()
-                            .border_color(if editing {
-                                pal.primary_accent
-                            } else {
-                                pal.card_border
-                            })
-                            .bg(pal.card_surface)
-                            .cursor_text()
-                            .text_xs()
-                            .child(if editing {
-                                format!("{} ▏", map.input_text)
-                            } else {
-                                format!("{value:.4}")
-                            })
-                            .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                                m.update(cx, |st, cx| {
-                                    st.clear_active_text_inputs();
-                                    st.update_map(&id, |map| {
-                                        map.input = Some(field);
-                                        map.input_text = format!("{value:.4}");
-                                        Ok(())
-                                    });
-                                    st.text_input_cursor =
-                                        st.active_map().map_or(0, |m| m.input_text.chars().count());
-                                    st.text_input_select_anchor = Some(0);
-                                    cx.notify();
-                                });
-                            }),
-                    ),
-            );
-        }
-    }
-    panel = panel
-        .child(
-            div()
-                .text_size(px(10.))
-                .text_color(pal.text_secondary)
-                .child("输入数值后按 Enter 应用"),
-        )
-        .child(button("聚焦对象 (F)", false, &pal, model, id, |m| {
-            m.focus_selected();
-            Ok(())
-        }))
-        .child(button("吸附到地形", false, &pal, model, id, |m| {
-            m.snap_to_terrain()
-        }))
-        .child(
-            div()
-                .flex()
-                .gap_2()
-                .child(button("复制", false, &pal, model, id, |m| m.duplicate()))
-                .child(button("删除", false, &pal, model, id, |m| m.delete())),
-        );
-    if let Some(links) = actor
-        .as_map()
-        .ok()
-        .and_then(|m| m.get("LinksToObj"))
-        .and_then(|v| v.as_array().ok())
-    {
-        panel = panel.child(
-            div()
-                .mt_2()
-                .text_xs()
-                .font_weight(FontWeight::BOLD)
-                .child(format!("对象连线 ({})", links.len())),
-        );
-        for link in links {
-            if let Ok(m) = link.as_map() {
-                let name = m
-                    .get("DefinitionName")
-                    .and_then(|v| v.as_string().ok())
-                    .map(ToString::to_string)
-                    .unwrap_or_default();
-                let dest = m.get("DestUnitHashId").and_then(|v| match v {
-                    roead::byml::Byml::U32(v) => Some(*v),
-                    roead::byml::Byml::I32(v) => Some(*v as u32),
-                    _ => None,
+    div()
+        .w(px(4.))
+        .h_full()
+        .flex_shrink_0()
+        .cursor_col_resize()
+        .bg(pal.card_border)
+        .hover(|s| s.bg(pal.primary_accent))
+        .on_mouse_down(MouseButton::Left, move |e, _, cx| {
+            cx.stop_propagation();
+            model.update(cx, |st, cx| {
+                st.update_map(&id, |m| {
+                    m.panel_resize = Some((right, e.position.x.into(), width));
+                    Ok(())
                 });
-                if let Some(dest) = dest {
-                    let target = map
-                        .file
-                        .actors()
-                        .iter()
-                        .position(|a| hash_id(a) == Some(dest));
-                    panel = panel.child(button(
-                        format!("{name} → {dest:08X}"),
-                        false,
-                        &pal,
-                        model,
-                        id,
-                        move |m| {
-                            m.select(target);
-                            m.focus_selected();
-                            Ok(())
-                        },
-                    ));
-                }
-            }
-        }
-    }
-    panel.into_any_element()
+                cx.notify();
+            });
+        })
+        .into_any_element()
 }

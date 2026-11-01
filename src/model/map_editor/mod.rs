@@ -1,13 +1,20 @@
 pub mod geometry;
+pub mod links;
 pub mod loader;
+pub mod properties;
 pub mod resources;
 mod terrain_material;
 #[cfg(test)]
 mod tests;
 
 use super::model_preview::{ModelDocumentState, ModelInstance};
+pub use links::{ActorRef, ObjectLink};
+pub use properties::{PropertyPart, PropertyPath, PropertyType};
 use roead::byml::Byml;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 use uking_library::{
     map::{actor_name, MapFile, Transform},
     terrain::HeightField,
@@ -29,6 +36,7 @@ pub struct MapAssets {
     pub water_meshes: Vec<usize>,
     pub heights: Vec<HeightField>,
     pub round_markers: [usize; 2],
+    pub area_actors: HashSet<String>,
     pub context_actors: Vec<Byml>,
     pub context_path: Option<String>,
     pub warnings: Vec<String>,
@@ -38,6 +46,11 @@ pub struct MapAssets {
 pub enum MapInput {
     Search,
     Transform(usize, usize),
+    Property,
+    PropertyName,
+    NewPropertyName,
+    LinkDefinition,
+    LinkTarget,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,16 +59,35 @@ pub struct MapDocumentState {
     pub scene: ModelDocumentState,
     pub assets: Arc<MapAssets>,
     pub selected: Option<usize>,
+    pub selected_context: Option<usize>,
     pub show_terrain: bool,
     pub show_water: bool,
     pub show_models: bool,
     pub show_tags: bool,
+    pub show_map_models: bool,
+    pub show_context: bool,
+    pub show_links: bool,
+    pub selected_links_only: bool,
+    pub hidden_objects: Arc<HashSet<ActorRef>>,
+    pub links: Arc<Vec<ObjectLink>>,
+    pub collapsed_sections: HashSet<String>,
+    pub edit_path: PropertyPath,
+    pub add_property_parent: PropertyPath,
+    pub new_property_name: String,
+    pub new_property_type: PropertyType,
+    pub new_link_definition: String,
+    pub new_link_target: String,
+    pub input_error: Option<String>,
+    pub outliner_scope: usize,
+    pub outliner_width: f32,
+    pub inspector_width: f32,
+    pub panel_resize: Option<(bool, f32, f32)>,
     pub filter: String,
     pub input: Option<MapInput>,
     pub input_text: String,
     pub undo: Vec<Arc<Byml>>,
     pub redo: Vec<Arc<Byml>>,
-    pub instance_owners: Arc<Vec<Option<usize>>>,
+    pub instance_owners: Arc<Vec<Option<ActorRef>>>,
     pub orbiting: bool,
     pub panning: bool,
     pub dragging: bool,
@@ -69,6 +101,23 @@ pub struct MapDocumentState {
 }
 
 impl MapDocumentState {
+    fn actor_meshes(&self, actor: &Byml, visual: &ActorVisual) -> Vec<usize> {
+        let shape = actor
+            .as_map()
+            .ok()
+            .and_then(|m| m.get("!Parameters"))
+            .and_then(|p| p.as_map().ok())
+            .and_then(|p| p.get("Shape"))
+            .and_then(|p| p.as_string().ok())
+            .map(|s| s.as_str())
+            .unwrap_or("");
+        let is_area = self.assets.area_actors.contains(actor_name(actor));
+        match (visual.has_model, is_area, shape) {
+            (false, true, "Sphere") => vec![self.assets.round_markers[0]],
+            (false, true, "Cylinder") => vec![self.assets.round_markers[1]],
+            _ => visual.meshes.clone(),
+        }
+    }
     pub fn empty(file: MapFile, path: &str, title: &str) -> Self {
         let mut scene = ModelDocumentState::from_bfres(path, title, &Default::default());
         scene.is_switch = !file.big_endian;
@@ -79,10 +128,35 @@ impl MapDocumentState {
             scene,
             assets: Arc::new(MapAssets::default()),
             selected: None,
+            selected_context: None,
             show_terrain: true,
             show_water: true,
             show_models: true,
-            show_tags: false,
+            show_tags: true,
+            show_map_models: true,
+            show_context: true,
+            show_links: true,
+            selected_links_only: false,
+            hidden_objects: Arc::new(HashSet::new()),
+            links: Arc::new(Vec::new()),
+            collapsed_sections: [
+                "project-resources".into(),
+                "source".into(),
+                "display".into(),
+            ]
+            .into_iter()
+            .collect(),
+            edit_path: Vec::new(),
+            add_property_parent: Vec::new(),
+            new_property_name: String::new(),
+            new_property_type: PropertyType::Float,
+            new_link_definition: "BasicSig".into(),
+            new_link_target: String::new(),
+            input_error: None,
+            outliner_scope: 0,
+            outliner_width: 220.,
+            inspector_width: 390.,
+            panel_resize: None,
             filter: String::new(),
             input: None,
             input_text: String::new(),
@@ -103,6 +177,7 @@ impl MapDocumentState {
     }
 
     pub fn rebuild_instances(&mut self) {
+        self.rebuild_links();
         let mut instances = Vec::new();
         let mut owners = Vec::new();
         let mut min = [f32::INFINITY; 3];
@@ -111,40 +186,18 @@ impl MapDocumentState {
             let Some(visual) = self.assets.actors.get(actor_name(actor)) else {
                 continue;
             };
-            if (visual.has_model && !self.show_models)
-                || (!visual.has_model && !self.show_tags && self.selected != Some(index))
-            {
+            if !self.object_visible(ActorRef::Current(index)) {
                 continue;
             }
             let transform = Transform::from_actor(actor);
-            let shape = actor
-                .as_map()
-                .ok()
-                .and_then(|m| m.get("!Parameters"))
-                .and_then(|p| p.as_map().ok())
-                .and_then(|p| p.get("Shape"))
-                .and_then(|p| p.as_string().ok())
-                .map(|s| s.as_str())
-                .unwrap_or("");
-            let marker = if !visual.has_model {
-                match shape {
-                    "Sphere" => Some(self.assets.round_markers[0]),
-                    "Cylinder" => Some(self.assets.round_markers[1]),
-                    _ => None,
-                }
-            } else {
-                None
-            };
-            let indices = marker
-                .map(|i| vec![i])
-                .unwrap_or_else(|| visual.meshes.clone());
+            let indices = self.actor_meshes(actor, visual);
             for mesh_index in indices {
                 instances.push(ModelInstance {
                     mesh_index,
                     transform,
                     selected: self.selected == Some(index),
                 });
-                owners.push(Some(index));
+                owners.push(Some(ActorRef::Current(index)));
                 let b = &self.scene.meshes[mesh_index].bounding_box;
                 let lo = b.min();
                 let hi = b.max();
@@ -176,7 +229,7 @@ impl MapDocumentState {
                 self.assets
                     .background_meshes
                     .iter()
-                    .map(|i| (i, self.show_models)),
+                    .map(|i| (i, self.show_map_models)),
             )
         {
             if !visible {
@@ -196,21 +249,21 @@ impl MapDocumentState {
                 max[a] = max[a].max(hi[a]);
             }
         }
-        for actor in &self.assets.context_actors {
+        for (index, actor) in self.assets.context_actors.iter().enumerate() {
             let Some(visual) = self.assets.actors.get(actor_name(actor)) else {
                 continue;
             };
-            if !visual.has_model || !self.show_models {
+            if !self.object_visible(ActorRef::Context(index)) {
                 continue;
             }
             let transform = Transform::from_actor(actor);
-            for &mesh_index in &visual.meshes {
+            for mesh_index in self.actor_meshes(actor, visual) {
                 instances.push(ModelInstance {
                     mesh_index,
                     transform,
-                    selected: false,
+                    selected: self.selected_context == Some(index),
                 });
-                owners.push(None);
+                owners.push(Some(ActorRef::Context(index)));
                 let b = &self.scene.meshes[mesh_index].bounding_box;
                 let lo = b.min();
                 let hi = b.max();
@@ -244,8 +297,10 @@ impl MapDocumentState {
     }
 
     pub fn select(&mut self, index: Option<usize>) {
+        self.selected_context = None;
         self.selected = index.filter(|i| *i < self.file.actors().len());
         self.input = None;
+        self.input_error = None;
         self.rebuild_instances();
     }
 
@@ -264,7 +319,11 @@ impl MapDocumentState {
             self.redo.push(self.file.root.clone());
             self.file.root = root;
             self.selected = None;
-            self.rebuild_instances();
+            self.selected_context = None;
+            self.input = None;
+            self.input_error = None;
+            self.hidden_objects = Arc::new(HashSet::new());
+            self.refresh_after_history();
         }
     }
     pub fn redo(&mut self) {
@@ -272,14 +331,22 @@ impl MapDocumentState {
             self.undo.push(self.file.root.clone());
             self.file.root = root;
             self.selected = None;
-            self.rebuild_instances();
+            self.selected_context = None;
+            self.input = None;
+            self.input_error = None;
+            self.hidden_objects = Arc::new(HashSet::new());
+            self.refresh_after_history();
         }
     }
     pub fn revert(&mut self) {
         self.checkpoint();
         self.file.root = self.file.original.clone();
         self.selected = None;
-        self.rebuild_instances();
+        self.selected_context = None;
+        self.input = None;
+        self.input_error = None;
+        self.hidden_objects = Arc::new(HashSet::new());
+        self.refresh_after_history();
     }
     pub fn change_transform(&mut self, transform: Transform) -> Result<(), String> {
         let index = self.selected.ok_or("请先选择对象")?;
@@ -292,6 +359,16 @@ impl MapDocumentState {
         Ok(())
     }
     pub fn apply_input(&mut self) -> Result<(), String> {
+        let result = self.apply_input_inner();
+        self.input_error = result.as_ref().err().cloned();
+        result
+    }
+    fn apply_input_inner(&mut self) -> Result<(), String> {
+        if self.apply_property_input()? {
+            self.input = None;
+            self.input_error = None;
+            return Ok(());
+        }
         if let Some(MapInput::Transform(kind, axis)) = self.input {
             let value: f32 = self
                 .input_text
@@ -311,6 +388,7 @@ impl MapDocumentState {
             self.change_transform(t)?;
         }
         self.input = None;
+        self.input_error = None;
         Ok(())
     }
     pub fn duplicate(&mut self) -> Result<(), String> {
@@ -328,8 +406,14 @@ impl MapDocumentState {
     }
     pub fn delete(&mut self) -> Result<(), String> {
         let index = self.selected.ok_or("请先选择对象")?;
+        if uking_library::map::hash_id(&self.file.actors()[index])
+            .is_some_and(|id| self.has_context_reference(id))
+        {
+            return Err("配套地图中有链接指向此对象，无法单独删除".into());
+        }
         self.checkpoint();
         self.file.delete(index)?;
+        self.hidden_objects = Arc::new(HashSet::new());
         self.select(None);
         Ok(())
     }
@@ -351,12 +435,12 @@ impl MapDocumentState {
         self.change_transform(t)
     }
     pub fn focus_selected(&mut self) {
-        if let Some(actor) = self.selected.and_then(|i| self.file.actors().get(i)) {
+        if let Some(actor) = self.selected_actor() {
             let transform = Transform::from_actor(actor);
             let mut min = [f32::INFINITY; 3];
             let mut max = [f32::NEG_INFINITY; 3];
             if let Some(visual) = self.assets.actors.get(actor_name(actor)) {
-                for &index in &visual.meshes {
+                for index in self.actor_meshes(actor, visual) {
                     let Some(mesh) = self.scene.meshes.get(index) else {
                         continue;
                     };
@@ -394,7 +478,7 @@ impl MapDocumentState {
         y: f32,
         width: f32,
         height: f32,
-    ) -> Option<usize> {
+    ) -> Option<ActorRef> {
         let (right, up, forward) = camera.compute_basis();
         let tan = (camera.fov / 2.).tan();
         let nx = (2. * x / width - 1.) * width / height * tan;
