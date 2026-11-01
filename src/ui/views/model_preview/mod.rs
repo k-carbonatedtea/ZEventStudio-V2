@@ -5,8 +5,13 @@ pub mod mesh_sidebar;
 pub mod rasterizer;
 pub mod renderer;
 pub mod stats_hud;
+pub mod standalone_sidebar;
+pub mod standalone_toolbar;
+pub mod standalone_window;
 pub mod toolbar;
 pub mod wgpu_renderer;
+
+pub use standalone_window::open_standalone_model_preview_window;
 
 use crate::ui::state::AppState;
 use gpui::*;

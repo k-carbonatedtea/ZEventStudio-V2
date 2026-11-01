@@ -104,6 +104,10 @@ pub fn get_zh_menu(key: &str) -> Option<&'static str> {
         "code_editor.empty_prompt" => "请在左侧文件树选择文件以在代码编辑器中查看与编辑",
         "code_editor.mode_msyt" => "MSYT 源码",
         "code_editor.mode_bubble" => "气泡编辑器",
+        "code_editor.model_preview" => "模型预览",
+        "code_editor.model_preview_tooltip" => "在独立窗口中预览当前 Actor 配置的 3D 模型",
+        "code_editor.model_not_found" => "未能找到与当前 Actor 对应的 3D 模型文件 (.sbfres)",
+        "code_editor.model_load_failed" => "加载 3D 模型失败",
 
         "msbt_editor.entries" => "条目列表",
         "msbt_editor.add_entry" => "新建",

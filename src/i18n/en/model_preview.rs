@@ -32,6 +32,10 @@ pub fn get_en_model_preview(key: &str) -> Option<&'static str> {
         "model_preview.meshes_title" => Some("Submeshes"),
         "model_preview.filter_placeholder" => Some("Filter by name or material..."),
         "model_preview.no_model_selected" => Some("No 3D Model Selected"),
+        "model_preview.window_title" => Some("3D Model Preview"),
+        "model_preview.toggle_sidebar" => Some("Submeshes Panel"),
+        "model_preview.select_all" => Some("Select All"),
+        "model_preview.deselect_all" => Some("Deselect All"),
         _ => None,
     }
 }

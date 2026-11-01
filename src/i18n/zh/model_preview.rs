@@ -32,6 +32,10 @@ pub fn get_zh_model_preview(key: &str) -> Option<&'static str> {
         "model_preview.meshes_title" => Some("子网格图层"),
         "model_preview.filter_placeholder" => Some("按名称或材质筛选..."),
         "model_preview.no_model_selected" => Some("未选中或未加载 3D 模型"),
+        "model_preview.window_title" => Some("3D 模型预览"),
+        "model_preview.toggle_sidebar" => Some("子网格目录"),
+        "model_preview.select_all" => Some("全选"),
+        "model_preview.deselect_all" => Some("全不选"),
         _ => None,
     }
 }

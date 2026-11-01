@@ -104,6 +104,10 @@ pub fn get_en_menu(key: &str) -> Option<&'static str> {
         "code_editor.empty_prompt" => "Select a file from the explorer to view and edit",
         "code_editor.mode_msyt" => "MSYT Source",
         "code_editor.mode_bubble" => "Bubble Editor",
+        "code_editor.model_preview" => "Model Preview",
+        "code_editor.model_preview_tooltip" => "Preview the 3D model configured by current actor in a standalone window",
+        "code_editor.model_not_found" => "Could not find matching 3D model file (.sbfres) for current actor",
+        "code_editor.model_load_failed" => "Failed to load 3D model",
 
         "msbt_editor.entries" => "Entries",
         "msbt_editor.add_entry" => "New",

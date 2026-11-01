@@ -81,6 +81,10 @@ pub fn render_code_editor_header(
                         .text_color(pal.secondary_accent)
                         .child(endian_label),
                 )
+                // 3D 模型预览独立窗口徽章 (仅在检测到当前 Actor 配置了 3D 模型时展示)
+                .children(render_actor_model_preview_badge(
+                    code_state, state, model,
+                ))
                 // MSBT 模式切换控件 (源码模式 ⇋ 气泡对话编辑器 Bubble-Wrap)
                 .child(crate::ui::views::msbt_editor::render_msbt_view_mode_toggle(
                     code_state, state, model,
@@ -190,4 +194,94 @@ pub fn render_code_editor_header(
                         .child(format!("💾 {} (Ctrl+S)", state.t("code_editor.save"))),
                 ),
         )
+}
+
+/// 渲染 3D 模型预览入口徽章标签 (点击弹出独立 3D 模型视口窗口)
+fn render_actor_model_preview_badge(
+    code_state: &CodeDocumentState,
+    state: &AppState,
+    model: &Entity<AppState>,
+) -> Option<impl IntoElement> {
+    let target = crate::model::model_preview::detect_actor_model_target(
+        &code_state.file_path,
+        &code_state.content,
+    )?;
+
+    let pal = state.theme();
+    let lang = state.lang;
+    let model_click = model.clone();
+    let file_path = code_state.file_path.clone();
+    let project_root = state.project_path.clone();
+
+    Some(
+        div()
+            .flex()
+            .items_center()
+            .gap_1()
+            .px_2()
+            .py_0p5()
+            .rounded_md()
+            .bg(pal.card_surface)
+            .border_1()
+            .border_color(rgb(0x06B6D4))
+            .cursor_pointer()
+            .hover(|s| s.bg(pal.card_hover).border_color(rgb(0x38BDF8)))
+            .on_mouse_down(MouseButton::Left, move |_, _window, cx| {
+                let target_clone = target.clone();
+                let proj_ref = project_root.as_deref();
+                let found_path = crate::model::model_preview::locate_actor_model_file(
+                    &target_clone,
+                    &file_path,
+                    proj_ref,
+                );
+
+                let Some(model_file) = found_path else {
+                    let not_found_title = crate::i18n::t("code_editor.model_not_found", lang);
+                    let err_msg = format!("{}: {}.sbfres", not_found_title, target_clone.folder);
+                    model_click.update(cx, |st, cx| {
+                        st.toast = Some(crate::ui::components::Toast::error(err_msg));
+                        cx.notify();
+                    });
+                    return;
+                };
+
+                match crate::model::model_preview::load_actor_model_document(&target_clone, &model_file) {
+                    Ok(model_doc) => {
+                        if let Err(e) = crate::ui::views::model_preview::open_standalone_model_preview_window(
+                            target_clone,
+                            model_doc,
+                            lang,
+                            cx,
+                        ) {
+                            let load_err_prefix = crate::i18n::t("code_editor.model_load_failed", lang);
+                            model_click.update(cx, |st, cx| {
+                                st.toast = Some(crate::ui::components::Toast::error(format!(
+                                    "{} {}",
+                                    load_err_prefix, e
+                                )));
+                                cx.notify();
+                            });
+                        }
+                    }
+                    Err(e) => {
+                        let load_err_prefix = crate::i18n::t("code_editor.model_load_failed", lang);
+                        model_click.update(cx, |st, cx| {
+                            st.toast = Some(crate::ui::components::Toast::error(format!(
+                                "{} {}",
+                                load_err_prefix, e
+                            )));
+                            cx.notify();
+                        });
+                    }
+                }
+            })
+            .child(div().text_size(px(11.5)).child("🧊"))
+            .child(
+                div()
+                    .font_weight(FontWeight::BOLD)
+                    .text_size(px(10.5))
+                    .text_color(rgb(0x06B6D4))
+                    .child(state.t("code_editor.model_preview")),
+            ),
+    )
 }

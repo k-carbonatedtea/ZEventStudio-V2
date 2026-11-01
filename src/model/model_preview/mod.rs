@@ -1,8 +1,15 @@
 //! BFRES 3D 模型预览文档状态与核心管理模型
 
+pub mod actor_loader;
+pub mod actor_resolver;
 pub mod camera;
 pub mod texture_loader;
 pub mod types;
+
+pub use actor_loader::load_actor_model_document;
+pub use actor_resolver::{
+    detect_actor_model_target, locate_actor_model_file, ActorModelTarget,
+};
 
 #[allow(unused_imports)]
 pub use camera::{FastCameraProjector, OrbitCamera, PreviewPresetView};
