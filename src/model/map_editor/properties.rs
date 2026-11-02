@@ -656,6 +656,7 @@ mod tests {
                 ActorVisual {
                     meshes: vec![mesh],
                     resource: String::new(),
+                    profile: String::new(),
                     has_model,
                     diagnostic: None,
                 },
@@ -689,6 +690,7 @@ mod tests {
             ActorVisual {
                 meshes: vec![],
                 resource: String::new(),
+                profile: String::new(),
                 has_model: false,
                 diagnostic: None,
             },

@@ -7,6 +7,7 @@ use std::sync::{Arc, Condvar, Mutex, OnceLock};
 
 pub struct CompletedFrame {
     key: WgpuCacheKey,
+    pub camera: crate::model::model_preview::OrbitCamera,
     pub image: Option<Arc<RenderImage>>,
 }
 
@@ -53,6 +54,7 @@ fn worker() -> &'static Arc<(Mutex<Mailbox>, Condvar)> {
                 .flatten();
                 let frame = Arc::new(CompletedFrame {
                     key: request.key,
+                    camera: request.scene.camera.clone(),
                     image,
                 });
                 lock.lock().unwrap().completed = Some(frame);
@@ -70,6 +72,7 @@ fn same_scene(a: &WgpuCacheKey, b: &WgpuCacheKey) -> bool {
         && a.visibility_hash == b.visibility_hash
         && a.model_path == b.model_path
         && a.selected_mesh_idx == b.selected_mesh_idx
+        && a.render_mode == b.render_mode
         && a.view_w == b.view_w
         && a.view_h == b.view_h
 }
@@ -124,6 +127,9 @@ mod tests {
         key.yaw_bits = 5;
         assert!(same_scene(&original, &key));
         key.instance_identity = 7;
+        assert!(!same_scene(&original, &key));
+        key = original.clone();
+        key.render_mode = crate::model::model_preview::RenderMode::Wireframe;
         assert!(!same_scene(&original, &key));
         key = original.clone();
         key.view_w = 400;

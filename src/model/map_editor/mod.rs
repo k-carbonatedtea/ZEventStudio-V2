@@ -1,3 +1,4 @@
+mod display;
 pub mod geometry;
 pub mod links;
 pub mod loader;
@@ -8,7 +9,8 @@ mod terrain_material;
 mod tests;
 
 use super::model_preview::{ModelDocumentState, ModelInstance};
-pub use links::{ActorRef, ObjectLink};
+pub use display::MapViewMode;
+pub use links::{ActorRef, LinkKindSource, LinkTargetKind, ObjectLink, SystemReference};
 pub use properties::{PropertyPart, PropertyPath, PropertyType};
 use roead::byml::Byml;
 use std::{
@@ -24,6 +26,7 @@ use uking_library::{
 pub struct ActorVisual {
     pub meshes: Vec<usize>,
     pub resource: String,
+    pub profile: String,
     pub has_model: bool,
     pub diagnostic: Option<String>,
 }
@@ -60,6 +63,8 @@ pub struct MapDocumentState {
     pub assets: Arc<MapAssets>,
     pub selected: Option<usize>,
     pub selected_context: Option<usize>,
+    pub view_mode: MapViewMode,
+    pub category_filter: Option<LinkTargetKind>,
     pub show_terrain: bool,
     pub show_water: bool,
     pub show_models: bool,
@@ -71,6 +76,15 @@ pub struct MapDocumentState {
     pub selected_links_only: bool,
     pub hidden_objects: Arc<HashSet<ActorRef>>,
     pub links: Arc<Vec<ObjectLink>>,
+    pub actor_kinds: Arc<HashMap<ActorRef, LinkTargetKind>>,
+    pub related_kinds: Arc<HashMap<ActorRef, u8>>,
+    pub system_references: Arc<Vec<SystemReference>>,
+    link_incoming: Arc<HashMap<ActorRef, Vec<usize>>>,
+    link_outgoing: Arc<HashMap<ActorRef, Vec<usize>>>,
+    reference_indices: Arc<HashMap<ActorRef, Vec<usize>>>,
+    pub selected_link_indices: Arc<Vec<usize>>,
+    pub context_objects: Arc<HashSet<ActorRef>>,
+    link_cache_source: Option<(Arc<Byml>, Arc<MapAssets>)>,
     pub collapsed_sections: HashSet<String>,
     pub edit_path: PropertyPath,
     pub add_property_parent: PropertyPath,
@@ -130,10 +144,12 @@ impl MapDocumentState {
             assets: Arc::new(MapAssets::default()),
             selected: None,
             selected_context: None,
+            view_mode: MapViewMode::Context,
+            category_filter: None,
             show_terrain: true,
             show_water: true,
             show_models: true,
-            show_tags: true,
+            show_tags: false,
             show_hidden_perspective: false,
             show_map_models: true,
             show_context: true,
@@ -142,6 +158,15 @@ impl MapDocumentState {
             selected_links_only: true,
             hidden_objects: Arc::new(HashSet::new()),
             links: Arc::new(Vec::new()),
+            actor_kinds: Arc::new(HashMap::new()),
+            related_kinds: Arc::new(HashMap::new()),
+            system_references: Arc::new(Vec::new()),
+            link_incoming: Arc::new(HashMap::new()),
+            link_outgoing: Arc::new(HashMap::new()),
+            reference_indices: Arc::new(HashMap::new()),
+            selected_link_indices: Arc::new(Vec::new()),
+            context_objects: Arc::new(HashSet::new()),
+            link_cache_source: None,
             collapsed_sections: [
                 "project-resources".into(),
                 "source".into(),

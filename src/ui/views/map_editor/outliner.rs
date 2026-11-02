@@ -1,6 +1,9 @@
-use super::{actor_matches, button, inspector::section};
+use super::{
+    actor_matches, button,
+    inspector::{section, section_lazy},
+};
 use crate::{
-    model::map_editor::{ActorRef, MapDocumentState, MapInput},
+    model::map_editor::{ActorRef, LinkTargetKind, MapDocumentState, MapInput},
     ui::state::AppState,
 };
 use gpui::*;
@@ -13,6 +16,7 @@ struct Matches {
     assets: Arc<crate::model::map_editor::MapAssets>,
     query: String,
     scope: usize,
+    category: Option<LinkTargetKind>,
     rows: Arc<Vec<ActorRef>>,
 }
 thread_local! {static MATCHES:RefCell<Option<Matches>> = const {RefCell::new(None)};}
@@ -24,6 +28,7 @@ pub(super) fn rows(map: &MapDocumentState) -> Arc<Vec<ActorRef>> {
                 && Arc::ptr_eq(&c.assets, &map.assets)
                 && c.query == map.filter
                 && c.scope == map.outliner_scope
+                && c.category == map.category_filter
             {
                 return c.rows.clone();
             }
@@ -44,6 +49,7 @@ pub(super) fn rows(map: &MapDocumentState) -> Arc<Vec<ActorRef>> {
                         .filter(|(_, a)| map.outliner_scope != 0 && actor_matches(a, &query))
                         .map(|(i, _)| ActorRef::Context(i)),
                 )
+                .filter(|&reference| map.object_category_matches(reference))
                 .collect(),
         );
         *cache = Some(Matches {
@@ -51,6 +57,7 @@ pub(super) fn rows(map: &MapDocumentState) -> Arc<Vec<ActorRef>> {
             assets: map.assets.clone(),
             query: map.filter.clone(),
             scope: map.outliner_scope,
+            category: map.category_filter,
             rows: rows.clone(),
         });
         rows
@@ -73,7 +80,7 @@ pub fn render(
     let mut controls = div().flex().flex_col().gap_1();
     for (label, active, kind) in [
         ("显示可见对象", map.show_models, 0),
-        ("显示隐藏对象", map.show_tags, 1),
+        ("显示全部辅助对象", map.show_tags, 1),
         ("隐藏对象透视框", map.show_hidden_perspective, 8),
         ("显示地图模型", map.show_map_models, 2),
         ("显示配套地图", map.show_context, 3),
@@ -91,16 +98,16 @@ pub fn render(
             move |m| {
                 match kind {
                     0 => m.show_models = !m.show_models,
-                    1 => m.show_tags = !m.show_tags,
+                    1 => m.toggle_tags(),
                     2 => m.show_map_models = !m.show_map_models,
                     3 => m.show_context = !m.show_context,
-                    4 => m.show_links = !m.show_links,
+                    4 => m.toggle_links(),
                     5 => m.selected_links_only = !m.selected_links_only,
                     6 => m.show_terrain = !m.show_terrain,
                     7 => m.show_water = !m.show_water,
                     _ => m.show_hidden_perspective = !m.show_hidden_perspective,
                 }
-                if !matches!(kind, 4 | 5 | 8) {
+                if !matches!(kind, 1 | 4 | 5 | 8) {
                     m.rebuild_instances();
                 }
                 Ok(())
@@ -114,22 +121,24 @@ pub fn render(
         .flex()
         .flex_col()
         .bg(pal.panel_surface)
-        .child(section(
+        .child(section_lazy(
             map,
             state,
             model,
             id,
             "project-resources",
             "项目资源",
-            div()
-                .h(px(180.))
-                .child(crate::ui::components::render_file_tree(
-                    &state.file_tree,
-                    state,
-                    model,
-                    0,
-                ))
-                .into_any_element(),
+            || {
+                div()
+                    .h(px(180.))
+                    .child(crate::ui::components::render_file_tree(
+                        &state.file_tree,
+                        state,
+                        model,
+                        0,
+                    ))
+                    .into_any_element()
+            },
         ))
         .child(
             div()
@@ -215,6 +224,45 @@ pub fn render(
                 }),
         )
         .child(
+            div()
+                .px_2()
+                .pb_2()
+                .flex()
+                .flex_wrap()
+                .gap_1()
+                .child(button(
+                    "全部分类",
+                    map.category_filter.is_none(),
+                    &pal,
+                    model,
+                    id,
+                    |m| {
+                        m.category_filter = None;
+                        m.rebuild_instances();
+                        Ok(())
+                    },
+                ))
+                .children(
+                    LinkTargetKind::ALL
+                        .into_iter()
+                        .filter(|k| *k != LinkTargetKind::Unknown)
+                        .map(|kind| {
+                            button(
+                                format!("{} {}", kind.symbol(), kind.label()),
+                                map.category_filter == Some(kind),
+                                &pal,
+                                model,
+                                id,
+                                move |m| {
+                                    m.category_filter = Some(kind);
+                                    m.rebuild_instances();
+                                    Ok(())
+                                },
+                            )
+                        }),
+                ),
+        )
+        .child(
             uniform_list("map-object-list", count, move |range, _, _| {
                 range
                     .map(|i| {
@@ -234,6 +282,8 @@ pub fn render(
                             .actors
                             .get(name)
                             .is_some_and(|v| v.diagnostic.is_some());
+                        let kind = snapshot.actor_kind(reference);
+                        let status = snapshot.object_display_status(reference);
                         let m = list_model.clone();
                         let tab = tid.clone();
                         let toggle_model = list_model.clone();
@@ -286,7 +336,8 @@ pub fn render(
                                                 pal.text_primary
                                             })
                                             .child(format!(
-                                                "{}{}",
+                                                "{} {}{}",
+                                                kind.symbol(),
                                                 if missing {
                                                     "! "
                                                 } else if logical {
@@ -302,12 +353,17 @@ pub fn render(
                                             .text_size(px(10.))
                                             .text_color(pal.text_secondary)
                                             .child(format!(
-                                                "{:08X} · {}",
+                                                "{:08X} · {} · {}",
                                                 hash_id(actor).unwrap_or(0),
                                                 if matches!(reference, ActorRef::Context(_)) {
                                                     "配套 · 只读"
                                                 } else {
                                                     "当前"
+                                                },
+                                                if status == "可见" {
+                                                    kind.label()
+                                                } else {
+                                                    status
                                                 }
                                             )),
                                     ),

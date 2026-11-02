@@ -1,4 +1,10 @@
-use crate::{model::map_editor::MapDocumentState, ui::state::AppState};
+use crate::{
+    model::{
+        map_editor::{LinkTargetKind, MapDocumentState, MapViewMode},
+        model_preview::OrbitCamera,
+    },
+    ui::state::AppState,
+};
 use gpui::*;
 use std::sync::{Arc, Mutex};
 use uking_library::map::Transform;
@@ -19,7 +25,7 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
         .child(
             canvas(
                 |_, _, _| {},
-                move |bounds, _, window, _| {
+                move |bounds, _, window, cx| {
                     *paint_rect.lock().unwrap() = [
                         bounds.origin.x.into(),
                         bounds.origin.y.into(),
@@ -40,18 +46,19 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
                                     bounds,
                                     window,
                                 );
-                                *painted_camera.lock().unwrap() =
-                                    Some(snapshot.scene.camera.clone());
+                                *painted_camera.lock().unwrap() = Some(frame.camera.clone());
                                 if snapshot.show_hidden_perspective {
-                                    draw_area_outlines(&snapshot, bounds, window);
+                                    draw_area_outlines(&snapshot, &frame.camera, bounds, window);
                                 }
-                                draw_selection(&snapshot, bounds, window);
+                                draw_selection(&snapshot, &frame.camera, bounds, window);
                                 draw_links(
                                     &snapshot,
+                                    &frame.camera,
                                     snapshot.show_links,
                                     snapshot.selected_links_only,
                                     bounds,
                                     window,
+                                    cx,
                                 );
                             }
                         }
@@ -246,19 +253,27 @@ fn plane_point(
     Some(std::array::from_fn(|i| eye[i] + direction[i] * t))
 }
 
-fn draw_selection(map: &MapDocumentState, bounds: Bounds<Pixels>, window: &mut Window) {
+fn draw_selection(
+    map: &MapDocumentState,
+    camera: &OrbitCamera,
+    bounds: Bounds<Pixels>,
+    window: &mut Window,
+) {
     let Some(reference) = map.selected_ref() else {
         return;
     };
     let Some(actor) = map.actor(reference) else {
         return;
     };
+    if !map.object_visible(reference) {
+        return;
+    }
     let w = f32::from(bounds.size.width);
     let h = f32::from(bounds.size.height);
     let ox = f32::from(bounds.origin.x);
     let oy = f32::from(bounds.origin.y);
     let transform = Transform::from_actor(actor);
-    let projector = map.scene.camera.projector(w, h);
+    let projector = camera.projector(w, h);
     let mut path = PathBuilder::stroke(px(1.5));
     let mut count = 0;
     if let Some(instances) = &map.scene.instances {
@@ -310,9 +325,9 @@ fn draw_selection(map: &MapDocumentState, bounds: Bounds<Pixels>, window: &mut W
         }
     }
     crate::ui::views::model_preview::gizmos::draw_axes(
-        &map.scene.camera,
+        camera,
         transform.translation,
-        (map.scene.camera.distance * 0.04).clamp(1., 20.),
+        (camera.distance * 0.04).clamp(1., 20.),
         ox,
         oy,
         w,
@@ -321,11 +336,13 @@ fn draw_selection(map: &MapDocumentState, bounds: Bounds<Pixels>, window: &mut W
     );
 }
 
-fn draw_area_outlines(map: &MapDocumentState, bounds: Bounds<Pixels>, window: &mut Window) {
-    let projector = map
-        .scene
-        .camera
-        .projector(bounds.size.width.into(), bounds.size.height.into());
+fn draw_area_outlines(
+    map: &MapDocumentState,
+    camera: &OrbitCamera,
+    bounds: Bounds<Pixels>,
+    window: &mut Window,
+) {
+    let projector = camera.projector(bounds.size.width.into(), bounds.size.height.into());
     let ox = f32::from(bounds.origin.x);
     let oy = f32::from(bounds.origin.y);
     let mut path = PathBuilder::stroke(px(0.85));
@@ -489,35 +506,141 @@ fn draw_area_outlines(map: &MapDocumentState, bounds: Bounds<Pixels>, window: &m
     }
 }
 
+const LINK_KINDS: [LinkTargetKind; 8] = LinkTargetKind::ALL;
+
+fn system_node_position(
+    kind: LinkTargetKind,
+    ox: f32,
+    oy: f32,
+    width: f32,
+    height: f32,
+) -> [f32; 2] {
+    let step = ((height - 36.) / 8.).clamp(10., 25.);
+    [ox + width - 16., oy + 20. + kind.index() as f32 * step]
+}
+
+fn link_color(kind: LinkTargetKind, selected: bool) -> Rgba {
+    rgba((kind.color() << 8) | if selected { 0xEE } else { 0x44 })
+}
+
+fn draw_system_node(path: &mut PathBuilder, kind: LinkTargetKind, x: f32, y: f32) {
+    let size = 5.;
+    match kind {
+        LinkTargetKind::Camera => {
+            path.move_to(point(px(x), px(y - size)));
+            path.line_to(point(px(x + size), px(y + size)));
+            path.line_to(point(px(x - size), px(y + size)));
+            path.close();
+        }
+        LinkTargetKind::Event => {
+            path.move_to(point(px(x), px(y - size)));
+            path.line_to(point(px(x + size), px(y)));
+            path.line_to(point(px(x), px(y + size)));
+            path.line_to(point(px(x - size), px(y)));
+            path.close();
+        }
+        LinkTargetKind::Weather => {
+            for index in 0..=8 {
+                let angle = index as f32 / 8. * std::f32::consts::TAU;
+                let (sin, cos) = angle.sin_cos();
+                let p = point(px(x + cos * size), px(y + sin * size));
+                if index == 0 {
+                    path.move_to(p);
+                } else {
+                    path.line_to(p);
+                }
+            }
+            path.close();
+        }
+        LinkTargetKind::Audio
+        | LinkTargetKind::External
+        | LinkTargetKind::Unknown
+        | LinkTargetKind::MapObject
+        | LinkTargetKind::Physics => {
+            path.move_to(point(px(x - size), px(y - size)));
+            path.line_to(point(px(x + size), px(y - size)));
+            path.line_to(point(px(x + size), px(y + size)));
+            path.line_to(point(px(x - size), px(y + size)));
+            path.close();
+        }
+    }
+}
+
+fn add_link_segment(path: &mut PathBuilder, kind: LinkTargetKind, a: [f32; 2], b: [f32; 2]) {
+    let pattern: Option<(f32, f32)> = match kind {
+        LinkTargetKind::Camera => Some((10., 6.)),
+        LinkTargetKind::Weather => Some((3., 5.)),
+        LinkTargetKind::External | LinkTargetKind::Unknown => Some((5., 5.)),
+        _ => None,
+    };
+    let dx = b[0] - a[0];
+    let dy = b[1] - a[1];
+    let length = dx.hypot(dy);
+    if let Some((dash, gap)) = pattern.filter(|_| length > 1.) {
+        let period = (dash + gap).max(length / 64.);
+        let mut offset = 0.;
+        while offset < length {
+            let start = offset / length;
+            let end = ((offset + period * dash / (dash + gap)) / length).min(1.);
+            path.move_to(point(px(a[0] + dx * start), px(a[1] + dy * start)));
+            path.line_to(point(px(a[0] + dx * end), px(a[1] + dy * end)));
+            offset += period;
+        }
+    } else {
+        path.move_to(point(px(a[0]), px(a[1])));
+        path.line_to(point(px(b[0]), px(b[1])));
+    }
+}
+
 fn draw_links(
     map: &MapDocumentState,
+    camera: &OrbitCamera,
     show: bool,
     selected_only: bool,
     bounds: Bounds<Pixels>,
     window: &mut Window,
+    cx: &mut App,
 ) {
-    if !show {
+    if !show || map.view_mode == MapViewMode::Game {
         return;
     }
     let selected = map.selected_ref();
     if selected_only && selected.is_none() {
         return;
     }
-    let projector = map
-        .scene
-        .camera
-        .projector(bounds.size.width.into(), bounds.size.height.into());
+    let projector = camera.projector(bounds.size.width.into(), bounds.size.height.into());
     let ox = f32::from(bounds.origin.x);
     let oy = f32::from(bounds.origin.y);
-    let mut normal_path = PathBuilder::stroke(px(1.));
-    let mut selected_path = PathBuilder::stroke(px(2.));
+    let width = f32::from(bounds.size.width);
+    let height = f32::from(bounds.size.height);
+    let mut normal_paths = LINK_KINDS.map(|_| PathBuilder::stroke(px(1.)));
+    let mut selected_paths = LINK_KINDS.map(|_| PathBuilder::stroke(px(2.)));
+    let mut system_nodes = LINK_KINDS.map(|_| PathBuilder::fill());
+    let mut selected_nodes = PathBuilder::stroke(px(2.));
     let mut source_points = PathBuilder::fill();
     let mut target_points = PathBuilder::fill();
-    let mut normal_count = 0;
-    let mut selected_count = 0;
-    for link in map.links.iter() {
+    let mut normal_counts = [0usize; 8];
+    let mut selected_counts = [0usize; 8];
+    let mut node_drawn = [false; 8];
+    let mut unresolved_counts = [0usize; 8];
+    let mut reference_counts = [0usize; 8];
+    let link_count = if selected_only {
+        map.selected_link_indices.len()
+    } else {
+        map.links.len()
+    };
+    for index in 0..link_count {
+        let index = if selected_only {
+            map.selected_link_indices[index]
+        } else {
+            index
+        };
+        let link = &map.links[index];
         let connected = selected.is_some_and(|r| link.source == r || link.target == Some(r));
-        if selected_only && !connected {
+        if (selected_only && !connected)
+            || !map.category_matches(link.target_kind)
+            || (link.target.is_none() && !connected)
+        {
             continue;
         }
         if !map.object_visible(link.source) || link.target.is_some_and(|r| !map.object_visible(r)) {
@@ -532,44 +655,145 @@ fn draw_links(
         {
             continue;
         }
-        let Some(to) = link.to else {
-            continue;
-        };
-        let (Some((a, _)), Some((b, _))) = (projector.project(link.from), projector.project(to))
-        else {
+        let Some((a, _)) = projector.project(link.from) else {
             continue;
         };
         let [ax, ay] = [ox + a[0], oy + a[1]];
-        let [bx, by] = [ox + b[0], oy + b[1]];
-        let path = if connected {
-            selected_count += 1;
-            &mut selected_path
+        // Category says what a link means, not whether its target has a
+        // location. Resolved camera/event/weather actors keep world endpoints.
+        let (bx, by) = if let Some(to) = link.to {
+            let Some((b, _)) = projector.project(to) else {
+                continue;
+            };
+            (ox + b[0], oy + b[1])
         } else {
-            normal_count += 1;
-            &mut normal_path
+            let [x, y] = system_node_position(link.target_kind, ox, oy, width, height);
+            (x, y)
         };
-        path.move_to(point(px(ax), px(ay)));
-        path.line_to(point(px(bx), px(by)));
+        if ((ax < ox && bx < ox)
+            || (ax > ox + width && bx > ox + width)
+            || (ay < oy && by < oy)
+            || (ay > oy + height && by > oy + height))
+            || ![ax, ay, bx, by].iter().all(|v| v.is_finite())
+        {
+            continue;
+        }
+        let kind_index = link.target_kind.index();
+        let path = if connected {
+            selected_counts[kind_index] += 1;
+            &mut selected_paths[kind_index]
+        } else {
+            normal_counts[kind_index] += 1;
+            &mut normal_paths[kind_index]
+        };
+        add_link_segment(path, link.target_kind, [ax, ay], [bx, by]);
+        if link.target.is_none() {
+            unresolved_counts[kind_index] += 1;
+            if !node_drawn[kind_index] {
+                draw_system_node(&mut system_nodes[kind_index], link.target_kind, bx, by);
+                node_drawn[kind_index] = true;
+            }
+        }
         if connected {
+            draw_system_node(&mut selected_nodes, link.target_kind, bx, by);
             let size = 6.;
             for (builder, x, y) in [(&mut source_points, ax, ay), (&mut target_points, bx, by)] {
-                builder.move_to(point(px(x - size * 0.5), px(y - size * 0.5)));
-                builder.line_to(point(px(x + size * 0.5), px(y - size * 0.5)));
-                builder.line_to(point(px(x + size * 0.5), px(y + size * 0.5)));
-                builder.line_to(point(px(x - size * 0.5), px(y + size * 0.5)));
+                let radius = if x == bx && y == by { 1.5 } else { size * 0.5 };
+                builder.move_to(point(px(x - radius), px(y - radius)));
+                builder.line_to(point(px(x + radius), px(y - radius)));
+                builder.line_to(point(px(x + radius), px(y + radius)));
+                builder.line_to(point(px(x - radius), px(y + radius)));
                 builder.close();
             }
         }
     }
-    if normal_count > 0 {
-        if let Ok(path) = normal_path.build() {
-            window.paint_path(path, rgba(0x6E9AA655));
+    // Parameter references are a different relationship from LinksToObj.
+    // Aggregate their lines by category and list concrete names in the inspector.
+    if let Some((reference, actor)) = selected.and_then(|r| map.actor(r).map(|a| (r, a))) {
+        if map.object_visible(reference) {
+            if let Some((a, _)) = projector.project(Transform::from_actor(actor).translation) {
+                for binding in map
+                    .object_system_references(reference)
+                    .filter(|r| map.category_matches(r.kind))
+                {
+                    reference_counts[binding.kind.index()] += 1;
+                }
+                for kind in LINK_KINDS {
+                    let i = kind.index();
+                    if reference_counts[i] == 0 {
+                        continue;
+                    }
+                    let [x, y] = system_node_position(kind, ox, oy, width, height);
+                    add_link_segment(
+                        &mut selected_paths[i],
+                        LinkTargetKind::External,
+                        [ox + a[0], oy + a[1]],
+                        [x, y],
+                    );
+                    selected_counts[i] += 1;
+                    if !node_drawn[i] {
+                        draw_system_node(&mut system_nodes[i], kind, x, y);
+                        node_drawn[i] = true;
+                    }
+                }
+            }
         }
     }
-    if selected_count > 0 {
-        if let Ok(path) = selected_path.build() {
-            window.paint_path(path, rgba(0x58A6FFDD));
+    for (index, (((kind, normal_path), selected_path), system_node)) in LINK_KINDS
+        .into_iter()
+        .zip(normal_paths)
+        .zip(selected_paths)
+        .zip(system_nodes)
+        .enumerate()
+    {
+        if normal_counts[index] > 0 {
+            if let Ok(path) = normal_path.build() {
+                window.paint_path(path, link_color(kind, false));
+            }
         }
+        if selected_counts[index] > 0 {
+            if let Ok(path) = selected_path.build() {
+                window.paint_path(path, link_color(kind, true));
+            }
+        }
+        if node_drawn[index] {
+            if let Ok(path) = system_node.build() {
+                window.paint_path(path, link_color(kind, false));
+            }
+            {
+                let [x, y] = system_node_position(kind, ox, oy, width, height);
+                let text: SharedString = format!(
+                    "{} · 引用{} / 待解析{}",
+                    kind.label(),
+                    reference_counts[index],
+                    unresolved_counts[index]
+                )
+                .into();
+                let style = window.text_style();
+                let run = TextRun {
+                    len: text.len(),
+                    font: style.font(),
+                    color: link_color(kind, true).into(),
+                    background_color: None,
+                    underline: None,
+                    strikethrough: None,
+                };
+                let line = window.text_system().shape_line(text, px(10.), &[run], None);
+                let _ = line.paint(
+                    point(px(x - 170.), px(y - 7.)),
+                    px(14.),
+                    TextAlign::Left,
+                    None,
+                    window,
+                    cx,
+                );
+            }
+        }
+    }
+    if let Ok(path) = selected_nodes.build() {
+        window.paint_path(path, rgba(0xFFFFFFFF));
+    }
+    if selected_counts.iter().any(|count| *count > 0) {
         if let Ok(path) = source_points.build() {
             window.paint_path(path, rgba(0x58A6FFFF));
         }

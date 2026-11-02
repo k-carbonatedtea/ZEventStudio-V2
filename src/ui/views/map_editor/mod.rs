@@ -3,7 +3,7 @@ mod inspector;
 mod outliner;
 mod viewport;
 use crate::{
-    model::map_editor::MapDocumentState,
+    model::map_editor::{MapDocumentState, MapViewMode},
     ui::{state::AppState, theme::ThemePalette},
 };
 use gpui::*;
@@ -226,11 +226,25 @@ pub fn render_map_editor(state: &AppState, model: &Entity<AppState>) -> AnyEleme
         );
     let mut layers = div()
         .flex()
+        .flex_wrap()
         .items_center()
         .gap_2()
         .px_3()
         .py_1()
         .bg(pal.panel_surface)
+        .children(MapViewMode::ALL.into_iter().map(|mode| {
+            button(
+                mode.label(),
+                map.view_mode == mode,
+                &pal,
+                model,
+                id,
+                move |m| {
+                    m.set_view_mode(mode);
+                    Ok(())
+                },
+            )
+        }))
         .child(button(
             "可见对象",
             map.show_models,
@@ -254,14 +268,13 @@ pub fn render_map_editor(state: &AppState, model: &Entity<AppState>) -> AnyEleme
             Ok(())
         }))
         .child(button(
-            "隐藏对象",
+            "全部辅助对象",
             map.show_tags,
             &pal,
             model,
             id,
             |m| {
-                m.show_tags = !m.show_tags;
-                m.rebuild_instances();
+                m.toggle_tags();
                 Ok(())
             },
         ))
@@ -283,7 +296,7 @@ pub fn render_map_editor(state: &AppState, model: &Entity<AppState>) -> AnyEleme
             model,
             id,
             |m| {
-                m.show_links = !m.show_links;
+                m.toggle_links();
                 Ok(())
             },
         ))

@@ -71,7 +71,9 @@ pub fn load_scene(
     let marker_texture = "__editor_marker_generic".to_string();
     Arc::make_mut(&mut doc.scene.textures).insert(
         marker_texture.clone(),
-        editor_texture(include_bytes!("../../../assets/editor-markers/TexturedCube.png")),
+        editor_texture(include_bytes!(
+            "../../../assets/editor-markers/TexturedCube.png"
+        )),
     );
     Arc::make_mut(&mut doc.scene.meshes)[marker_index].texture_name = Some(marker_texture);
     Arc::make_mut(&mut doc.scene.textures).insert(
@@ -86,21 +88,45 @@ pub fn load_scene(
         Some("__editor_marker_area".into());
     let mut tag_meshes = HashMap::new();
     for (name, bytes) in [
-        ("LinkTagAnd", include_bytes!("../../../assets/editor-markers/LinkTagAnd.png") as &[u8]),
-        ("LinkTagNAnd", include_bytes!("../../../assets/editor-markers/LinkTagNAnd.png") as &[u8]),
-        ("LinkTagOr", include_bytes!("../../../assets/editor-markers/LinkTagOr.png") as &[u8]),
-        ("LinkTagXOr", include_bytes!("../../../assets/editor-markers/LinkTagXOr.png") as &[u8]),
-        ("LinkTagNOr", include_bytes!("../../../assets/editor-markers/LinkTagNOr.png") as &[u8]),
-        ("LinkTagNone", include_bytes!("../../../assets/editor-markers/LinkTagNone.png") as &[u8]),
-        ("LinkTagCount", include_bytes!("../../../assets/editor-markers/LinkTagCount.png") as &[u8]),
-        ("LinkTagPulse", include_bytes!("../../../assets/editor-markers/LinkTagPulse.png") as &[u8]),
-        ("EventTag", include_bytes!("../../../assets/editor-markers/EventTag.png") as &[u8]),
+        (
+            "LinkTagAnd",
+            include_bytes!("../../../assets/editor-markers/LinkTagAnd.png") as &[u8],
+        ),
+        (
+            "LinkTagNAnd",
+            include_bytes!("../../../assets/editor-markers/LinkTagNAnd.png") as &[u8],
+        ),
+        (
+            "LinkTagOr",
+            include_bytes!("../../../assets/editor-markers/LinkTagOr.png") as &[u8],
+        ),
+        (
+            "LinkTagXOr",
+            include_bytes!("../../../assets/editor-markers/LinkTagXOr.png") as &[u8],
+        ),
+        (
+            "LinkTagNOr",
+            include_bytes!("../../../assets/editor-markers/LinkTagNOr.png") as &[u8],
+        ),
+        (
+            "LinkTagNone",
+            include_bytes!("../../../assets/editor-markers/LinkTagNone.png") as &[u8],
+        ),
+        (
+            "LinkTagCount",
+            include_bytes!("../../../assets/editor-markers/LinkTagCount.png") as &[u8],
+        ),
+        (
+            "LinkTagPulse",
+            include_bytes!("../../../assets/editor-markers/LinkTagPulse.png") as &[u8],
+        ),
+        (
+            "EventTag",
+            include_bytes!("../../../assets/editor-markers/EventTag.png") as &[u8],
+        ),
     ] {
         let texture_name = format!("__editor_marker_{name}");
-        Arc::make_mut(&mut doc.scene.textures).insert(
-            texture_name.clone(),
-            editor_texture(bytes),
-        );
+        Arc::make_mut(&mut doc.scene.textures).insert(texture_name.clone(), editor_texture(bytes));
         let mesh_index = push_mesh(&mut doc.scene, geometry::rito_cube(name, 0.625));
         Arc::make_mut(&mut doc.scene.meshes)[mesh_index].texture_name = Some(texture_name);
         tag_meshes.insert(name.to_string(), mesh_index);
@@ -109,12 +135,6 @@ pub fn load_scene(
         Arc::make_mut(&mut doc.scene.meshes)[i].texture_name = Some("__editor_marker_area".into());
     }
     for name in names {
-        let mut visual = ActorVisual {
-            meshes: Vec::new(),
-            resource: String::new(),
-            has_model: false,
-            diagnostic: None,
-        };
         let profile = resources
             .actor_info
             .get(&name)
@@ -123,6 +143,13 @@ pub fn load_scene(
             .and_then(|v| v.as_string().ok())
             .map(ToString::to_string)
             .unwrap_or_default();
+        let mut visual = ActorVisual {
+            meshes: Vec::new(),
+            resource: String::new(),
+            profile: profile.clone(),
+            has_model: false,
+            diagnostic: None,
+        };
         let logical = profile == "Area"
             || profile == "SpotBgmTag"
             || name.ends_with("Tag")
@@ -331,7 +358,10 @@ fn editor_texture(bytes: &[u8]) -> Arc<RgbaTexture> {
 fn is_area_profile(profile: &str, name: &str) -> bool {
     profile == "Area"
         || profile == "SpotBgmTag"
-        || matches!(name, "BoxWater" | "AscendingCurrent" | "AirWall" | "NavMesh")
+        || matches!(
+            name,
+            "BoxWater" | "AscendingCurrent" | "AirWall" | "NavMesh"
+        )
 }
 
 fn rito_tag_name(name: &str) -> Option<&'static str> {

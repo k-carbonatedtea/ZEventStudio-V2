@@ -101,6 +101,7 @@ fn focus_frames_offset_child_meshes_after_rotation_and_negative_scale() {
         ActorVisual {
             meshes: vec![0, 1],
             resource: "test".into(),
+            profile: String::new(),
             has_model: true,
             diagnostic: None,
         },

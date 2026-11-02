@@ -2,7 +2,8 @@ use super::button;
 use crate::{
     model::map_editor::{
         properties::{key, type_name, value_at, value_text},
-        ActorRef, MapDocumentState, MapInput, PropertyPart, PropertyPath, PropertyType,
+        ActorRef, LinkKindSource, LinkTargetKind, MapDocumentState, MapInput, PropertyPart,
+        PropertyPath, PropertyType,
     },
     ui::{state::AppState, theme::ThemePalette},
 };
@@ -502,6 +503,28 @@ fn jump_button(
         Ok(())
     })
 }
+fn link_kind_badge(kind: LinkTargetKind, pal: &ThemePalette) -> AnyElement {
+    let (background, foreground) = match kind {
+        LinkTargetKind::MapObject => (rgba(0x3A5366AA), rgb(0xB8D8EA)),
+        LinkTargetKind::Camera => (rgba(0x7354AFAA), rgb(0xE4D2FF)),
+        LinkTargetKind::Event => (rgba(0xA4603FAA), rgb(0xFFD3B8)),
+        LinkTargetKind::Weather => (rgba(0x287C82AA), rgb(0xB8F2F2)),
+        LinkTargetKind::Audio => (rgba(0x6D6A34AA), rgb(0xF5E7A4)),
+        LinkTargetKind::Physics => (rgba(0x3F774FAA), rgb(0xC7F0C6)),
+        LinkTargetKind::External => (rgba(0x5D6470AA), rgb(0xD3D8E0)),
+        LinkTargetKind::Unknown => (rgba(0x4A4D52AA), pal.text_secondary),
+    };
+    div()
+        .px_1()
+        .py(px(1.))
+        .rounded_sm()
+        .bg(background)
+        .text_color(foreground)
+        .text_size(px(10.))
+        .child(format!("{} {}", kind.symbol(), kind.label()))
+        .into_any_element()
+}
+
 fn links(
     map: &MapDocumentState,
     state: &AppState,
@@ -511,17 +534,42 @@ fn links(
     readonly: bool,
 ) -> AnyElement {
     let pal = state.theme();
-    let reference = map.selected_ref();
+    let Some(reference) = map.selected_ref() else {
+        return div().into_any_element();
+    };
     let mut body = div().flex().flex_col().gap_2();
-    let mut count = 0;
-    for link in map.links.iter().filter(|l| {
-        if incoming {
-            l.target == reference
-        } else {
-            Some(l.source) == reference
-        }
-    }) {
-        count += 1;
+    let mut visible_links: Vec<_> = map.object_links(reference, incoming).collect();
+    let count = visible_links.len();
+    visible_links.sort_by_key(|link| (link.target_kind.index(), link.index));
+    let mut kind_counts = [0usize; 8];
+    for link in &visible_links {
+        kind_counts[link.target_kind.index()] += 1;
+    }
+    if count > 0 {
+        body = body.child(div().flex().flex_wrap().gap_1().children(
+            LinkTargetKind::ALL.into_iter().filter_map(|kind| {
+                let count = kind_counts[kind.index()];
+                if count == 0 {
+                    return None;
+                }
+                Some(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap_1()
+                        .child(link_kind_badge(kind, &pal))
+                        .child(
+                            div()
+                                .text_size(px(10.))
+                                .text_color(pal.text_secondary)
+                                .child(count.to_string()),
+                        )
+                        .into_any_element(),
+                )
+            }),
+        ));
+    }
+    for link in visible_links {
         let target = if incoming {
             Some(link.source)
         } else {
@@ -539,6 +587,7 @@ fn links(
             .p_1()
             .border_b_1()
             .border_color(pal.card_border)
+            .child(link_kind_badge(link.target_kind, &pal))
             .child(
                 div()
                     .text_xs()
@@ -549,10 +598,48 @@ fn links(
                         link.definition
                     )),
             )
-            .child(jump_button(map, state, model, id, target, hash));
+            .child(jump_button(map, state, model, id, target, hash))
+            .child(muted(
+                format!(
+                    "{} · 分类依据：{}",
+                    if link.target.is_some() {
+                        "地图目标已解析"
+                    } else {
+                        "目标未解析（可能位于其他地图）"
+                    },
+                    link.kind_source.label()
+                ),
+                &pal,
+            ));
+        if link.target.is_none() && link.kind_source == LinkKindSource::Definition {
+            item = item.child(muted("仅推断用途，尚未确认系统绑定。", &pal));
+        }
         if !incoming && !readonly {
             let path = vec![key("LinksToObj"), PropertyPart::Index(link.index)];
-            if let Some(value) = map.selected_actor().and_then(|a| value_at(a, &path)) {
+            let section_key = format!("link-edit-{:?}-{}", link.source, link.index);
+            let expanded = map.collapsed_sections.contains(&section_key);
+            item = item.child(button(
+                if expanded {
+                    "▾ 收起链接参数"
+                } else {
+                    "▸ 编辑链接参数"
+                },
+                false,
+                &pal,
+                model,
+                id,
+                move |m| {
+                    if !m.collapsed_sections.remove(&section_key) {
+                        m.collapsed_sections.insert(section_key.clone());
+                    }
+                    Ok(())
+                },
+            ));
+            if let Some(value) = map
+                .selected_actor()
+                .and_then(|a| value_at(a, &path))
+                .filter(|_| expanded)
+            {
                 item = item.child(properties(
                     map,
                     state,
@@ -707,6 +794,37 @@ fn links(
     body.into_any_element()
 }
 
+fn systems(map: &MapDocumentState, state: &AppState) -> AnyElement {
+    let pal = state.theme();
+    let mut body = div().flex().flex_col().gap_2();
+    for reference in map
+        .selected_ref()
+        .into_iter()
+        .flat_map(|source| map.object_system_references(source))
+    {
+        body = body.child(
+            div()
+                .flex()
+                .flex_col()
+                .gap_1()
+                .child(link_kind_badge(reference.kind, &pal))
+                .child(muted(reference.parameter.clone(), &pal))
+                .child(div().text_xs().child(reference.value.clone()))
+                .children(
+                    reference
+                        .entry_point
+                        .as_ref()
+                        .map(|entry| muted(format!("入口：{entry}"), &pal)),
+                ),
+        );
+    }
+    body.child(muted(
+        "来自对象参数；运行时系统绑定尚未验证。地图对象链接单独列于下方。",
+        &pal,
+    ))
+    .into_any_element()
+}
+
 pub fn render(
     map: &MapDocumentState,
     state: &AppState,
@@ -777,6 +895,16 @@ pub fn render(
         format!("{file} · HashId {:08X}", hash_id(actor).unwrap_or(0)),
         &pal,
     ));
+    if let Some(reference) = map.selected_ref() {
+        content = content.child(
+            div()
+                .flex()
+                .items_center()
+                .gap_2()
+                .child(link_kind_badge(map.actor_kind(reference), &pal))
+                .child(muted(map.object_display_status(reference), &pal)),
+        );
+    }
     if readonly {
         let path = map.assets.context_path.clone();
         let hash = hash_id(actor);
@@ -807,6 +935,21 @@ pub fn render(
         );
     }
     content = content
+        .children(
+            map.selected_ref()
+                .is_some_and(|source| map.object_system_references(source).len() > 0)
+                .then(|| {
+                    section_lazy(
+                        map,
+                        state,
+                        model,
+                        id,
+                        "system-references",
+                        "系统引用 / 参数绑定",
+                        || systems(map, state),
+                    )
+                }),
+        )
         .child(section_lazy(
             map,
             state,
@@ -928,15 +1071,11 @@ pub fn render(
         || param_body.into_any_element(),
     ));
     let incoming = map
-        .links
-        .iter()
-        .filter(|l| l.target == map.selected_ref())
-        .count();
+        .selected_ref()
+        .map_or(0, |source| map.object_links(source, true).len());
     let outgoing = map
-        .links
-        .iter()
-        .filter(|l| Some(l.source) == map.selected_ref())
-        .count();
+        .selected_ref()
+        .map_or(0, |source| map.object_links(source, false).len());
     content = content
         .child(section_lazy(
             map,
@@ -956,16 +1095,6 @@ pub fn render(
             &format!("传出链接 ({outgoing})"),
             || links(map, state, model, id, false, readonly),
         ));
-    let mut diagnostics = div().flex().flex_col().gap_1();
-    if let Some(visual) = map.assets.actors.get(actor_name(actor)) {
-        diagnostics = diagnostics.child(muted(visual.resource.clone(), &pal));
-        if let Some(error) = &visual.diagnostic {
-            diagnostics = diagnostics.child(muted(error.clone(), &pal));
-        }
-    }
-    for warning in &map.assets.warnings {
-        diagnostics = diagnostics.child(muted(warning.clone(), &pal));
-    }
     content = content
         .child(section_lazy(
             map,
@@ -974,7 +1103,19 @@ pub fn render(
             id,
             "source",
             "模型来源 / 资源诊断",
-            || diagnostics.into_any_element(),
+            || {
+                let mut diagnostics = div().flex().flex_col().gap_1();
+                if let Some(visual) = map.assets.actors.get(actor_name(actor)) {
+                    diagnostics = diagnostics.child(muted(visual.resource.clone(), &pal));
+                    if let Some(error) = &visual.diagnostic {
+                        diagnostics = diagnostics.child(muted(error.clone(), &pal));
+                    }
+                }
+                for warning in &map.assets.warnings {
+                    diagnostics = diagnostics.child(muted(warning.clone(), &pal));
+                }
+                diagnostics.into_any_element()
+            },
         ))
         .child(muted(
             "Enter 应用 · Esc 取消 · Ctrl+Z 撤销\n布尔值点击切换；整数保留原始类型。",
