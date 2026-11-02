@@ -1,4 +1,5 @@
 mod async_render;
+mod asset_browser;
 mod inspector;
 mod outliner;
 mod viewport;
@@ -198,6 +199,11 @@ pub fn render_map_editor(state: &AppState, model: &Entity<AppState>) -> AnyEleme
             m.redo();
             Ok(())
         }))
+        .child(button("资产", map.asset_browser.open, &pal, model, id, |m| {
+            m.asset_browser.open = !m.asset_browser.open;
+            if !m.asset_browser.open { m.asset_browser.pending_placement = None; }
+            Ok(())
+        }))
         .child(button("全景", false, &pal, model, id, |m| {
             m.scene.fit_camera();
             Ok(())
@@ -337,16 +343,19 @@ pub fn render_map_editor(state: &AppState, model: &Entity<AppState>) -> AnyEleme
     }
     div().size_full().flex().flex_col().overflow_hidden().bg(pal.app_bg).text_color(pal.text_primary)
         .on_mouse_move(move |e,_,cx| {resize_model.update(cx,|st,cx| {
-            if st.active_map().is_some_and(|m|m.panel_resize.is_some()) {
+            if st.active_map().is_some_and(|m|m.panel_resize.is_some() || m.asset_browser.resizing.is_some()) {
                 st.update_map(&resize_id,|m| {
-                    if !e.dragging() {m.panel_resize=None;return Ok(());}
+                    if !e.dragging() {m.panel_resize=None;m.asset_browser.resizing=None;return Ok(());}
+                    if let Some((start,height)) = m.asset_browser.resizing {
+                        m.asset_browser.height = (height + start - f32::from(e.position.y)).clamp(180.,480.);
+                    }
                     if let Some((right,start,width))=m.panel_resize {
                     let delta=f32::from(e.position.x)-start;
                     if right {m.inspector_width=(width-delta).clamp(300.,700.);}else{m.outliner_width=(width+delta).clamp(180.,420.);}
                 } Ok(())});cx.notify();
             }
         });})
-        .on_mouse_up(MouseButton::Left,move |_,_,cx| {up_model.update(cx,|st,cx| {st.update_map(&up_id,|m|{m.panel_resize=None;Ok(())});cx.notify();});})
+        .on_mouse_up(MouseButton::Left,move |_,_,cx| {up_model.update(cx,|st,cx| {st.update_map(&up_id,|m|{m.panel_resize=None;m.asset_browser.resizing=None;Ok(())});cx.notify();});})
         .child(toolbar).child(layers)
         .child(div().flex_1().min_h_0().flex().overflow_hidden()
             .child(outliner::render(map,state,model,id))
@@ -354,6 +363,7 @@ pub fn render_map_editor(state: &AppState, model: &Entity<AppState>) -> AnyEleme
             .child(viewport::render_viewport(map,model,id))
             .child(resize_handle(true,map,state,model,id))
             .child(inspector::render(map,state,model,id)))
+        .children(map.asset_browser.open.then(|| asset_browser::render(map,state,model,id)))
         .child(div().px_3().py_1().bg(pal.panel_surface).text_xs().text_color(pal.text_secondary)
             .child("左键选择 · 右键旋转 · 中键平移 · 滚轮缩放 · Shift+左拖移动 · F 聚焦 · Ctrl+D 复制 · Delete 删除"))
         .into_any_element()

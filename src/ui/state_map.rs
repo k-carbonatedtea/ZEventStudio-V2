@@ -5,6 +5,183 @@ use crate::{
 use gpui::*;
 
 impl AppState {
+    /// New placements load only their missing model in the background. Merge
+    /// resource additions without replacing newer edits, selection or camera.
+    pub fn start_pending_map_assets(&mut self, cx: &mut Context<Self>) {
+        use std::sync::Arc;
+        let Some(id) = self.active_tab_id.clone() else {
+            return;
+        };
+        let settings = self.game_paths.clone();
+        let project = self.project_path.clone();
+        if let Some(map) = self
+            .active_map_mut()
+            .filter(|map| !map.loading && map.asset_loading.is_none())
+        {
+            let name = loop {
+                let Some(name) = map.asset_queue.pop_front() else {
+                    break None;
+                };
+                let still_used = map
+                    .file
+                    .actors()
+                    .iter()
+                    .any(|actor| uking_library::map::actor_name(actor) == name);
+                if still_used
+                    && !map.assets.actors.contains_key(&name)
+                    && !map.asset_failed.contains(&name)
+                {
+                    break Some(name);
+                }
+            };
+            if let Some(name) = name {
+                map.asset_loading = Some(name.clone());
+                let snapshot = map.clone();
+                let meshes = snapshot.scene.meshes.clone();
+                let assets = snapshot.assets.clone();
+                let id = id.clone();
+                let settings = settings.clone();
+                let project = project.clone();
+                cx.spawn(async move |this, cx| {
+                    let requested_name = name.clone();
+                    let result = cx
+                        .background_spawn(async move {
+                            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                crate::model::map_editor::loader::load_actor_asset(
+                                    snapshot,
+                                    settings,
+                                    project,
+                                    &requested_name,
+                                )
+                            }))
+                            .unwrap_or_else(|_| Err("资产模型解析异常".into()))
+                        })
+                        .await;
+                    let _ = this.update(cx, |st, cx| {
+                        if let Some(map) = st
+                            .open_tabs
+                            .iter_mut()
+                            .find(|tab| tab.id == id)
+                            .and_then(|tab| tab.map_state.as_mut())
+                        {
+                            if map.asset_loading.as_deref() == Some(&name) {
+                                map.asset_loading = None;
+                                if !map.loading
+                                    && Arc::ptr_eq(&meshes, &map.scene.meshes)
+                                    && Arc::ptr_eq(&assets, &map.assets)
+                                {
+                                    match result {
+                                        Ok(loaded) => {
+                                            map.scene.meshes = loaded.scene.meshes;
+                                            map.scene.mesh_items = loaded.scene.mesh_items;
+                                            map.scene.textures = loaded.scene.textures;
+                                            map.assets = loaded.assets;
+                                            map.rebuild_instances();
+                                        }
+                                        Err(error) => {
+                                            Arc::make_mut(&mut map.asset_failed).insert(name);
+                                            map.input_error = Some(error);
+                                        }
+                                    }
+                                } else if map
+                                    .file
+                                    .actors()
+                                    .iter()
+                                    .any(|actor| uking_library::map::actor_name(actor) == name)
+                                    && !map.assets.actors.contains_key(&name)
+                                    && !map.asset_failed.contains(&name)
+                                {
+                                    map.asset_queue.push_front(name.clone());
+                                }
+                                cx.notify();
+                            }
+                        }
+                    });
+                })
+                .detach();
+            }
+        }
+        let Some(map) = self
+            .active_map_mut()
+            .filter(|map| !map.loading && map.asset_browser.open)
+        else {
+            return;
+        };
+        let Some(name) = map.asset_browser.selected.clone() else {
+            return;
+        };
+        if map
+            .asset_preview
+            .as_ref()
+            .is_some_and(|preview| preview.name == name)
+        {
+            return;
+        }
+        let source = map.scene.file_path.clone();
+        let big_endian = map.file.big_endian;
+        let catalog = map.assets.catalog.clone();
+        map.asset_preview = Some(crate::model::map_editor::AssetPreviewState {
+            name: name.clone(),
+            loading: true,
+            image: None,
+            error: None,
+        });
+        cx.spawn(async move |this, cx| {
+            let requested_name = name.clone();
+            let result = cx
+                .background_spawn(async move {
+                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        let scene = crate::model::map_editor::loader::load_asset_preview(
+                            &source,
+                            big_endian,
+                            settings,
+                            project,
+                            &requested_name,
+                        )?;
+                        crate::ui::views::model_preview::rasterizer::rasterize_scene(
+                            &scene, 256., 144.,
+                        )
+                        .ok_or_else(|| "模型预览没有可绘制内容".to_string())
+                    }))
+                    .unwrap_or_else(|_| Err("资产预览解析异常".into()))
+                })
+                .await;
+            let _ = this.update(cx, |st, cx| {
+                if let Some(map) = st
+                    .open_tabs
+                    .iter_mut()
+                    .find(|tab| tab.id == id)
+                    .and_then(|tab| tab.map_state.as_mut())
+                {
+                    if map
+                        .asset_preview
+                        .as_ref()
+                        .is_some_and(|preview| preview.loading && preview.name == name)
+                    {
+                        map.asset_preview = if map.asset_browser.selected.as_deref() == Some(&name)
+                            && Arc::ptr_eq(&catalog, &map.assets.catalog)
+                        {
+                            let (image, error) = match result {
+                                Ok(image) => (Some(image), None),
+                                Err(error) => (None, Some(error)),
+                            };
+                            Some(crate::model::map_editor::AssetPreviewState {
+                                name,
+                                loading: false,
+                                image,
+                                error,
+                            })
+                        } else {
+                            None
+                        };
+                        cx.notify();
+                    }
+                }
+            });
+        })
+        .detach();
+    }
+
     pub fn active_map(&self) -> Option<&MapDocumentState> {
         self.open_tabs
             .iter()
@@ -115,11 +292,15 @@ pub fn handle_map_key(
             let mut cursor = state.text_input_cursor;
             let mut anchor = state.text_input_select_anchor;
             let map = state.active_map_mut()?;
-            let target = if map.input == Some(crate::model::map_editor::MapInput::Search) {
-                map.page = 0;
-                &mut map.filter
-            } else {
-                &mut map.input_text
+            let target = match map.input {
+                Some(crate::model::map_editor::MapInput::Search) => {
+                    map.page = 0;
+                    &mut map.filter
+                }
+                Some(crate::model::map_editor::MapInput::AssetSearch) => {
+                    &mut map.asset_browser.query
+                }
+                _ => &mut map.input_text,
             };
             crate::ui::components::handle_text_key_event(
                 target,
@@ -156,7 +337,11 @@ pub fn handle_map_key(
                 }
             }
             ("f", false, _) => map.focus_selected(),
-            ("escape", false, _) => map.select(None),
+            ("escape", false, _) => {
+                if map.asset_browser.pending_placement.take().is_none() {
+                    map.select(None);
+                }
+            }
             _ => return None,
         }
     }

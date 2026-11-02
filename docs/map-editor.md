@@ -18,6 +18,8 @@
 
 地图工作区采用三栏布局：左侧对象大纲，中间场景，右侧属性。拖动两侧分隔条调整宽度；原项目文件树收进左侧“项目资源”折叠区。对象列表采用虚拟滚动，支持当前、配套、全部三个范围，以及 Actor 名称和 HashId 搜索。
 
+底部“资产”面板按 ActorInfo 的 Profile 分类浏览游戏资产，支持中文名称、Actor ID、Profile 和模型名称搜索，也可切换网格/列表、收藏常用资产。选中条目会在详情栏异步显示实际模型预览；目录和网格不预先解码全部模型。将资产拖到视口可直接放置，或双击资产/点“放置到地图”后点击场景表面；“添加到视图中心”可直接在当前视图中心创建对象。放置会命中最近的可见模型或地形表面，空白处使用相机目标高度。新对象使用唯一 HashId，不复制源对象链接；新增操作可撤销、重做并保存。需要模型的资产按需在后台加载并合并到当前场景，保留地图、地形和相机状态；纯逻辑资产继续使用编辑器标记显示。收藏保存在 `%LOCALAPPDATA%\Zevent\asset-browser.json`。
+
 顶部提供三种视图：
 
 | 视图 | 显示方式 |
@@ -55,6 +57,7 @@
 | 复制 / 删除 | `Ctrl+D` / `Delete`，或属性栏按钮 |
 | 撤销 / 重做 | `Ctrl+Z` / `Ctrl+Y` / `Ctrl+Shift+Z`，最多 100 步 |
 | 保存 | `Ctrl+S` 或顶部保存按钮 |
+| 放置资产 | 底部“资产”面板拖入视口，或选择资产后双击并点击目标位置；`Esc` 取消待放置状态 |
 
 保存保留 BYML 版本、端序、Yaz0 压缩状态、未知字段和 Rails 数据。变换后清零 SRTHash；复制生成唯一 HashId；删除清理当前文件内指向被删除对象的连线。SARC 内的文件通过现有归档写入器回写。
 
@@ -95,6 +98,9 @@ cargo test --offline --bin nodeflow-editor map_editor
 $env:ZEVENT_TEST_MAP = '你的 romfs\Map\MainField\F-5\F-5_Dynamic.smubin'
 $env:ZEVENT_TEST_RENDER = 'H:\Zevent\ZEventStudio\.cache\map-validation.png'
 cargo test --offline --bin nodeflow-editor real_map_models_terrain_render_and_save -- --ignored --nocapture
+
+# 资产增量模型加载、场景状态保留及独立预览
+cargo test --offline --bin nodeflow-editor real_asset_incremental_load_and_isolated_preview -- --ignored --nocapture
 
 # 同一场景的加载、首帧及旋转性能（沿用上面的环境变量）
 $env:ZEVENT_PROFILE_LOAD = '1'

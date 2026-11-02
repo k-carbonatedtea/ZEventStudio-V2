@@ -60,13 +60,191 @@ pub fn load_scene(
         .chain(&assets.context_actors)
         .map(|a| actor_name(a).to_string())
         .collect();
+    assets.catalog = Arc::new(super::catalog::AssetCatalog::from_actor_info(
+        &resources.actor_info,
+    ));
+    load_actor_models(
+        &mut doc,
+        &mut resources,
+        &mut assets,
+        names,
+        project.as_deref(),
+    );
+    if profile {
+        eprintln!(
+            "[MAP LOAD] actors/models/textures: {:.3}s",
+            started.elapsed().as_secs_f64()
+        );
+    }
+    let mut materials = super::terrain_material::TerrainMaterials::new(project.as_deref());
+    load_actor_terrain_materials(&mut doc, &mut resources, &mut assets, &mut materials);
+    if profile {
+        eprintln!(
+            "[MAP LOAD] shared terrain materials: {:.3}s",
+            started.elapsed().as_secs_f64()
+        );
+    }
+    if let Err(error) = load_dungeon_background(&mut doc, &mut resources, &mut assets) {
+        assets.warnings.push(error);
+    }
+    if let Err(error) = load_terrain(&mut doc, &mut resources, &mut assets, &mut materials) {
+        assets.warnings.push(error);
+    }
+    doc.assets = Arc::new(assets);
+    doc.loading = false;
+    doc.rebuild_instances();
+    if doc.selected_ref().is_some() {
+        doc.focus_selected();
+    } else {
+        doc.scene.fit_camera();
+    }
+    doc.scene.camera.distance *= 0.65;
+    doc.scene.camera.pitch = 0.7;
+    if profile {
+        eprintln!(
+            "[MAP LOAD] complete: {:.3}s, decoded textures: {}",
+            started.elapsed().as_secs_f64(),
+            doc.scene.textures.len()
+        );
+    }
+    Ok(doc)
+}
+
+/// Load one catalog actor into the existing scene. Map terrain and companion
+/// objects are retained, and repeated placements reuse the same visual.
+pub fn load_actor_asset(
+    mut doc: MapDocumentState,
+    settings: GamePathSettings,
+    project: Option<String>,
+    name: &str,
+) -> Result<MapDocumentState, String> {
+    if name.is_empty() {
+        return Err("资产名称为空".into());
+    }
+    if doc.assets.actors.contains_key(name) {
+        return Ok(doc);
+    }
+    let mut resources = Resources::new(
+        &doc.scene.file_path,
+        project.as_deref(),
+        &settings,
+        doc.file.big_endian,
+    );
+    let mut assets = (*doc.assets).clone();
+    load_actor_models(
+        &mut doc,
+        &mut resources,
+        &mut assets,
+        [name.to_string()],
+        project.as_deref(),
+    );
+    let mut materials = super::terrain_material::TerrainMaterials::new(project.as_deref());
+    load_actor_terrain_materials(&mut doc, &mut resources, &mut assets, &mut materials);
+    doc.assets = Arc::new(assets);
+    doc.rebuild_instances();
+    Ok(doc)
+}
+
+/// Build an isolated asset preview through the same actor/model resolver as
+/// map placement. `source` only chooses the project/game resource overlays.
+pub fn load_asset_preview(
+    source: &str,
+    big_endian: bool,
+    settings: GamePathSettings,
+    project: Option<String>,
+    name: &str,
+) -> Result<ModelDocumentState, String> {
+    use roead::byml::Byml;
+    let mut actor = roead::byml::Map::default();
+    actor.insert("UnitConfigName".into(), Byml::String(name.into()));
+    actor.insert("HashId".into(), Byml::U32(1));
+    let mut root = roead::byml::Map::default();
+    root.insert("Objs".into(), Byml::Array(vec![Byml::Map(actor)]));
+    let endian = if big_endian {
+        roead::Endian::Big
+    } else {
+        roead::Endian::Little
+    };
+    let file = uking_library::map::MapFile::from_bytes(&Byml::Map(root).to_binary(endian))?;
+    let mut doc = MapDocumentState::empty(file, source, name);
+    doc.loading = false;
+    doc.show_tags = true;
+    doc.selected = Some(0);
+    let mut doc = load_actor_asset(doc, settings, project, name)?;
+    let visual = doc.assets.actors.get(name).ok_or("资产预览未生成")?;
+    if let Some(error) = &visual.diagnostic {
+        return Err(error.clone());
+    }
+    doc.scene.file_path = format!("asset-preview:{source}#{name}");
+    doc.scene.model_name = name.into();
+    // Preview instances should not carry the map editor's selection tint.
+    if let Some(instances) = &mut doc.scene.instances {
+        for instance in Arc::make_mut(instances) {
+            instance.selected = false;
+        }
+    }
+    doc.scene.fit_camera();
+    doc.scene.camera.distance *= 1.1;
+    doc.scene.camera.pitch = 0.3;
+    doc.scene.show_stats = false;
+    Ok(doc.scene)
+}
+
+fn ensure_marker(scene: &mut ModelDocumentState, mesh: ExtractedMesh, texture: &str) -> usize {
+    if let Some(index) = scene.meshes.iter().position(|existing| {
+        existing.name == mesh.name && existing.texture_name.as_deref() == Some(texture)
+    }) {
+        return index;
+    }
+    let index = push_mesh(scene, mesh);
+    Arc::make_mut(&mut scene.meshes)[index].texture_name = Some(texture.into());
+    index
+}
+
+fn load_actor_models(
+    doc: &mut MapDocumentState,
+    resources: &mut Resources,
+    assets: &mut MapAssets,
+    names: impl IntoIterator<Item = String>,
+    project: Option<&str>,
+) {
     let mut cache: HashMap<(String, String), Vec<usize>> = HashMap::new();
-    let mut loaded_textures = std::collections::HashSet::new();
-    let marker_index = push_mesh(&mut doc.scene, geometry::rito_cube("Editor marker", 0.625));
-    let area_marker_index = push_mesh(&mut doc.scene, geometry::cube("Editor area"));
+    let mut existing_model_meshes: HashMap<String, Vec<usize>> = assets
+        .actors
+        .values()
+        .filter(|visual| visual.has_model && !visual.meshes.is_empty())
+        .map(|visual| (visual.resource.clone(), visual.meshes.clone()))
+        .collect();
+    let mut loaded_textures: HashSet<String> = doc
+        .scene
+        .textures
+        .keys()
+        .filter_map(|name| {
+            name.rsplit_once("::")
+                .map(|(namespace, _)| namespace.to_string())
+        })
+        .collect();
+    let marker_index = ensure_marker(
+        &mut doc.scene,
+        geometry::rito_cube("Editor marker", 0.625),
+        "__editor_marker_generic",
+    );
+    let area_marker_index = ensure_marker(
+        &mut doc.scene,
+        geometry::cube("Editor area"),
+        "__editor_marker_area",
+    );
     assets.round_markers = [
-        push_mesh(&mut doc.scene, geometry::round_marker(true)),
-        push_mesh(&mut doc.scene, geometry::round_marker(false)),
+        ensure_marker(
+            &mut doc.scene,
+            geometry::round_marker(true),
+            "__editor_marker_area",
+        ),
+        ensure_marker(
+            &mut doc.scene,
+            geometry::round_marker(false),
+            "__editor_marker_area",
+        ),
     ];
     let marker_texture = "__editor_marker_generic".to_string();
     Arc::make_mut(&mut doc.scene.textures).insert(
@@ -127,7 +305,11 @@ pub fn load_scene(
     ] {
         let texture_name = format!("__editor_marker_{name}");
         Arc::make_mut(&mut doc.scene.textures).insert(texture_name.clone(), editor_texture(bytes));
-        let mesh_index = push_mesh(&mut doc.scene, geometry::rito_cube(name, 0.625));
+        let mesh_index = ensure_marker(
+            &mut doc.scene,
+            geometry::rito_cube(name, 0.625),
+            &texture_name,
+        );
         Arc::make_mut(&mut doc.scene.meshes)[mesh_index].texture_name = Some(texture_name);
         tag_meshes.insert(name.to_string(), mesh_index);
     }
@@ -135,6 +317,9 @@ pub fn load_scene(
         Arc::make_mut(&mut doc.scene.meshes)[i].texture_name = Some("__editor_marker_area".into());
     }
     for name in names {
+        if assets.actors.contains_key(&name) {
+            continue;
+        }
         let profile = resources
             .actor_info
             .get(&name)
@@ -183,7 +368,7 @@ pub fn load_scene(
                     &umii,
                     platform,
                     Some(&resources.model_directories()),
-                    project.as_deref(),
+                    project,
                 ) {
                     Ok(npc) => {
                         let ns = format!("__umii_{name}");
@@ -218,6 +403,13 @@ pub fn load_scene(
                     visual.diagnostic = Some(format!("模型文件缺失: {folder} / {unit}"));
                     continue;
                 };
+                let model_resource = format!("{} / {unit}", resource.path);
+                if let Some(indices) = existing_model_meshes.get(&model_resource) {
+                    cache.insert(key, indices.clone());
+                    visual.meshes.extend(indices);
+                    visual.resource = model_resource;
+                    continue;
+                }
                 let bfres = match resources.parse_model(&resource) {
                     Ok(file) => file,
                     Err(e) => {
@@ -274,6 +466,7 @@ pub fn load_scene(
                     }
                 }
                 cache.insert(key, indices.clone());
+                existing_model_meshes.insert(model_resource, indices.clone());
                 visual.meshes.extend(indices);
                 visual.resource = format!("{} / {unit}", resource.path);
             }
@@ -304,44 +497,6 @@ pub fn load_scene(
         }
         assets.actors.insert(name, visual);
     }
-    if profile {
-        eprintln!(
-            "[MAP LOAD] actors/models/textures: {:.3}s",
-            started.elapsed().as_secs_f64()
-        );
-    }
-    let mut materials = super::terrain_material::TerrainMaterials::new(project.as_deref());
-    load_actor_terrain_materials(&mut doc, &mut resources, &mut assets, &mut materials);
-    if profile {
-        eprintln!(
-            "[MAP LOAD] shared terrain materials: {:.3}s",
-            started.elapsed().as_secs_f64()
-        );
-    }
-    if let Err(error) = load_dungeon_background(&mut doc, &mut resources, &mut assets) {
-        assets.warnings.push(error);
-    }
-    if let Err(error) = load_terrain(&mut doc, &mut resources, &mut assets, &mut materials) {
-        assets.warnings.push(error);
-    }
-    doc.assets = Arc::new(assets);
-    doc.loading = false;
-    doc.rebuild_instances();
-    if doc.selected_ref().is_some() {
-        doc.focus_selected();
-    } else {
-        doc.scene.fit_camera();
-    }
-    doc.scene.camera.distance *= 0.65;
-    doc.scene.camera.pitch = 0.7;
-    if profile {
-        eprintln!(
-            "[MAP LOAD] complete: {:.3}s, decoded textures: {}",
-            started.elapsed().as_secs_f64(),
-            doc.scene.textures.len()
-        );
-    }
-    Ok(doc)
 }
 
 fn editor_texture(bytes: &[u8]) -> Arc<RgbaTexture> {
@@ -407,6 +562,9 @@ fn load_actor_terrain_materials(
         .filter_map(|m| {
             let name = m.texture_name.as_ref()?;
             let (_, layer) = name.rsplit_once("::MaterialAlb#")?;
+            if doc.scene.textures.contains_key(name) {
+                return None;
+            }
             Some((name.clone(), layer.parse::<u32>().ok()?))
         })
         .collect();
@@ -634,4 +792,137 @@ fn load_terrain(
     }
     doc.scene.terrain = Some(Arc::new(render_data));
     Ok(())
+}
+
+#[cfg(test)]
+mod asset_tests {
+    use super::*;
+    use roead::byml::Byml;
+    use uking_library::map::{hash_id, MapFile};
+
+    fn empty_document(path: &str) -> MapDocumentState {
+        let root = Byml::from_text("Objs: []\nRails: [{Preserved: true}]").unwrap();
+        let file = MapFile::from_bytes(&root.to_binary(roead::Endian::Little)).unwrap();
+        let mut doc = MapDocumentState::empty(file, path, "asset-test");
+        doc.loading = false;
+        doc
+    }
+
+    #[test]
+    fn incremental_markers_preserve_document_camera_and_scene_indices() {
+        let settings = GamePathSettings::default();
+        let mut doc = empty_document("incremental-test");
+        let existing = geometry::cube("existing terrain");
+        push_mesh(&mut doc.scene, existing.clone());
+        doc.scene.terrain = Some(Arc::new(crate::model::model_preview::TerrainRenderData {
+            layers: Vec::new(),
+            material_params: Vec::new(),
+            tiles: HashMap::new(),
+        }));
+        let original_root = doc.file.root.clone();
+        let original_camera = doc.scene.camera.clone();
+        let original_terrain = doc.scene.terrain.clone().unwrap();
+        let paired = Byml::from_text("{UnitConfigName: LinkTagOr, HashId: !u 42}").unwrap();
+        Arc::make_mut(&mut doc.assets).context_actors.push(paired);
+        let doc = load_actor_asset(doc, settings.clone(), None, "LinkTagAnd").unwrap();
+        assert!(Arc::ptr_eq(&doc.file.root, &original_root));
+        assert_eq!(doc.scene.camera, original_camera);
+        assert!(Arc::ptr_eq(
+            doc.scene.terrain.as_ref().unwrap(),
+            &original_terrain
+        ));
+        assert_eq!(doc.scene.meshes[0], existing);
+        assert_eq!(
+            doc.assets.context_actors.first().and_then(hash_id),
+            Some(42)
+        );
+        let count = doc.scene.meshes.len();
+        let doc = load_actor_asset(doc, settings.clone(), None, "EventTag").unwrap();
+        assert_eq!(doc.scene.meshes.len(), count, "editor markers are reused");
+        let meshes = doc.scene.meshes.clone();
+        let textures = doc.scene.textures.clone();
+        let assets = doc.assets.clone();
+        let doc = load_actor_asset(doc, settings, None, "EventTag").unwrap();
+        assert!(Arc::ptr_eq(&meshes, &doc.scene.meshes));
+        assert!(Arc::ptr_eq(&textures, &doc.scene.textures));
+        assert!(Arc::ptr_eq(&assets, &doc.assets));
+    }
+
+    #[test]
+    fn marker_preview_contains_only_one_origin_instance() {
+        let scene = load_asset_preview(
+            "asset-test",
+            false,
+            GamePathSettings::default(),
+            None,
+            "LinkTagAnd",
+        )
+        .unwrap();
+        let instances = scene.instances.as_ref().unwrap();
+        assert_eq!(instances.len(), 1);
+        assert_eq!(instances[0].transform.translation, [0.; 3]);
+        assert!(!instances[0].selected);
+        assert!(scene.terrain.is_none());
+        assert!(scene.camera.distance.is_finite());
+        assert!(scene.total_triangles > 0);
+    }
+
+    #[test]
+    #[ignore = "requires ZEVENT_TEST_MAP and local game resources"]
+    fn real_asset_incremental_load_and_isolated_preview() {
+        let path = std::env::var("ZEVENT_TEST_MAP").expect("set ZEVENT_TEST_MAP");
+        let file =
+            MapFile::from_bytes(&crate::model::file_tree::read_file_from_path(&path).unwrap())
+                .unwrap();
+        let settings = GamePathSettings::load_from_disk();
+        let doc = load_scene(
+            MapDocumentState::empty(file, &path, "asset-test"),
+            settings.clone(),
+            None,
+        )
+        .unwrap();
+        let root = doc.file.root.clone();
+        let camera = doc.scene.camera.clone();
+        let meshes = doc.scene.meshes.clone();
+        let count = meshes.len();
+        let terrain = doc.scene.terrain.clone();
+        let candidate = doc
+            .assets
+            .catalog
+            .entries
+            .iter()
+            .find(|asset| !asset.model.is_empty() && !doc.assets.actors.contains_key(&asset.name))
+            .map(|asset| asset.name.clone())
+            .expect("unloaded real actor with a model");
+        let doc = load_actor_asset(doc, settings.clone(), None, &candidate).unwrap();
+        assert!(Arc::ptr_eq(&root, &doc.file.root));
+        assert_eq!(camera, doc.scene.camera);
+        assert!(
+            doc.assets.actors[&candidate].has_model,
+            "{:?}",
+            doc.assets.actors[&candidate].diagnostic
+        );
+        assert!(doc.scene.meshes.len() > count);
+        assert_eq!(&doc.scene.meshes[..count], meshes.as_slice());
+        if let Some(terrain) = terrain {
+            assert!(Arc::ptr_eq(&terrain, doc.scene.terrain.as_ref().unwrap()));
+        }
+        let preview = load_asset_preview(&path, false, settings, None, &candidate).unwrap();
+        assert!(preview.terrain.is_none());
+        assert!(preview.instances.as_ref().unwrap().len() < preview.meshes.len());
+        assert!(preview.total_triangles > 12);
+        assert_eq!(
+            preview.bounding_box_min,
+            doc.assets.actors[&candidate].meshes.iter().fold(
+                [f32::INFINITY; 3],
+                |mut bound, &index| {
+                    let min = doc.scene.meshes[index].bounding_box.min();
+                    for (axis, value) in [min.x, min.y, min.z].into_iter().enumerate() {
+                        bound[axis] = bound[axis].min(value);
+                    }
+                    bound
+                }
+            )
+        );
+    }
 }

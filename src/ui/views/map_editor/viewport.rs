@@ -90,7 +90,8 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
                         || (button == MouseButton::Left && e.modifiers.alt);
                     m.panning = button == MouseButton::Middle;
                     m.dragging =
-                        button == MouseButton::Left && e.modifiers.shift && m.selected.is_some();
+                        button == MouseButton::Left && e.modifiers.shift && m.selected.is_some()
+                        && m.asset_browser.pending_placement.is_none();
                     m.drag_changed = false;
                     if m.dragging {
                         m.checkpoint();
@@ -170,6 +171,12 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
                     {
                         let r = *r.lock().unwrap();
                         let camera = displayed_camera.lock().unwrap();
+                        if let Some(name) = m.asset_browser.pending_placement.clone() {
+                            let position = m.asset_drop_position(camera.as_ref().unwrap_or(&m.scene.camera),
+                                pos.0-r[0],pos.1-r[1],r[2],r[3]).ok_or("无法计算放置坐标")?;
+                            m.add_asset(&name, position)?;
+                            return Ok(());
+                        }
                         let hit = m.pick_with_camera(
                             camera.as_ref().unwrap_or(&m.scene.camera),
                             pos.0 - r[0],
@@ -216,6 +223,38 @@ pub fn render_viewport(map: &MapDocumentState, model: &Entity<AppState>, id: &st
             cx.notify();
         });
     });
+    let drop_model = model.clone();
+    let drop_id = id.to_string();
+    let drop_rect = rect.clone();
+    let drop_camera = displayed_camera.clone();
+    view = view.on_drop(move |asset: &super::asset_browser::AssetDrag, window, cx| {
+        if asset.tab_id != drop_id { return; }
+        let position = window.mouse_position();
+        let r = *drop_rect.lock().unwrap();
+        let camera = drop_camera.lock().unwrap().clone();
+        drop_model.update(cx, |st,cx| {
+            st.clear_active_text_inputs();
+            st.update_map(&drop_id, |map| {
+                if map.input.is_some() && map.input_error.is_some() { return Ok(()); }
+                let position = map.asset_drop_position(camera.as_ref().unwrap_or(&map.scene.camera),
+                    f32::from(position.x)-r[0],f32::from(position.y)-r[1],r[2],r[3])
+                    .ok_or("无法计算放置坐标")?;
+                map.add_asset(&asset.name, position)?;
+                Ok(())
+            });
+            cx.notify();
+        });
+    });
+    if let Some(name) = &map.asset_browser.pending_placement {
+        view = view.child(div().absolute().top_2().left_2().px_3().py_2().rounded_md()
+            .bg(rgba(0x182C3CEE)).text_xs().text_color(rgb(0xE4C989))
+            .child(format!("放置 {name}：点击场景表面 · Esc 取消")));
+    }
+    if let Some(name) = &map.asset_loading {
+        view = view.child(div().absolute().bottom_2().left_2().px_3().py_2().rounded_md()
+            .bg(rgba(0x182C3CEE)).text_xs().text_color(rgb(0xB5C8D3))
+            .child(format!("正在加载资产模型：{name}…")));
+    }
     if map.loading {
         view = view.child(
             div()

@@ -1,7 +1,9 @@
+pub mod catalog;
 mod display;
 pub mod geometry;
 pub mod links;
 pub mod loader;
+mod placement;
 pub mod properties;
 pub mod resources;
 mod terrain_material;
@@ -9,12 +11,13 @@ mod terrain_material;
 mod tests;
 
 use super::model_preview::{ModelDocumentState, ModelInstance};
+pub use catalog::{AssetBrowserState, AssetCatalog};
 pub use display::MapViewMode;
 pub use links::{ActorRef, LinkKindSource, LinkTargetKind, ObjectLink, SystemReference};
 pub use properties::{PropertyPart, PropertyPath, PropertyType};
 use roead::byml::Byml;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     sync::Arc,
 };
 use uking_library::{
@@ -31,8 +34,17 @@ pub struct ActorVisual {
     pub diagnostic: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct AssetPreviewState {
+    pub name: String,
+    pub loading: bool,
+    pub image: Option<Arc<gpui::RenderImage>>,
+    pub error: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct MapAssets {
+    pub catalog: Arc<AssetCatalog>,
     pub actors: HashMap<String, ActorVisual>,
     pub terrain_meshes: Vec<usize>,
     pub background_meshes: Vec<usize>,
@@ -48,6 +60,7 @@ pub struct MapAssets {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MapInput {
     Search,
+    AssetSearch,
     Transform(usize, usize),
     Property,
     PropertyName,
@@ -61,6 +74,11 @@ pub struct MapDocumentState {
     pub file: MapFile,
     pub scene: ModelDocumentState,
     pub assets: Arc<MapAssets>,
+    pub asset_browser: AssetBrowserState,
+    pub asset_preview: Option<AssetPreviewState>,
+    pub asset_loading: Option<String>,
+    pub asset_queue: VecDeque<String>,
+    pub asset_failed: Arc<HashSet<String>>,
     pub selected: Option<usize>,
     pub selected_context: Option<usize>,
     pub view_mode: MapViewMode,
@@ -142,6 +160,11 @@ impl MapDocumentState {
             file,
             scene,
             assets: Arc::new(MapAssets::default()),
+            asset_browser: AssetBrowserState::default(),
+            asset_preview: None,
+            asset_loading: None,
+            asset_queue: VecDeque::new(),
+            asset_failed: Arc::new(HashSet::new()),
             selected: None,
             selected_context: None,
             view_mode: MapViewMode::Context,

@@ -137,7 +137,11 @@ impl AppState {
             return Some(&self.msbt_new_entry_name);
         }
         if let Some(map) = self.active_map().filter(|m| m.input.is_some()) {
-            return Some(if map.input == Some(crate::model::map_editor::MapInput::Search) { &map.filter } else { &map.input_text });
+            return Some(match map.input {
+                Some(crate::model::map_editor::MapInput::Search) => &map.filter,
+                Some(crate::model::map_editor::MapInput::AssetSearch) => &map.asset_browser.query,
+                _ => &map.input_text,
+            });
         }
         None
     }
@@ -308,7 +312,11 @@ impl AppState {
                 GitCommitFocus::Description => f(&mut self.git_commit_desc),
                 GitCommitFocus::None => {
                     let Some(map) = self.active_map_mut().filter(|m|m.input.is_some()) else {return false;};
-                    let target = if map.input == Some(crate::model::map_editor::MapInput::Search) { map.page = 0; &mut map.filter } else { &mut map.input_text };
+                    let target = match map.input {
+                        Some(crate::model::map_editor::MapInput::Search) => { map.page = 0; &mut map.filter },
+                        Some(crate::model::map_editor::MapInput::AssetSearch) => &mut map.asset_browser.query,
+                        _ => &mut map.input_text,
+                    };
                     f(target)
                 },
             }
