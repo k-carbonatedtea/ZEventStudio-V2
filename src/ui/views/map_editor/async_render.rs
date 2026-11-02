@@ -64,17 +64,11 @@ fn worker() -> &'static Arc<(Mutex<Mailbox>, Condvar)> {
     })
 }
 
-fn same_scene(a: &WgpuCacheKey, b: &WgpuCacheKey) -> bool {
-    a.geometry_identity == b.geometry_identity
-        && a.instance_identity == b.instance_identity
-        && a.texture_identity == b.texture_identity
-        && a.terrain_identity == b.terrain_identity
-        && a.visibility_hash == b.visibility_hash
-        && a.model_path == b.model_path
-        && a.selected_mesh_idx == b.selected_mesh_idx
-        && a.render_mode == b.render_mode
+fn same_viewport(a: &WgpuCacheKey, b: &WgpuCacheKey) -> bool {
+    a.model_path == b.model_path
         && a.view_w == b.view_w
         && a.view_h == b.view_h
+        && a.render_mode == b.render_mode
 }
 
 /// Keep at most one running render and one replaceable request. UI drawing never
@@ -107,7 +101,10 @@ pub fn request(
     let frame = mailbox
         .completed
         .as_ref()
-        .filter(|f| same_scene(&f.key, &key))
+        // Keep the last image visible while a selection, placement, visibility,
+        // or camera update renders. A frame from another map, size, or mode is
+        // not a useful placeholder and should not leak into this viewport.
+        .filter(|f| same_viewport(&f.key, &key))
         .cloned();
     (frame, pending)
 }
@@ -116,7 +113,7 @@ pub fn request(
 mod tests {
     use super::*;
     #[test]
-    fn completed_frame_compatibility_rejects_old_scene_and_size() {
+    fn last_frame_is_kept_only_for_the_same_viewport_source() {
         let scene = crate::model::model_preview::ModelDocumentState::from_bfres(
             "a",
             "a",
@@ -124,16 +121,19 @@ mod tests {
         );
         let original = compute_cache_key(&scene, 800, 600);
         let mut key = original.clone();
-        key.yaw_bits = 5;
-        assert!(same_scene(&original, &key));
         key.instance_identity = 7;
-        assert!(!same_scene(&original, &key));
+        assert!(same_viewport(&original, &key));
+        key.yaw_bits = 5;
+        assert!(same_viewport(&original, &key));
         key = original.clone();
         key.render_mode = crate::model::model_preview::RenderMode::Wireframe;
-        assert!(!same_scene(&original, &key));
+        assert!(!same_viewport(&original, &key));
         key = original.clone();
         key.view_w = 400;
-        assert!(!same_scene(&original, &key));
+        assert!(!same_viewport(&original, &key));
+        key = original.clone();
+        key.model_path = "another-map".into();
+        assert!(!same_viewport(&original, &key));
     }
 
     #[test]
